@@ -1,0 +1,11 @@
+{
+  "name": "Muslim Daily",
+  "short_name": "MuslimDaily",
+  "description": "Your daily Muslim companion for prayer times and tracking",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#3f51b5",
+  "background_color": "#ffffff",
+  "scope": "/",
+  "lang": "en"
+}
