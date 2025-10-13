@@ -1,5 +1,5 @@
 {
-  "name": "muslim-daily-backend",
+  "name": "muslimdailybackend",
   "version": "1.0.0",
   "description": "Backend for Muslim Daily app",
   "main": "server.js",

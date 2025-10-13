@@ -363,20 +363,21 @@ const PrayerTimes = () => {
     }
   };
 
-  // Fetch prayer times from backend
-// Replace your fetchPrayerTimes function with this:
 const fetchPrayerTimes = async (zoneCode) => {
   try {
     setError(null);
     
-    // Dynamic API URL - works on both local and mobile
-    const isLocalhost = window.location.hostname === 'localhost' || 
-                        window.location.hostname === '127.0.0.1';
-    
-    const API_BASE = isLocalhost 
-      ? 'http://localhost:5000' 
-      : 'YOUR_PRODUCTION_URL'; // You'll set this later when you deploy
-    
+    // Dynamic API URL for different environments
+    const getApiBase = () => {
+      // Development - works on localhost
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'http://localhost:5000';
+      }
+      // Production - your Render backend URL
+      return 'https://muslimdailybackend.onrender.com';
+    };
+
+    const API_BASE = getApiBase();
     const response = await fetch(`${API_BASE}/api/prayertimes/${zoneCode}`);
     
     if (!response.ok) {
@@ -386,7 +387,6 @@ const fetchPrayerTimes = async (zoneCode) => {
     const data = await response.json();
     
     if (data.success && data.data) {
-      // Format all times to 12-hour format
       const formattedTimes = {
         fajr: formatTimeTo12Hour(data.data.fajr),
         dhuhr: formatTimeTo12Hour(data.data.dhuhr),
@@ -405,13 +405,9 @@ const fetchPrayerTimes = async (zoneCode) => {
   } catch (error) {
     console.error('API Error:', error);
     
-    // Fallback: Use cached prayer times or show error
-    if (window.location.hostname !== 'localhost') {
-      setError('Prayer times unavailable. Using sample times.');
-      // Return sample prayer times as fallback
-      return getSamplePrayerTimes(zoneCode);
-    }
-    throw error;
+    // Fallback to sample times if API fails
+    setError('Unable to fetch live prayer times. Using sample times.');
+    return getSamplePrayerTimes(zoneCode);
   }
 };
 
