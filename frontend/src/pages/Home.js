@@ -9,17 +9,24 @@ import {
   Container,
   Chip,
   useTheme,
-  useMediaQuery
+  useMediaQuery,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText
 } from '@mui/material';
 import {
   AccessTime,
   TrendingUp,
   MenuBook,
   Psychology,
-  Mosque,
   PlayArrow,
-  Star,
-  CheckCircle
+  CheckCircle,
+  Chat,
+  CalendarMonth,
+  LocationOn,
+  Notifications,
+  SelfImprovement
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import PrayerTimes from '../components/PrayerTimes/PrayerTimes';
@@ -29,30 +36,30 @@ const Home = ({ onAuthAction }) => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-  const features = [
+  const uniqueFeatures = [
     {
-      icon: <AccessTime sx={{ fontSize: { xs: 24, md: 32 } }} />,
-      title: 'Prayer Times',
-      description: 'Accurate prayer times with notifications',
-      color: '#1A4F8C'
+      icon: <Chat sx={{ fontSize: { xs: 20, md: 24 } }} />,
+      title: 'WhatsApp Reminders',
+      description: 'Get prayer times & daily Quran directly on WhatsApp',
+      benefit: 'No app opening needed'
     },
     {
-      icon: <MenuBook sx={{ fontSize: { xs: 24, md: 32 } }} />,
-      title: 'Quran Journey',
-      description: 'Track your Quran reading progress',
-      color: '#D4AF37'
+      icon: <CalendarMonth sx={{ fontSize: { xs: 20, md: 24 } }} />,
+      title: 'Daily Planning',
+      description: 'Schedule your spiritual tasks alongside daily activities',
+      benefit: 'Better time management'
     },
     {
-      icon: <TrendingUp sx={{ fontSize: { xs: 24, md: 32 } }} />,
-      title: 'Progress Tracking',
-      description: 'Monitor your spiritual growth',
-      color: '#0D9488'
+      icon: <SelfImprovement sx={{ fontSize: { xs: 20, md: 24 } }} />,
+      title: 'Mindful Moments',
+      description: 'Pause and reflect with guided Islamic reflections',
+      benefit: 'Reduce morning rush'
     },
     {
-      icon: <Psychology sx={{ fontSize: { xs: 24, md: 32 } }} />,
-      title: 'Dhikr Counter',
-      description: 'Count your daily remembrance',
-      color: '#7C3AED'
+      icon: <LocationOn sx={{ fontSize: { xs: 20, md: 24 } }} />,
+      title: 'Mosque Finder',
+      description: 'Find nearest prayers and community events',
+      benefit: 'Stay connected'
     }
   ];
 
@@ -75,16 +82,16 @@ const Home = ({ onAuthAction }) => {
             sx={{
               width: { xs: 70, md: 90 },
               height: { xs: 70, md: 90 },
-              backgroundColor: 'rgba(26, 79, 140, 0.1)',
+              backgroundColor: 'rgba(13, 148, 136, 0.1)',
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 16px',
-              border: '2px solid rgba(26, 79, 140, 0.2)'
+              border: '2px solid rgba(13, 148, 136, 0.2)'
             }}
           >
-            <Mosque sx={{ fontSize: { xs: 32, md: 42 }, color: '#1A4F8C' }} />
+            <MenuBook sx={{ fontSize: { xs: 32, md: 42 }, color: '#0D9488' }} />
           </Box>
           
           <Typography 
@@ -93,12 +100,12 @@ const Home = ({ onAuthAction }) => {
             gutterBottom
             sx={{ mb: 1 }}
           >
-            Welcome to Muslim
+            Your Peaceful Daily
             <Box 
               component="span" 
-              sx={{ color: '#D4AF37' }}
+              sx={{ color: '#F59E0B', display: 'block' }}
             >
-              Journal
+              Muslim Diary
             </Box>
           </Typography>
           
@@ -112,7 +119,7 @@ const Home = ({ onAuthAction }) => {
               lineHeight: 1.5
             }}
           >
-            Your personal companion for tracking prayers, Quran reading, and spiritual growth
+            Move beyond the rush. Mindful reminders, WhatsApp notifications, and daily planning for a peaceful spiritual journey.
           </Typography>
           
           {!user && (
@@ -122,9 +129,9 @@ const Home = ({ onAuthAction }) => {
               endIcon={<PlayArrow />}
               onClick={handleGetStarted}
               sx={{
-                backgroundColor: '#1A4F8C',
+                backgroundColor: '#0D9488',
                 '&:hover': {
-                  backgroundColor: '#0D3A6A',
+                  backgroundColor: '#0F766E',
                 },
                 px: { xs: 3, md: 4 },
                 py: { xs: 1, md: 1.5 },
@@ -132,23 +139,8 @@ const Home = ({ onAuthAction }) => {
                 fontWeight: 600,
               }}
             >
-              Start Your Journey
+              Start Your Peaceful Journey
             </Button>
-          )}
-          {user && (
-            <Chip 
-              icon={<CheckCircle sx={{ fontSize: 16 }} />}
-              label={`Welcome back, ${user.name}`}
-              sx={{ 
-                backgroundColor: 'rgba(26, 79, 140, 0.08)',
-                color: '#1A4F8C',
-                border: '1px solid rgba(26, 79, 140, 0.2)',
-                fontSize: { xs: '0.8rem', md: '0.9rem' },
-                padding: { xs: 1, md: 1.5 },
-                height: 'auto',
-                fontWeight: 500
-              }}
-            />
           )}
         </Container>
       </Box>
@@ -158,7 +150,43 @@ const Home = ({ onAuthAction }) => {
         <PrayerTimes />
       </Box>
 
-      {/* Features Grid */}
+      {/* Unique Value Proposition */}
+      <Container maxWidth="lg" sx={{ mb: { xs: 3, md: 4 } }}>
+        <Card sx={{ backgroundColor: 'rgba(245, 158, 11, 0.05)', border: '1px solid rgba(245, 158, 11, 0.2)' }}>
+          <CardContent sx={{ textAlign: 'center', p: { xs: 2, md: 3 } }}>
+            <Typography 
+              variant={isMobile ? "h6" : "h5"} 
+              fontWeight="600" 
+              gutterBottom
+              color="#F59E0B"
+            >
+              Tired of the Morning Rush?
+            </Typography>
+            <Typography 
+              variant="body2" 
+              sx={{ color: 'text.secondary', mb: 2 }}
+            >
+              Most apps add to your busy schedule. Muslim Diary helps you slow down and be present.
+            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
+              {['Mindful Reminders', 'WhatsApp Integration', 'Daily Planning', 'Focus on Presence'].map((item, index) => (
+                <Chip
+                  key={index}
+                  label={item}
+                  size="small"
+                  sx={{ 
+                    backgroundColor: 'white',
+                    border: '1px solid rgba(245, 158, 11, 0.3)',
+                    fontWeight: 500
+                  }}
+                />
+              ))}
+            </Box>
+          </CardContent>
+        </Card>
+      </Container>
+
+      {/* Unique Features */}
       <Container maxWidth="lg">
         <Typography 
           variant={isMobile ? "h6" : "h5"} 
@@ -167,57 +195,49 @@ const Home = ({ onAuthAction }) => {
           gutterBottom 
           sx={{ mb: { xs: 2, md: 3 } }}
         >
-          Your Spiritual Companion
+          Designed for Modern Muslim Life
         </Typography>
         <Grid container spacing={2}>
-          {features.map((feature, index) => (
-            <Grid item xs={6} key={index}>
-              <Card 
-                sx={{ 
-                  height: '100%',
-                  backgroundColor: 'background.paper',
-                  textAlign: 'center',
-                  p: 2,
-                  '&:hover': {
-                    transform: 'translateY(-2px)',
-                  },
-                  transition: 'transform 0.2s ease'
-                }}
-              >
-                <CardContent sx={{ p: '0 !important' }}>
-                  <Box 
-                    sx={{
-                      width: 50,
-                      height: 50,
-                      backgroundColor: 'rgba(26, 79, 140, 0.1)',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      margin: '0 auto 12px',
-                      color: feature.color
-                    }}
-                  >
-                    {feature.icon}
+          {uniqueFeatures.map((feature, index) => (
+            <Grid item xs={12} sm={6} key={index}>
+              <Card sx={{ height: '100%' }}>
+                <CardContent sx={{ p: { xs: 2, md: 2.5 } }}>
+                  <Box sx={{ display: 'flex', alignItems: 'flex-start', mb: 1.5 }}>
+                    <Box
+                      sx={{
+                        width: 40,
+                        height: 40,
+                        backgroundColor: 'rgba(13, 148, 136, 0.1)',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        mr: 2,
+                        color: '#0D9488',
+                        flexShrink: 0
+                      }}
+                    >
+                      {feature.icon}
+                    </Box>
+                    <Box>
+                      <Typography variant="subtitle1" fontWeight="600" gutterBottom>
+                        {feature.title}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        {feature.description}
+                      </Typography>
+                      <Chip 
+                        label={feature.benefit} 
+                        size="small" 
+                        variant="outlined"
+                        sx={{ 
+                          borderColor: '#F59E0B',
+                          color: '#F59E0B',
+                          fontSize: '0.7rem'
+                        }}
+                      />
+                    </Box>
                   </Box>
-                  <Typography 
-                    variant="subtitle1" 
-                    fontWeight="600" 
-                    gutterBottom
-                    sx={{ fontSize: { xs: '0.9rem', md: '1rem' } }}
-                  >
-                    {feature.title}
-                  </Typography>
-                  <Typography 
-                    variant="body2" 
-                    color="text.secondary"
-                    sx={{ 
-                      fontSize: { xs: '0.75rem', md: '0.8rem' },
-                      lineHeight: 1.4
-                    }}
-                  >
-                    {feature.description}
-                  </Typography>
                 </CardContent>
               </Card>
             </Grid>
@@ -225,94 +245,83 @@ const Home = ({ onAuthAction }) => {
         </Grid>
       </Container>
 
-      {/* Stats Section for Users */}
-      {user && (
-        <Container maxWidth="lg" sx={{ mt: { xs: 3, md: 4 } }}>
-          <Card sx={{ 
-            backgroundColor: 'rgba(26, 79, 140, 0.03)',
-            border: '1px solid rgba(26, 79, 140, 0.1)',
-            borderRadius: 2,
-          }}>
-            <CardContent sx={{ 
-              textAlign: 'center', 
-              p: { xs: 2, md: 3 },
-            }}>
-              <Typography 
-                variant={isMobile ? "subtitle1" : "h6"} 
-                fontWeight="600" 
-                gutterBottom 
-                color="#1A4F8C"
-              >
-                Today's Progress
-              </Typography>
-              <Grid container spacing={1} sx={{ mt: 0.5 }}>
-                {[
-                  { value: '5/5', label: 'Prayers', color: '#1A4F8C' },
-                  { value: '3p', label: 'Quran', color: '#D4AF37' },
-                  { value: '45', label: 'Dhikr', color: '#0D9488' },
-                  { value: '7d', label: 'Streak', color: '#7C3AED' }
-                ].map((stat, index) => (
-                  <Grid item xs={6} sm={3} key={index}>
-                    <Typography 
-                      variant={isMobile ? "h6" : "h5"} 
-                      fontWeight="700" 
-                      sx={{ color: stat.color }}
-                    >
-                      {stat.value}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {stat.label}
-                    </Typography>
-                  </Grid>
-                ))}
-              </Grid>
-            </CardContent>
-          </Card>
-        </Container>
-      )}
+      {/* WhatsApp Integration Highlight */}
+      <Container maxWidth="md" sx={{ mt: { xs: 3, md: 4 } }}>
+        <Card sx={{ 
+          background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+          color: 'white',
+          textAlign: 'center'
+        }}>
+          <CardContent sx={{ p: { xs: 3, md: 4 } }}>
+            <Chat sx={{ fontSize: { xs: 40, md: 48 }, mb: 2 }} />
+            <Typography variant={isMobile ? "h6" : "h5"} fontWeight="600" gutterBottom>
+              Reminders on WhatsApp
+            </Typography>
+            <Typography variant="body2" sx={{ opacity: 0.9, mb: 3 }}>
+              Get prayer times, daily Quran verses, and spiritual reminders directly in WhatsApp. No need to open the app constantly.
+            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1, flexWrap: 'wrap' }}>
+              {['Prayer Times', 'Quran Verses', 'Hadith', 'Mosque Events'].map((item, index) => (
+                <Chip
+                  key={index}
+                  label={item}
+                  size="small"
+                  sx={{ 
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                    color: 'white',
+                    fontWeight: 500
+                  }}
+                />
+              ))}
+            </Box>
+          </CardContent>
+        </Card>
+      </Container>
 
-      {/* Call to Action for Non-Users */}
+      {/* Daily Planning Preview */}
       {!user && (
-        <Container maxWidth="sm" sx={{ mt: { xs: 3, md: 4 }, textAlign: 'center' }}>
-          <Card sx={{ 
-            backgroundColor: 'rgba(26, 79, 140, 0.05)',
-            border: '1px solid rgba(26, 79, 140, 0.1)',
-            borderRadius: 2,
-            py: { xs: 2, md: 3 },
-          }}>
-            <CardContent>
-              <Typography 
-                variant={isMobile ? "subtitle1" : "h6"} 
-                fontWeight="600" 
-                gutterBottom
-                color="#1A4F8C"
-              >
-                Start Your Spiritual Journey
-              </Typography>
-              <Typography 
-                variant="body2" 
-                sx={{ color: 'text.secondary', mb: 2 }}
-              >
-                Join Muslims worldwide in building consistent spiritual habits
-              </Typography>
-              <Button 
-                variant="contained" 
-                size={isMobile ? "medium" : "large"}
-                endIcon={<PlayArrow />}
-                onClick={handleGetStarted}
-                sx={{
-                  backgroundColor: '#1A4F8C',
-                  '&:hover': {
-                    backgroundColor: '#0D3A6A',
-                  },
-                  px: { xs: 3, md: 4 },
-                  py: { xs: 1, md: 1.5 },
-                  borderRadius: 2,
-                  fontWeight: 600,
-                }}
-              >
-                Get Started Free
-              </Button>
+        <Container maxWidth="lg" sx={{ mt: { xs: 3, md: 4 } }}>
+          <Card sx={{ backgroundColor: 'rgba(13, 148, 136, 0.05)' }}>
+            <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                <CalendarMonth sx={{ color: '#0D9488', mr: 1.5 }} />
+                <Typography variant="h6" fontWeight="600">
+                  Your Spiritual Day at a Glance
+                </Typography>
+              </Box>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={6}>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Plan your day with spiritual tasks integrated into your schedule:
+                  </Typography>
+                  <List dense>
+                    {['Morning Dhikr', 'Quran Reading', 'Prayer Times', 'Evening Reflection'].map((item, index) => (
+                      <ListItem key={index} sx={{ px: 0 }}>
+                        <ListItemIcon sx={{ minWidth: 32 }}>
+                          <CheckCircle sx={{ fontSize: 16, color: '#0D9488' }} />
+                        </ListItemIcon>
+                        <ListItemText primary={item} primaryTypographyProps={{ variant: 'body2' }} />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Box sx={{ textAlign: 'center', pt: { xs: 2, md: 0 } }}>
+                    <Button 
+                      variant="contained"
+                      onClick={handleGetStarted}
+                      sx={{
+                        backgroundColor: '#0D9488',
+                        '&:hover': { backgroundColor: '#0F766E' },
+                        px: 3,
+                        py: 1.5
+                      }}
+                    >
+                      Start Planning Today
+                    </Button>
+                  </Box>
+                </Grid>
+              </Grid>
             </CardContent>
           </Card>
         </Container>

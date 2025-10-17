@@ -38,7 +38,11 @@ import {
   Close,
   Book,
   Schedule,
-  TrendingUp
+  TrendingUp,
+  Notifications,
+  CalendarMonth,
+  Chat,
+  LocationOn
 } from '@mui/icons-material';
 import { usePWAInstall } from './hooks/usePWAInstall';
 import { PracticeProvider } from './context/PracticeContext';
@@ -48,24 +52,25 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Home from './pages/Home';
 import Progress from './pages/Progress';
 import Settings from './pages/Settings';
+import Calendar from './pages/Calendar';
 import AuthModal from './components/Auth/AuthModal';
 
-// Islamic-inspired color scheme - Deep blue & gold
+// Calming color scheme - Teal & Amber
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#1A4F8C',
-      light: '#2D6BB5',
-      dark: '#0D3A6A',
+      main: '#0D9488',
+      light: '#14B8A6',
+      dark: '#0F766E',
       contrastText: '#FFFFFF',
     },
     secondary: {
-      main: '#D4AF37',
-      light: '#E8C766',
-      dark: '#B8941F',
+      main: '#F59E0B',
+      light: '#FBBF24',
+      dark: '#D97706',
     },
     background: {
-      default: '#F8FAFC',
+      default: '#F0FDFA',
       paper: '#FFFFFF',
     },
     text: {
@@ -101,12 +106,12 @@ const theme = createTheme({
     MuiCard: {
       styleOverrides: {
         root: {
-          boxShadow: '0 2px 12px rgba(26, 79, 140, 0.08)',
+          boxShadow: '0 2px 12px rgba(13, 148, 136, 0.08)',
           border: '1px solid #E2E8F0',
           borderRadius: 16,
           transition: 'all 0.2s ease',
           '&:hover': {
-            boxShadow: '0 4px 20px rgba(26, 79, 140, 0.12)',
+            boxShadow: '0 4px 20px rgba(13, 148, 136, 0.12)',
           },
         },
       },
@@ -120,9 +125,9 @@ const theme = createTheme({
           fontSize: { xs: '0.8rem', md: '0.9rem' },
         },
         contained: {
-          backgroundColor: '#1A4F8C',
+          backgroundColor: '#0D9488',
           '&:hover': {
-            backgroundColor: '#0D3A6A',
+            backgroundColor: '#0F766E',
           },
         },
       },
@@ -132,25 +137,6 @@ const theme = createTheme({
         root: {
           paddingLeft: { xs: '16px', sm: '24px' },
           paddingRight: { xs: '16px', sm: '24px' }
-        }
-      }
-    },
-    MuiBottomNavigation: {
-      styleOverrides: {
-        root: {
-          height: '65px',
-        }
-      }
-    },
-    MuiBottomNavigationAction: {
-      styleOverrides: {
-        root: {
-          minWidth: 'auto',
-          padding: '8px 12px',
-          '& .MuiBottomNavigationAction-label': {
-            fontSize: '0.7rem',
-            marginTop: '4px'
-          }
         }
       }
     }
@@ -186,24 +172,34 @@ const UserMenu = () => {
   return (
     <div>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Chip 
-          avatar={
-            <Avatar sx={{ width: 28, height: 28, bgcolor: '#1A4F8C', fontSize: '0.8rem' }}>
-              {user.name?.charAt(0).toUpperCase()}
-            </Avatar>
-          }
-          label={user.name}
-          variant="outlined"
-          onClick={handleMenu}
-          sx={{ 
-            cursor: 'pointer', 
-            borderColor: '#1A4F8C',
-            '& .MuiChip-label': { 
-              display: { xs: 'none', sm: 'block' },
-              fontSize: { xs: '0.8rem', md: '0.9rem' }
+        <Badge
+          overlap="circular"
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          variant="dot"
+          sx={{
+            '& .MuiBadge-dot': {
+              backgroundColor: '#10B981',
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              border: '2px solid white'
             }
           }}
-        />
+        >
+          <Avatar 
+            sx={{ 
+              width: 36, 
+              height: 36, 
+              background: 'linear-gradient(135deg, #0D9488 0%, #F59E0B 100%)',
+              cursor: 'pointer',
+              fontWeight: 600,
+              fontSize: '0.9rem'
+            }}
+            onClick={handleMenu}
+          >
+            {user.name?.charAt(0).toUpperCase()}
+          </Avatar>
+        </Badge>
       </Box>
       <Menu
         anchorEl={anchorEl}
@@ -225,11 +221,15 @@ const UserMenu = () => {
           </Box>
         </MenuItem>
         <MenuItem onClick={() => handleNavigate('/progress')}>
-          <Analytics sx={{ mr: 2, fontSize: '1.2rem', color: '#1A4F8C' }} />
+          <Analytics sx={{ mr: 2, fontSize: '1.2rem', color: '#0D9488' }} />
           <Typography variant="body2">My Progress</Typography>
         </MenuItem>
+        <MenuItem onClick={() => handleNavigate('/calendar')}>
+          <CalendarMonth sx={{ mr: 2, fontSize: '1.2rem', color: '#0D9488' }} />
+          <Typography variant="body2">My Calendar</Typography>
+        </MenuItem>
         <MenuItem onClick={() => handleNavigate('/settings')}>
-          <SettingsIcon sx={{ mr: 2, fontSize: '1.2rem', color: '#1A4F8C' }} />
+          <SettingsIcon sx={{ mr: 2, fontSize: '1.2rem', color: '#0D9488' }} />
           <Typography variant="body2">Settings</Typography>
         </MenuItem>
         <MenuItem onClick={handleLogout} sx={{ color: '#DC2626' }}>
@@ -241,168 +241,6 @@ const UserMenu = () => {
   );
 };
 
-// Auth Buttons Component
-const AuthButtons = ({ onAuthAction }) => {
-  const { user } = useAuth();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-
-  const handleGetStarted = () => {
-    if (onAuthAction) {
-      onAuthAction('register');
-    }
-  };
-
-  const handleLogin = () => {
-    if (onAuthAction) {
-      onAuthAction('login');
-    }
-  };
-
-  if (user) return <UserMenu />;
-
-  return (
-    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-      {!isMobile && (
-        <Button
-          onClick={handleLogin}
-          variant="text"
-          sx={{ 
-            color: 'text.primary',
-            fontWeight: 600
-          }}
-        >
-          Sign In
-        </Button>
-      )}
-      <Button
-        onClick={handleGetStarted}
-        variant="contained"
-        size={isMobile ? "small" : "medium"}
-        sx={{ 
-          backgroundColor: '#1A4F8C',
-          '&:hover': {
-            backgroundColor: '#0D3A6A',
-          }
-        }}
-      >
-        {isMobile ? 'Start' : 'Get Started'}
-      </Button>
-    </Box>
-  );
-};
-
-// Mobile Navigation Drawer
-const MobileDrawer = ({ open, onClose, onAuthAction }) => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const { user } = useAuth();
-
-  const navigationItems = [
-    { label: 'Home', icon: <HomeIcon />, path: '/' },
-    { label: 'Progress', icon: <Analytics />, path: '/progress' },
-    { label: 'Prayers', icon: <Schedule />, path: '/prayers' },
-    { label: 'Quran', icon: <Book />, path: '/quran' },
-    { label: 'Settings', icon: <SettingsIcon />, path: '/settings' },
-  ];
-
-  const handleNavigation = (path) => {
-    navigate(path);
-    onClose();
-  };
-
-  return (
-    <Drawer
-      anchor="left"
-      open={open}
-      onClose={onClose}
-      PaperProps={{
-        sx: {
-          width: 280,
-          backgroundColor: 'background.paper'
-        }
-      }}
-    >
-      <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E2E8F0' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Mosque sx={{ fontSize: 28, color: '#1A4F8C', mr: 1.5 }} />
-          <Typography variant="h6" fontWeight="700">
-            Muslim<span style={{ color: '#D4AF37' }}>Journal</span>
-          </Typography>
-        </Box>
-        <IconButton onClick={onClose} size="small">
-          <Close />
-        </IconButton>
-      </Box>
-
-      <List sx={{ mt: 1, px: 1 }}>
-        {navigationItems.map((item) => (
-          <ListItem 
-            key={item.path}
-            onClick={() => handleNavigation(item.path)}
-            sx={{
-              cursor: 'pointer',
-              backgroundColor: location.pathname === item.path ? 'rgba(26, 79, 140, 0.08)' : 'transparent',
-              margin: '4px 0',
-              borderRadius: 2,
-              '&:hover': {
-                backgroundColor: 'rgba(26, 79, 140, 0.04)'
-              }
-            }}
-          >
-            <ListItemIcon sx={{ 
-              color: location.pathname === item.path ? '#1A4F8C' : 'text.secondary',
-              minWidth: 40 
-            }}>
-              {item.icon}
-            </ListItemIcon>
-            <ListItemText 
-              primary={item.label}
-              primaryTypographyProps={{ 
-                fontWeight: location.pathname === item.path ? 600 : 400,
-                fontSize: '0.9rem'
-              }}
-            />
-          </ListItem>
-        ))}
-      </List>
-
-      {!user && (
-        <Box sx={{ p: 2, mt: 'auto', borderTop: '1px solid #E2E8F0' }}>
-          <Button
-            fullWidth
-            variant="contained"
-            onClick={() => {
-              onAuthAction('register');
-              onClose();
-            }}
-            sx={{
-              backgroundColor: '#1A4F8C',
-              mb: 1,
-              borderRadius: 2,
-            }}
-          >
-            Get Started
-          </Button>
-          <Button
-            fullWidth
-            variant="outlined"
-            onClick={() => {
-              onAuthAction('login');
-              onClose();
-            }}
-            sx={{
-              borderRadius: 2,
-              borderColor: '#E2E8F0',
-            }}
-          >
-            Sign In
-          </Button>
-        </Box>
-      )}
-    </Drawer>
-  );
-};
-
 // Mobile Bottom Navigation
 const MobileBottomNav = () => {
   const location = useLocation();
@@ -411,7 +249,7 @@ const MobileBottomNav = () => {
   const navigationItems = [
     { label: 'Home', icon: <HomeIcon />, path: '/' },
     { label: 'Prayers', icon: <Schedule />, path: '/prayers' },
-    { label: 'Quran', icon: <Book />, path: '/quran' },
+    { label: 'Calendar', icon: <CalendarMonth />, path: '/calendar' },
     { label: 'Progress', icon: <TrendingUp />, path: '/progress' },
   ];
 
@@ -423,7 +261,6 @@ const MobileBottomNav = () => {
       right: 0, 
       zIndex: 1000,
       borderTop: '1px solid #E2E8F0',
-      borderRadius: '16px 16px 0 0'
     }} elevation={3}>
       <BottomNavigation
         value={location.pathname}
@@ -441,7 +278,7 @@ const MobileBottomNav = () => {
             value={item.path}
             icon={item.icon}
             sx={{
-              color: location.pathname === item.path ? '#1A4F8C' : '#64748B',
+              color: location.pathname === item.path ? '#0D9488' : '#64748B',
               minWidth: '60px',
               '& .MuiBottomNavigationAction-label': {
                 fontSize: '0.7rem',
@@ -458,17 +295,9 @@ const MobileBottomNav = () => {
 
 // Modern Header Component
 const Header = ({ onAuthAction }) => {
-  const location = useLocation();
   const navigate = useNavigate();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [drawerOpen, setDrawerOpen] = useState(false);
-
-  const navigationItems = [
-    { label: 'Home', path: '/' },
-    { label: 'Progress', path: '/progress' },
-    { label: 'Prayers', path: '/prayers' },
-    { label: 'Quran', path: '/quran' },
-  ];
 
   return (
     <>
@@ -496,43 +325,34 @@ const Header = ({ onAuthAction }) => {
               }} 
               onClick={() => navigate('/')}
             >
-              <Mosque sx={{ fontSize: { xs: 26, md: 30 }, color: '#1A4F8C', mr: 1.5 }} />
+              <Box
+                sx={{
+                  width: { xs: 32, md: 36 },
+                  height: { xs: 32, md: 36 },
+                  backgroundColor: 'rgba(13, 148, 136, 0.1)',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mr: 1.5,
+                  border: '1px solid rgba(13, 148, 136, 0.2)'
+                }}
+              >
+                <Book sx={{ fontSize: { xs: 18, md: 20 }, color: '#0D9488' }} />
+              </Box>
               <Typography variant="h6" component="div" fontWeight="700">
-                Muslim<span style={{ color: '#D4AF37' }}>Journal</span>
+                Muslim<span style={{ color: '#F59E0B' }}>Diary</span>
               </Typography>
             </Box>
 
-            {/* Desktop Navigation */}
-            <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 1, mr: 3 }}>
-              {navigationItems.map((item) => (
-                <Button
-                  key={item.path}
-                  onClick={() => navigate(item.path)}
-                  sx={{
-                    fontWeight: 600,
-                    color: location.pathname === item.path ? '#1A4F8C' : 'text.primary',
-                    fontSize: '0.9rem',
-                    px: 2,
-                    borderRadius: 2,
-                    backgroundColor: location.pathname === item.path ? 'rgba(26, 79, 140, 0.08)' : 'transparent',
-                    '&:hover': {
-                      backgroundColor: 'rgba(26, 79, 140, 0.04)',
-                    }
-                  }}
-                >
-                  {item.label}
-                </Button>
-              ))}
-            </Box>
-
             {/* Auth Controls */}
-            <AuthButtons onAuthAction={onAuthAction} />
+            <UserMenu />
           </Container>
         </Toolbar>
       </AppBar>
 
       {/* Mobile Drawer */}
-      <MobileDrawer 
+      <MobileNavigationDrawer 
         open={drawerOpen} 
         onClose={() => setDrawerOpen(false)}
         onAuthAction={onAuthAction}
@@ -541,51 +361,109 @@ const Header = ({ onAuthAction }) => {
   );
 };
 
-// PWA Install Prompt Component
-const PWAInstallPrompt = () => {
-  const { isInstallable, installApp } = usePWAInstall();
+// Mobile Navigation Drawer
+const MobileNavigationDrawer = ({ open, onClose, onAuthAction }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
-  if (!isInstallable) return null;
+  const navigationItems = [
+    { label: 'Home', icon: <HomeIcon />, path: '/' },
+    { label: 'Prayer Times', icon: <Schedule />, path: '/prayers' },
+    { label: 'My Calendar', icon: <CalendarMonth />, path: '/calendar' },
+    { label: 'Progress', icon: <Analytics />, path: '/progress' },
+    { label: 'Mosque Finder', icon: <LocationOn />, path: '/mosques' },
+    { label: 'Settings', icon: <SettingsIcon />, path: '/settings' },
+  ];
+
+  const handleNavigation = (path) => {
+    navigate(path);
+    onClose();
+  };
 
   return (
-    <Box
-      sx={{
-        position: 'fixed',
-        bottom: { xs: 72, md: 24 },
-        right: { xs: 16, md: 24 },
-        left: { xs: 16, md: 'auto' },
-        backgroundColor: '#1A4F8C',
-        color: 'white',
-        padding: '12px 16px',
-        borderRadius: 12,
-        cursor: 'pointer',
-        boxShadow: '0 4px 20px rgba(26, 79, 140, 0.3)',
-        zIndex: 1001,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: 2,
-        fontSize: '0.8rem',
-        fontWeight: '600',
-        textAlign: 'center'
+    <Drawer
+      anchor="left"
+      open={open}
+      onClose={onClose}
+      PaperProps={{
+        sx: {
+          width: 280,
+          backgroundColor: 'background.paper'
+        }
       }}
-      onClick={installApp}
     >
-      <Box
-        sx={{
-          width: 24,
-          height: 24,
-          backgroundColor: 'rgba(255, 255, 255, 0.2)',
-          borderRadius: 6,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}
-      >
-        <Typography sx={{ fontSize: '14px' }}>📱</Typography>
+      <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #E2E8F0' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Box
+            sx={{
+              width: 32,
+              height: 32,
+              backgroundColor: 'rgba(13, 148, 136, 0.1)',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              mr: 1.5,
+              border: '1px solid rgba(13, 148, 136, 0.2)'
+            }}
+          >
+            <Book sx={{ fontSize: 18, color: '#0D9488' }} />
+          </Box>
+          <Typography variant="h6" fontWeight="700">
+            Muslim<span style={{ color: '#F59E0B' }}>Diary</span>
+          </Typography>
+        </Box>
+        <IconButton onClick={onClose} size="small">
+          <Close />
+        </IconButton>
       </Box>
-      Install App
-    </Box>
+
+      <List sx={{ mt: 1, px: 1 }}>
+        {navigationItems.map((item) => (
+          <ListItem 
+            key={item.path}
+            onClick={() => handleNavigation(item.path)}
+            sx={{
+              cursor: 'pointer',
+              backgroundColor: location.pathname === item.path ? 'rgba(13, 148, 136, 0.08)' : 'transparent',
+              margin: '4px 0',
+              borderRadius: 2,
+              '&:hover': {
+                backgroundColor: 'rgba(13, 148, 136, 0.04)'
+              }
+            }}
+          >
+            <ListItemIcon sx={{ 
+              color: location.pathname === item.path ? '#0D9488' : 'text.secondary',
+              minWidth: 40 
+            }}>
+              {item.icon}
+            </ListItemIcon>
+            <ListItemText 
+              primary={item.label}
+              primaryTypographyProps={{ 
+                fontWeight: location.pathname === item.path ? 600 : 400,
+                fontSize: '0.9rem'
+              }}
+            />
+          </ListItem>
+        ))}
+      </List>
+
+      {/* WhatsApp Integration Info */}
+      <Box sx={{ p: 2, mt: 'auto', borderTop: '1px solid #E2E8F0' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+          <Chat sx={{ fontSize: 16, color: '#0D9488', mr: 1 }} />
+          <Typography variant="subtitle2" fontWeight="600">
+            WhatsApp Reminders
+          </Typography>
+        </Box>
+        <Typography variant="caption" color="text.secondary">
+          Get prayer times, Quran verses, and daily reminders directly on WhatsApp
+        </Typography>
+      </Box>
+    </Drawer>
   );
 };
 
@@ -623,7 +501,8 @@ function App() {
                   <Route path="/" element={<Home onAuthAction={handleAuthAction} />} />
                   <Route path="/progress" element={<Progress />} />
                   <Route path="/prayers" element={<div>Prayers Page</div>} />
-                  <Route path="/quran" element={<div>Quran Page</div>} />
+                  <Route path="/calendar" element={<Calendar />} />
+                  <Route path="/mosques" element={<div>Mosque Finder</div>} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="*" element={<Home onAuthAction={handleAuthAction} />} />
                 </Routes>
@@ -633,8 +512,6 @@ function App() {
               <Box sx={{ display: { xs: 'block', md: 'none' } }}>
                 <MobileBottomNav />
               </Box>
-
-              <PWAInstallPrompt />
 
               <AuthModal 
                 open={authModalOpen}
