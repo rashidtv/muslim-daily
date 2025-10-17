@@ -4,11 +4,13 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { usePWAInstall } from './hooks/usePWAInstall';
 import { PracticeProvider } from './context/PracticeContext';
+import { AuthProvider } from './context/AuthContext'; // ← ADD THIS LINE
 
 // Components
 import Home from './pages/Home';
 import Progress from './pages/Progress';
 import Settings from './pages/Settings';
+import AuthModal from './components/Auth/AuthModal'; // ← ADD THIS LINE
 
 // Create theme
 const theme = createTheme({
@@ -104,24 +106,29 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <PracticeProvider>
-        <Router>
-          <div className="App" style={{ minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
-            {/* Main App Content */}
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/progress" element={<Progress />} />
-              <Route path="/settings" element={<Settings />} />
-              
-              {/* Fallback route */}
-              <Route path="*" element={<Home />} />
-            </Routes>
+      <AuthProvider> {/* ← ADD THIS WRAPPER */}
+        <PracticeProvider>
+          <Router>
+            <div className="App" style={{ minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
+              {/* Main App Content */}
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/progress" element={<Progress />} />
+                <Route path="/settings" element={<Settings />} />
+                
+                {/* Fallback route */}
+                <Route path="*" element={<Home />} />
+              </Routes>
 
-            {/* PWA Install Prompt */}
-            <PWAInstallPrompt />
-          </div>
-        </Router>
-      </PracticeProvider>
+              {/* Auth Modal - Will auto-show when no user */} {/* ← ADD THIS LINE */}
+              <AuthModal />
+              
+              {/* PWA Install Prompt */}
+              <PWAInstallPrompt />
+            </div>
+          </Router>
+        </PracticeProvider>
+      </AuthProvider> {/* ← ADD THIS CLOSING TAG */}
     </ThemeProvider>
   );
 }
