@@ -1,18 +1,31 @@
 const express = require('express');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
 const router = express.Router();
 
-// Health check - test if route is working
+// Test route - always works
 router.get('/test', (req, res) => {
-  res.json({ success: true, message: 'Auth routes are working!' });
+  res.json({ 
+    success: true, 
+    message: 'Auth routes are working!',
+    timestamp: new Date().toISOString()
+  });
 });
 
-// Register
+// Safe registration with dependency checking
 router.post('/register', async (req, res) => {
   try {
-    console.log('Registration attempt:', req.body.email);
+    // Check if dependencies are available
+    if (typeof require('bcryptjs') === 'undefined' || 
+        typeof require('jsonwebtoken') === 'undefined') {
+      return res.status(503).json({
+        success: false,
+        error: 'Authentication service temporarily unavailable - dependencies missing'
+      });
+    }
+
+    const bcrypt = require('bcryptjs');
+    const jwt = require('jsonwebtoken');
+    const User = require('../models/User');
+
     const { email, password, name } = req.body;
     
     // Check if user exists
@@ -59,15 +72,27 @@ router.post('/register', async (req, res) => {
     console.error('Registration error:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Registration failed' 
+      error: 'Registration failed: ' + error.message
     });
   }
 });
 
-// Login
+// Safe login
 router.post('/login', async (req, res) => {
   try {
-    console.log('Login attempt:', req.body.email);
+    // Check if dependencies are available
+    if (typeof require('bcryptjs') === 'undefined' || 
+        typeof require('jsonwebtoken') === 'undefined') {
+      return res.status(503).json({
+        success: false,
+        error: 'Authentication service temporarily unavailable - dependencies missing'
+      });
+    }
+
+    const bcrypt = require('bcryptjs');
+    const jwt = require('jsonwebtoken');
+    const User = require('../models/User');
+
     const { email, password } = req.body;
     
     // Find user
@@ -110,7 +135,7 @@ router.post('/login', async (req, res) => {
     console.error('Login error:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Login failed' 
+      error: 'Login failed: ' + error.message
     });
   }
 });
