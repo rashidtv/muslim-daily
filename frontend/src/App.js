@@ -39,20 +39,19 @@ import {
   Book,
   Schedule,
   TrendingUp,
-  Notifications,
   CalendarMonth,
-  Chat,
   LocationOn
 } from '@mui/icons-material';
-// In your App.js, update the imports section:
-import Home from './pages/Home';
-import Progress from './pages/Progress';
-import Settings from './pages/Settings';
-import Calendar from './pages/Calendar'; // Add this
-import AuthModal from './components/Auth/AuthModal';
 import { usePWAInstall } from './hooks/usePWAInstall';
 import { PracticeProvider } from './context/PracticeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+
+// Components
+import Home from './pages/Home';
+import Progress from './pages/Progress';
+import Settings from './pages/Settings';
+import Calendar from './pages/Calendar';
+import AuthModal from './components/Auth/AuthModal';
 
 // Calming color scheme - Teal & Amber
 const theme = createTheme({
@@ -240,123 +239,51 @@ const UserMenu = () => {
   );
 };
 
-// Mobile Bottom Navigation
-const MobileBottomNav = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
+// Auth Buttons Component - FIXED: Now properly shows Sign In & Get Started
+const AuthButtons = ({ onAuthAction }) => {
+  const { user } = useAuth();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-  const navigationItems = [
-    { label: 'Home', icon: <HomeIcon />, path: '/' },
-    { label: 'Prayers', icon: <Schedule />, path: '/prayers' },
-    { label: 'Calendar', icon: <CalendarMonth />, path: '/calendar' },
-    { label: 'Progress', icon: <TrendingUp />, path: '/progress' },
-  ];
+  const handleGetStarted = () => {
+    if (onAuthAction) {
+      onAuthAction('register');
+    }
+  };
+
+  const handleLogin = () => {
+    if (onAuthAction) {
+      onAuthAction('login');
+    }
+  };
+
+  if (user) return <UserMenu />;
 
   return (
-    <Paper sx={{ 
-      position: 'fixed', 
-      bottom: 0, 
-      left: 0, 
-      right: 0, 
-      zIndex: 1000,
-      borderTop: '1px solid #E2E8F0',
-    }} elevation={3}>
-      <BottomNavigation
-        value={location.pathname}
-        onChange={(event, newValue) => navigate(newValue)}
-        showLabels
-        sx={{
-          backgroundColor: 'background.paper',
-          height: '65px'
+    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+      <Button
+        onClick={handleLogin}
+        variant="text"
+        sx={{ 
+          color: 'text.primary',
+          fontWeight: 600
         }}
       >
-        {navigationItems.map((item) => (
-          <BottomNavigationAction
-            key={item.path}
-            label={item.label}
-            value={item.path}
-            icon={item.icon}
-            sx={{
-              color: location.pathname === item.path ? '#0D9488' : '#64748B',
-              minWidth: '60px',
-              '& .MuiBottomNavigationAction-label': {
-                fontSize: '0.7rem',
-                fontWeight: location.pathname === item.path ? 600 : 400,
-                mt: 0.5
-              },
-            }}
-          />
-        ))}
-      </BottomNavigation>
-    </Paper>
-  );
-};
-
-// Modern Header Component
-const Header = ({ onAuthAction }) => {
-  const navigate = useNavigate();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const [drawerOpen, setDrawerOpen] = useState(false);
-
-  return (
-    <>
-      <AppBar position="sticky" elevation={1}>
-        <Toolbar sx={{ minHeight: { xs: '60px', md: '68px' }, py: 1 }}>
-          <Container maxWidth="lg" sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-            {/* Mobile Menu Button */}
-            {isMobile && (
-              <IconButton
-                edge="start"
-                sx={{ mr: 1 }}
-                onClick={() => setDrawerOpen(true)}
-              >
-                <MenuIcon />
-              </IconButton>
-            )}
-
-            {/* Logo */}
-            <Box 
-              sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                flexGrow: 1, 
-                cursor: 'pointer' 
-              }} 
-              onClick={() => navigate('/')}
-            >
-              <Box
-                sx={{
-                  width: { xs: 32, md: 36 },
-                  height: { xs: 32, md: 36 },
-                  backgroundColor: 'rgba(13, 148, 136, 0.1)',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  mr: 1.5,
-                  border: '1px solid rgba(13, 148, 136, 0.2)'
-                }}
-              >
-                <Book sx={{ fontSize: { xs: 18, md: 20 }, color: '#0D9488' }} />
-              </Box>
-              <Typography variant="h6" component="div" fontWeight="700">
-                Muslim<span style={{ color: '#F59E0B' }}>Diary</span>
-              </Typography>
-            </Box>
-
-            {/* Auth Controls */}
-            <UserMenu />
-          </Container>
-        </Toolbar>
-      </AppBar>
-
-      {/* Mobile Drawer */}
-      <MobileNavigationDrawer 
-        open={drawerOpen} 
-        onClose={() => setDrawerOpen(false)}
-        onAuthAction={onAuthAction}
-      />
-    </>
+        Sign In
+      </Button>
+      <Button
+        onClick={handleGetStarted}
+        variant="contained"
+        size={isMobile ? "small" : "medium"}
+        sx={{ 
+          backgroundColor: '#0D9488',
+          '&:hover': {
+            backgroundColor: '#0F766E',
+          }
+        }}
+      >
+        {isMobile ? 'Start' : 'Get Started'}
+      </Button>
+    </Box>
   );
 };
 
@@ -450,19 +377,208 @@ const MobileNavigationDrawer = ({ open, onClose, onAuthAction }) => {
         ))}
       </List>
 
-      {/* WhatsApp Integration Info */}
-      <Box sx={{ p: 2, mt: 'auto', borderTop: '1px solid #E2E8F0' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-          <Chat sx={{ fontSize: 16, color: '#0D9488', mr: 1 }} />
-          <Typography variant="subtitle2" fontWeight="600">
-            WhatsApp Reminders
-          </Typography>
+      {!user && (
+        <Box sx={{ p: 2, mt: 'auto', borderTop: '1px solid #E2E8F0' }}>
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={() => {
+              onAuthAction('register');
+              onClose();
+            }}
+            sx={{
+              backgroundColor: '#0D9488',
+              mb: 1,
+              borderRadius: 2,
+            }}
+          >
+            Get Started
+          </Button>
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={() => {
+              onAuthAction('login');
+              onClose();
+            }}
+            sx={{
+              borderRadius: 2,
+              borderColor: '#E2E8F0',
+            }}
+          >
+            Sign In
+          </Button>
         </Box>
-        <Typography variant="caption" color="text.secondary">
-          Get prayer times, Quran verses, and daily reminders directly on WhatsApp
-        </Typography>
-      </Box>
+      )}
     </Drawer>
+  );
+};
+
+// Mobile Bottom Navigation
+const MobileBottomNav = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const navigationItems = [
+    { label: 'Home', icon: <HomeIcon />, path: '/' },
+    { label: 'Prayers', icon: <Schedule />, path: '/prayers' },
+    { label: 'Calendar', icon: <CalendarMonth />, path: '/calendar' },
+    { label: 'Progress', icon: <TrendingUp />, path: '/progress' },
+  ];
+
+  return (
+    <Paper sx={{ 
+      position: 'fixed', 
+      bottom: 0, 
+      left: 0, 
+      right: 0, 
+      zIndex: 1000,
+      borderTop: '1px solid #E2E8F0',
+    }} elevation={3}>
+      <BottomNavigation
+        value={location.pathname}
+        onChange={(event, newValue) => navigate(newValue)}
+        showLabels
+        sx={{
+          backgroundColor: 'background.paper',
+          height: '65px'
+        }}
+      >
+        {navigationItems.map((item) => (
+          <BottomNavigationAction
+            key={item.path}
+            label={item.label}
+            value={item.path}
+            icon={item.icon}
+            sx={{
+              color: location.pathname === item.path ? '#0D9488' : '#64748B',
+              minWidth: '60px',
+              '& .MuiBottomNavigationAction-label': {
+                fontSize: '0.7rem',
+                fontWeight: location.pathname === item.path ? 600 : 400,
+                mt: 0.5
+              },
+            }}
+          />
+        ))}
+      </BottomNavigation>
+    </Paper>
+  );
+};
+
+// Modern Header Component - FIXED: Now includes AuthButtons
+const Header = ({ onAuthAction }) => {
+  const navigate = useNavigate();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  return (
+    <>
+      <AppBar position="sticky" elevation={1}>
+        <Toolbar sx={{ minHeight: { xs: '60px', md: '68px' }, py: 1 }}>
+          <Container maxWidth="lg" sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+            {/* Mobile Menu Button */}
+            {isMobile && (
+              <IconButton
+                edge="start"
+                sx={{ mr: 1 }}
+                onClick={() => setDrawerOpen(true)}
+              >
+                <MenuIcon />
+              </IconButton>
+            )}
+
+            {/* Logo */}
+            <Box 
+              sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                flexGrow: 1, 
+                cursor: 'pointer' 
+              }} 
+              onClick={() => navigate('/')}
+            >
+              <Box
+                sx={{
+                  width: { xs: 32, md: 36 },
+                  height: { xs: 32, md: 36 },
+                  backgroundColor: 'rgba(13, 148, 136, 0.1)',
+                  borderRadius: '50%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mr: 1.5,
+                  border: '1px solid rgba(13, 148, 136, 0.2)'
+                }}
+              >
+                <Book sx={{ fontSize: { xs: 18, md: 20 }, color: '#0D9488' }} />
+              </Box>
+              <Typography variant="h6" component="div" fontWeight="700">
+                Muslim<span style={{ color: '#F59E0B' }}>Diary</span>
+              </Typography>
+            </Box>
+
+            {/* Auth Controls - FIXED: Now properly visible */}
+            <AuthButtons onAuthAction={onAuthAction} />
+          </Container>
+        </Toolbar>
+      </AppBar>
+
+      {/* Mobile Drawer */}
+      <MobileNavigationDrawer 
+        open={drawerOpen} 
+        onClose={() => setDrawerOpen(false)}
+        onAuthAction={onAuthAction}
+      />
+    </>
+  );
+};
+
+// PWA Install Prompt Component
+const PWAInstallPrompt = () => {
+  const { isInstallable, installApp } = usePWAInstall();
+
+  if (!isInstallable) return null;
+
+  return (
+    <Box
+      sx={{
+        position: 'fixed',
+        bottom: { xs: 72, md: 24 },
+        right: { xs: 16, md: 24 },
+        left: { xs: 16, md: 'auto' },
+        backgroundColor: '#0D9488',
+        color: 'white',
+        padding: '12px 16px',
+        borderRadius: 12,
+        cursor: 'pointer',
+        boxShadow: '0 4px 20px rgba(13, 148, 136, 0.3)',
+        zIndex: 1001,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 2,
+        fontSize: '0.8rem',
+        fontWeight: '600',
+        textAlign: 'center'
+      }}
+      onClick={installApp}
+    >
+      <Box
+        sx={{
+          width: 24,
+          height: 24,
+          backgroundColor: 'rgba(255, 255, 255, 0.2)',
+          borderRadius: 6,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}
+      >
+        <Typography sx={{ fontSize: '14px' }}>📱</Typography>
+      </Box>
+      Install App
+    </Box>
   );
 };
 
@@ -499,9 +615,9 @@ function App() {
                 <Routes>
                   <Route path="/" element={<Home onAuthAction={handleAuthAction} />} />
                   <Route path="/progress" element={<Progress />} />
-                  <Route path="/prayers" element={<div>Prayers Page</div>} />
+                  <Route path="/prayers" element={<PrayerTimesComingSoon />} />
                   <Route path="/calendar" element={<Calendar />} />
-                  <Route path="/mosques" element={<div>Mosque Finder</div>} />
+                  <Route path="/mosques" element={<MosqueFinderComingSoon />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="*" element={<Home onAuthAction={handleAuthAction} />} />
                 </Routes>
@@ -511,6 +627,8 @@ function App() {
               <Box sx={{ display: { xs: 'block', md: 'none' } }}>
                 <MobileBottomNav />
               </Box>
+
+              <PWAInstallPrompt />
 
               <AuthModal 
                 open={authModalOpen}
@@ -524,5 +642,28 @@ function App() {
     </ThemeProvider>
   );
 }
+
+// Simple Coming Soon Components
+const PrayerTimesComingSoon = () => (
+  <Container maxWidth="lg" sx={{ py: 3, textAlign: 'center' }}>
+    <Typography variant="h4" fontWeight="700" gutterBottom>
+      Prayer Times
+    </Typography>
+    <Typography variant="h6" color="text.secondary">
+      Coming Soon
+    </Typography>
+  </Container>
+);
+
+const MosqueFinderComingSoon = () => (
+  <Container maxWidth="lg" sx={{ py: 3, textAlign: 'center' }}>
+    <Typography variant="h4" fontWeight="700" gutterBottom>
+      Mosque Finder
+    </Typography>
+    <Typography variant="h6" color="text.secondary">
+      Coming Soon
+    </Typography>
+  </Container>
+);
 
 export default App;

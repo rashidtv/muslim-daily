@@ -750,15 +750,10 @@ const getSamplePrayerTimes = (zoneCode) => {
 
         {/* Footer Info */}
         <Box sx={{ mt: 2, textAlign: 'center' }}>
-          <Typography variant="caption" color="text.secondary">
-            {prayerTimes?.method} • Zone: {selectedZone}
-            {usingGPS && ' • GPS Auto-detection Active'}
-          </Typography>
-          <br />
-          <Typography variant="caption" color="text.secondary">
-            Live data from JAKIM e-solat.gov.my • 12-hour format
-          </Typography>
-        </Box>
+  <Typography variant="caption" color="text.secondary">
+    Live data from JAKIM • Zone: {selectedZone}
+  </Typography>
+</Box>
       </CardContent>
     </Card>
   );
