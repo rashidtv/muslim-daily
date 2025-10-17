@@ -9,8 +9,7 @@ import {
   Container,
   Chip,
   useTheme,
-  useMediaQuery,
-  alpha
+  useMediaQuery
 } from '@mui/material';
 import {
   AccessTime,
@@ -19,9 +18,8 @@ import {
   Psychology,
   Mosque,
   PlayArrow,
-  Explore,
-  SelfImprovement,
-  Spa
+  Star,
+  CheckCircle
 } from '@mui/icons-material';
 import { useAuth } from '../context/AuthContext';
 import PrayerTimes from '../components/PrayerTimes/PrayerTimes';
@@ -33,32 +31,28 @@ const Home = ({ onAuthAction }) => {
 
   const features = [
     {
-      icon: <SelfImprovement sx={{ fontSize: { xs: 32, md: 40 } }} />,
-      title: 'Mindful Practice',
-      description: 'Transform your daily prayers into mindful moments with guided reflections',
-      gradient: 'linear-gradient(135deg, #6366F1 0%, #818CF8 100%)',
-      color: '#6366F1'
+      icon: <AccessTime sx={{ fontSize: { xs: 24, md: 32 } }} />,
+      title: 'Prayer Times',
+      description: 'Accurate prayer times with notifications',
+      color: '#1A4F8C'
     },
     {
-      icon: <AccessTime sx={{ fontSize: { xs: 32, md: 40 } }} />,
-      title: 'Intelligent Timing',
-      description: 'Smart prayer times that adapt to your location and preferences',
-      gradient: 'linear-gradient(135deg, #F59E0B 0%, #FBBF24 100%)',
-      color: '#F59E0B'
+      icon: <MenuBook sx={{ fontSize: { xs: 24, md: 32 } }} />,
+      title: 'Quran Journey',
+      description: 'Track your Quran reading progress',
+      color: '#D4AF37'
     },
     {
-      icon: <MenuBook sx={{ fontSize: { xs: 32, md: 40 } }} />,
-      title: 'Sacred Journey',
-      description: 'Personalized Quran reading plans that grow with your spiritual journey',
-      gradient: 'linear-gradient(135deg, #10B981 0%, #34D399 100%)',
-      color: '#10B981'
+      icon: <TrendingUp sx={{ fontSize: { xs: 24, md: 32 } }} />,
+      title: 'Progress Tracking',
+      description: 'Monitor your spiritual growth',
+      color: '#0D9488'
     },
     {
-      icon: <Psychology sx={{ fontSize: { xs: 32, md: 40 } }} />,
-      title: 'Soul Analytics',
-      description: 'Deep insights into your spiritual growth and consistency patterns',
-      gradient: 'linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%)',
-      color: '#8B5CF6'
+      icon: <Psychology sx={{ fontSize: { xs: 24, md: 32 } }} />,
+      title: 'Dhikr Counter',
+      description: 'Count your daily remembrance',
+      color: '#7C3AED'
     }
   ];
 
@@ -69,94 +63,56 @@ const Home = ({ onAuthAction }) => {
   };
 
   return (
-    <Box sx={{ pb: { xs: 2, md: 0 } }}>
+    <Box sx={{ pb: { xs: 1, md: 0 } }}>
       {/* Hero Section */}
       <Box sx={{ 
         textAlign: 'center', 
-        mb: { xs: 4, md: 6 },
-        position: 'relative',
-        overflow: 'hidden',
-        mx: { xs: -2, sm: -3, md: 0 }
+        mb: { xs: 3, md: 4 },
+        pt: { xs: 1, md: 2 }
       }}>
-        {/* Background Elements */}
-        <Box
-          sx={{
-            position: 'absolute',
-            top: -100,
-            right: -100,
-            width: 300,
-            height: 300,
-            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(245, 158, 11, 0.1) 100%)',
-            borderRadius: '50%',
-            filter: 'blur(40px)'
-          }}
-        />
-        <Box
-          sx={{
-            position: 'absolute',
-            bottom: -100,
-            left: -100,
-            width: 250,
-            height: 250,
-            background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%)',
-            borderRadius: '50%',
-            filter: 'blur(40px)'
-          }}
-        />
-        
-        <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
+        <Container maxWidth="md">
           <Box
             sx={{
-              width: { xs: 80, md: 120 },
-              height: { xs: 80, md: 120 },
-              background: 'linear-gradient(135deg, #6366F1 0%, #F59E0B 100%)',
+              width: { xs: 70, md: 90 },
+              height: { xs: 70, md: 90 },
+              backgroundColor: 'rgba(26, 79, 140, 0.1)',
               borderRadius: '50%',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              margin: '0 auto 24px',
-              boxShadow: '0 20px 60px rgba(99, 102, 241, 0.3)'
+              margin: '0 auto 16px',
+              border: '2px solid rgba(26, 79, 140, 0.2)'
             }}
           >
-            <Spa sx={{ fontSize: { xs: 40, md: 60 }, color: 'white' }} />
+            <Mosque sx={{ fontSize: { xs: 32, md: 42 }, color: '#1A4F8C' }} />
           </Box>
           
           <Typography 
-            variant={isMobile ? "h4" : "h3"} 
-            fontWeight="800" 
+            variant={isMobile ? "h5" : "h4"} 
+            fontWeight="700" 
             gutterBottom
-            sx={{ 
-              px: { xs: 1, md: 0 },
-              mb: 2
-            }}
+            sx={{ mb: 1 }}
           >
-            Your Sacred Space for
+            Welcome to Muslim
             <Box 
               component="span" 
-              sx={{ 
-                background: 'linear-gradient(135deg, #6366F1 0%, #F59E0B 100%)',
-                backgroundClip: 'text',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
-                display: 'block'
-              }}
+              sx={{ color: '#D4AF37' }}
             >
-              Modern Spirituality
+              Journal
             </Box>
           </Typography>
           
           <Typography 
-            variant={isMobile ? "body1" : "h6"} 
+            variant={isMobile ? "body2" : "body1"} 
             sx={{ 
               color: 'text.secondary', 
-              mb: 4, 
-              px: { xs: 1, md: 0 },
-              maxWidth: 600,
+              mb: 3,
+              maxWidth: 500,
               margin: '0 auto',
-              lineHeight: 1.6
+              lineHeight: 1.5
             }}
           >
-            A thoughtfully designed companion that brings peace, mindfulness, and consistency to your spiritual practice
+            Your personal companion for tracking prayers, Quran reading, and spiritual growth
           </Typography>
           
           {!user && (
@@ -166,34 +122,31 @@ const Home = ({ onAuthAction }) => {
               endIcon={<PlayArrow />}
               onClick={handleGetStarted}
               sx={{
-                background: 'linear-gradient(135deg, #6366F1 0%, #818CF8 100%)',
-                boxShadow: '0 8px 30px rgba(99, 102, 241, 0.4)',
-                '&:hover': { 
-                  transform: 'translateY(-3px)',
-                  boxShadow: '0 12px 40px rgba(99, 102, 241, 0.5)',
+                backgroundColor: '#1A4F8C',
+                '&:hover': {
+                  backgroundColor: '#0D3A6A',
                 },
-                px: { xs: 4, md: 6 },
-                py: { xs: 1.5, md: 2 },
-                borderRadius: 3,
-                fontWeight: 700,
-                fontSize: { xs: '1rem', md: '1.1rem' },
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                px: { xs: 3, md: 4 },
+                py: { xs: 1, md: 1.5 },
+                borderRadius: 2,
+                fontWeight: 600,
               }}
             >
-              Begin Your Journey
+              Start Your Journey
             </Button>
           )}
           {user && (
             <Chip 
-              label={`Welcome to your sacred space, ${user.name}`}
+              icon={<CheckCircle sx={{ fontSize: 16 }} />}
+              label={`Welcome back, ${user.name}`}
               sx={{ 
-                background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(245, 158, 11, 0.1) 100%)',
-                color: 'text.primary',
-                border: '1px solid rgba(99, 102, 241, 0.2)',
-                fontSize: { xs: '0.9rem', md: '1rem' },
-                padding: { xs: 1, md: 2 },
+                backgroundColor: 'rgba(26, 79, 140, 0.08)',
+                color: '#1A4F8C',
+                border: '1px solid rgba(26, 79, 140, 0.2)',
+                fontSize: { xs: '0.8rem', md: '0.9rem' },
+                padding: { xs: 1, md: 1.5 },
                 height: 'auto',
-                fontWeight: 600
+                fontWeight: 500
               }}
             />
           )}
@@ -201,77 +154,66 @@ const Home = ({ onAuthAction }) => {
       </Box>
 
       {/* Prayer Times Section */}
-      <Box sx={{ mb: { xs: 4, md: 6 } }}>
+      <Box sx={{ mb: { xs: 3, md: 4 } }}>
         <PrayerTimes />
       </Box>
 
       {/* Features Grid */}
       <Container maxWidth="lg">
         <Typography 
-          variant={isMobile ? "h5" : "h4"} 
+          variant={isMobile ? "h6" : "h5"} 
           textAlign="center" 
-          fontWeight="800" 
+          fontWeight="600" 
           gutterBottom 
-          sx={{ mb: { xs: 3, md: 6 } }}
+          sx={{ mb: { xs: 2, md: 3 } }}
         >
-          Designed for Your Spiritual Growth
+          Your Spiritual Companion
         </Typography>
-        <Grid container spacing={3}>
+        <Grid container spacing={2}>
           {features.map((feature, index) => (
-            <Grid item xs={12} sm={6} key={index}>
+            <Grid item xs={6} key={index}>
               <Card 
                 sx={{ 
                   height: '100%',
-                  background: 'white',
-                  border: '1px solid rgba(99, 102, 241, 0.1)',
-                  position: 'relative',
-                  '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: 4,
-                    background: feature.gradient,
-                    borderTopLeftRadius: 20,
-                    borderTopRightRadius: 20
-                  }
+                  backgroundColor: 'background.paper',
+                  textAlign: 'center',
+                  p: 2,
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                  },
+                  transition: 'transform 0.2s ease'
                 }}
               >
-                <CardContent sx={{ 
-                  textAlign: 'center', 
-                  p: { xs: 3, md: 4 },
-                  pt: { xs: 4, md: 5 } 
-                }}>
+                <CardContent sx={{ p: '0 !important' }}>
                   <Box 
                     sx={{
-                      width: 80,
-                      height: 80,
-                      background: feature.gradient,
+                      width: 50,
+                      height: 50,
+                      backgroundColor: 'rgba(26, 79, 140, 0.1)',
                       borderRadius: '50%',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      margin: '0 auto 20px',
-                      color: 'white'
+                      margin: '0 auto 12px',
+                      color: feature.color
                     }}
                   >
                     {feature.icon}
                   </Box>
                   <Typography 
-                    variant={isMobile ? "h6" : "h5"} 
-                    fontWeight="700" 
+                    variant="subtitle1" 
+                    fontWeight="600" 
                     gutterBottom
-                    sx={{ color: feature.color }}
+                    sx={{ fontSize: { xs: '0.9rem', md: '1rem' } }}
                   >
                     {feature.title}
                   </Typography>
                   <Typography 
-                    variant="body1" 
+                    variant="body2" 
                     color="text.secondary"
                     sx={{ 
-                      fontSize: { xs: '0.875rem', md: '1rem' },
-                      lineHeight: 1.6
+                      fontSize: { xs: '0.75rem', md: '0.8rem' },
+                      lineHeight: 1.4
                     }}
                   >
                     {feature.description}
@@ -285,62 +227,40 @@ const Home = ({ onAuthAction }) => {
 
       {/* Stats Section for Users */}
       {user && (
-        <Container maxWidth="lg" sx={{ mt: { xs: 4, md: 6 } }}>
+        <Container maxWidth="lg" sx={{ mt: { xs: 3, md: 4 } }}>
           <Card sx={{ 
-            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(245, 158, 11, 0.05) 100%)',
-            border: '1px solid rgba(99, 102, 241, 0.1)',
-            borderRadius: 3,
-            position: 'relative',
-            overflow: 'hidden'
+            backgroundColor: 'rgba(26, 79, 140, 0.03)',
+            border: '1px solid rgba(26, 79, 140, 0.1)',
+            borderRadius: 2,
           }}>
-            {/* Background Pattern */}
-            <Box
-              sx={{
-                position: 'absolute',
-                top: 0,
-                right: 0,
-                width: 200,
-                height: 200,
-                background: 'radial-gradient(circle, rgba(99, 102, 241, 0.1) 0%, transparent 70%)',
-                borderRadius: '50%'
-              }}
-            />
-            
             <CardContent sx={{ 
               textAlign: 'center', 
-              p: { xs: 3, md: 4 },
-              position: 'relative',
-              zIndex: 1
+              p: { xs: 2, md: 3 },
             }}>
               <Typography 
-                variant={isMobile ? "h6" : "h5"} 
-                fontWeight="700" 
+                variant={isMobile ? "subtitle1" : "h6"} 
+                fontWeight="600" 
                 gutterBottom 
-                sx={{
-                  background: 'linear-gradient(135deg, #6366F1 0%, #F59E0B 100%)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
+                color="#1A4F8C"
               >
-                Your Spiritual Journey
+                Today's Progress
               </Typography>
-              <Grid container spacing={2} sx={{ mt: 1 }}>
+              <Grid container spacing={1} sx={{ mt: 0.5 }}>
                 {[
-                  { value: '5/5', label: 'Prayers', color: '#10B981' },
-                  { value: '12min', label: 'Meditation', color: '#6366F1' },
-                  { value: '7d', label: 'Streak', color: '#F59E0B' },
-                  { value: '24%', label: 'Growth', color: '#8B5CF6' }
+                  { value: '5/5', label: 'Prayers', color: '#1A4F8C' },
+                  { value: '3p', label: 'Quran', color: '#D4AF37' },
+                  { value: '45', label: 'Dhikr', color: '#0D9488' },
+                  { value: '7d', label: 'Streak', color: '#7C3AED' }
                 ].map((stat, index) => (
-                  <Grid item xs={6} md={3} key={index}>
+                  <Grid item xs={6} sm={3} key={index}>
                     <Typography 
-                      variant={isMobile ? "h5" : "h4"} 
-                      fontWeight="800" 
+                      variant={isMobile ? "h6" : "h5"} 
+                      fontWeight="700" 
                       sx={{ color: stat.color }}
                     >
                       {stat.value}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="caption" color="text.secondary">
                       {stat.label}
                     </Typography>
                   </Grid>
@@ -353,64 +273,27 @@ const Home = ({ onAuthAction }) => {
 
       {/* Call to Action for Non-Users */}
       {!user && (
-        <Container maxWidth="md" sx={{ mt: { xs: 4, md: 8 }, textAlign: 'center' }}>
+        <Container maxWidth="sm" sx={{ mt: { xs: 3, md: 4 }, textAlign: 'center' }}>
           <Card sx={{ 
-            background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(245, 158, 11, 0.05) 100%)',
-            border: '1px solid rgba(99, 102, 241, 0.1)',
-            borderRadius: 3,
-            py: { xs: 4, md: 6 },
-            position: 'relative',
-            overflow: 'hidden'
+            backgroundColor: 'rgba(26, 79, 140, 0.05)',
+            border: '1px solid rgba(26, 79, 140, 0.1)',
+            borderRadius: 2,
+            py: { xs: 2, md: 3 },
           }}>
-            {/* Background Elements */}
-            <Box
-              sx={{
-                position: 'absolute',
-                top: -50,
-                left: -50,
-                width: 100,
-                height: 100,
-                background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, transparent 50%)',
-                borderRadius: '50%'
-              }}
-            />
-            <Box
-              sx={{
-                position: 'absolute',
-                bottom: -30,
-                right: -30,
-                width: 80,
-                height: 80,
-                background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.1) 0%, transparent 50%)',
-                borderRadius: '50%'
-              }}
-            />
-            
-            <CardContent sx={{ position: 'relative', zIndex: 1 }}>
+            <CardContent>
               <Typography 
-                variant={isMobile ? "h5" : "h4"} 
-                fontWeight="800" 
+                variant={isMobile ? "subtitle1" : "h6"} 
+                fontWeight="600" 
                 gutterBottom
-                sx={{
-                  background: 'linear-gradient(135deg, #6366F1 0%, #F59E0B 100%)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}
+                color="#1A4F8C"
               >
-                Ready to Transform Your Practice?
+                Start Your Spiritual Journey
               </Typography>
               <Typography 
-                variant="body1" 
-                sx={{ 
-                  color: 'text.secondary', 
-                  mb: 4,
-                  maxWidth: 500,
-                  margin: '0 auto',
-                  lineHeight: 1.6
-                }}
+                variant="body2" 
+                sx={{ color: 'text.secondary', mb: 2 }}
               >
-                Join a community of mindful practitioners and discover the peace that comes with consistent spiritual growth
+                Join Muslims worldwide in building consistent spiritual habits
               </Typography>
               <Button 
                 variant="contained" 
@@ -418,21 +301,17 @@ const Home = ({ onAuthAction }) => {
                 endIcon={<PlayArrow />}
                 onClick={handleGetStarted}
                 sx={{
-                  background: 'linear-gradient(135deg, #6366F1 0%, #818CF8 100%)',
-                  boxShadow: '0 8px 30px rgba(99, 102, 241, 0.4)',
-                  '&:hover': { 
-                    transform: 'translateY(-3px)',
-                    boxShadow: '0 12px 40px rgba(99, 102, 241, 0.5)',
+                  backgroundColor: '#1A4F8C',
+                  '&:hover': {
+                    backgroundColor: '#0D3A6A',
                   },
-                  px: { xs: 4, md: 6 },
-                  py: { xs: 1.5, md: 2 },
-                  borderRadius: 3,
-                  fontWeight: 700,
-                  fontSize: { xs: '1rem', md: '1.1rem' },
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  px: { xs: 3, md: 4 },
+                  py: { xs: 1, md: 1.5 },
+                  borderRadius: 2,
+                  fontWeight: 600,
                 }}
               >
-                Start Free Journey
+                Get Started Free
               </Button>
             </CardContent>
           </Card>
