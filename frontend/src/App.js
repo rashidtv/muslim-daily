@@ -16,7 +16,13 @@ import {
   Chip,
   BottomNavigation,
   BottomNavigationAction,
-  Paper
+  Paper,
+  Drawer,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  useMediaQuery
 } from '@mui/material';
 import {
   AccountCircle,
@@ -27,7 +33,8 @@ import {
   Home as HomeIcon,
   Analytics,
   Settings as SettingsIcon,
-  Menu as MenuIcon
+  Menu as MenuIcon,
+  Close
 } from '@mui/icons-material';
 import { usePWAInstall } from './hooks/usePWAInstall';
 import { PracticeProvider } from './context/PracticeContext';
@@ -59,10 +66,23 @@ const theme = createTheme({
   },
   typography: {
     fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
-    h4: { fontWeight: 700 },
-    h5: { fontWeight: 600 },
-    h6: { fontWeight: 600 },
-    button: { fontWeight: 600, textTransform: 'none' },
+    h4: { 
+      fontWeight: 700,
+      fontSize: { xs: '1.75rem', md: '2.125rem' }
+    },
+    h5: { 
+      fontWeight: 600,
+      fontSize: { xs: '1.5rem', md: '1.75rem' }
+    },
+    h6: { 
+      fontWeight: 600,
+      fontSize: { xs: '1.25rem', md: '1.5rem' }
+    },
+    button: { 
+      fontWeight: 600, 
+      textTransform: 'none',
+      fontSize: { xs: '0.875rem', md: '0.9375rem' }
+    },
   },
   shape: { borderRadius: 12 },
   components: {
@@ -84,11 +104,20 @@ const theme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: 10,
-          padding: '10px 24px',
+          padding: { xs: '8px 16px', md: '10px 24px' },
           fontWeight: 600,
+          fontSize: { xs: '0.875rem', md: '0.9375rem' }
         },
       },
     },
+    MuiContainer: {
+      styleOverrides: {
+        root: {
+          paddingLeft: { xs: 16, sm: 24 },
+          paddingRight: { xs: 16, sm: 24 }
+        }
+      }
+    }
   },
 });
 
@@ -128,14 +157,26 @@ const UserMenu = () => {
           label={user.name}
           variant="outlined"
           onClick={handleMenu}
-          sx={{ cursor: 'pointer', borderColor: '#4CAF50' }}
+          sx={{ 
+            cursor: 'pointer', 
+            borderColor: '#4CAF50',
+            '& .MuiChip-label': { 
+              display: { xs: 'none', sm: 'block' } 
+            }
+          }}
         />
       </Box>
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleClose}
-        PaperProps={{ sx: { mt: 1.5, borderRadius: 3 } }}
+        PaperProps={{ 
+          sx: { 
+            mt: 1.5, 
+            borderRadius: 3,
+            minWidth: 200 
+          } 
+        }}
       >
         <MenuItem sx={{ cursor: 'default' }}>
           <Box>
@@ -161,48 +202,160 @@ const UserMenu = () => {
 };
 
 // Auth Buttons Component
-const AuthButtons = () => {
+const AuthButtons = ({ onAuthAction }) => {
   const { user } = useAuth();
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState('login');
 
-  const handleLogin = () => {
-    setAuthMode('login');
-    setAuthModalOpen(true);
+  const handleGetStarted = () => {
+    if (onAuthAction) {
+      onAuthAction('register');
+    }
   };
 
-  const handleRegister = () => {
-    setAuthMode('register');
-    setAuthModalOpen(true);
+  const handleLogin = () => {
+    if (onAuthAction) {
+      onAuthAction('login');
+    }
   };
 
   if (user) return <UserMenu />;
 
   return (
-    <Box sx={{ display: 'flex', gap: 1 }}>
+    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
       <Button
-        startIcon={<Login />}
         onClick={handleLogin}
-        variant="outlined"
-        sx={{ borderColor: '#4CAF50', color: '#1B5E20' }}
+        variant="text"
+        sx={{ 
+          color: 'white',
+          fontWeight: 600
+        }}
       >
         Login
       </Button>
       <Button
-        startIcon={<PersonAdd />}
-        onClick={handleRegister}
+        onClick={handleGetStarted}
         variant="contained"
-        sx={{ backgroundColor: '#2E7D32' }}
+        sx={{ 
+          backgroundColor: 'white', 
+          color: '#2E7D32',
+          '&:hover': {
+            backgroundColor: '#f5f5f5'
+          }
+        }}
       >
-        Register
+        Get Started
       </Button>
-      
-      <AuthModal 
-        open={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
-        initialMode={authMode}
-      />
     </Box>
+  );
+};
+
+// Mobile Navigation Drawer
+const MobileDrawer = ({ open, onClose, onAuthAction }) => {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const navigationItems = [
+    { label: 'Home', icon: <HomeIcon />, path: '/' },
+    { label: 'Progress', icon: <Analytics />, path: '/progress' },
+    { label: 'Settings', icon: <SettingsIcon />, path: '/settings' },
+  ];
+
+  const handleNavigation = (path) => {
+    navigate(path);
+    onClose();
+  };
+
+  return (
+    <Drawer
+      anchor="left"
+      open={open}
+      onClose={onClose}
+      PaperProps={{
+        sx: {
+          width: 280,
+          background: 'linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%)',
+          color: 'white'
+        }
+      }}
+    >
+      <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Mosque sx={{ fontSize: 32, mr: 2 }} />
+          <Typography variant="h6" fontWeight="700">
+            Muslim<span style={{ color: '#FF9800' }}>Daily</span>
+          </Typography>
+        </Box>
+        <IconButton onClick={onClose} sx={{ color: 'white' }}>
+          <Close />
+        </IconButton>
+      </Box>
+
+      <List sx={{ mt: 2 }}>
+        {navigationItems.map((item) => (
+          <ListItem 
+            key={item.path}
+            onClick={() => handleNavigation(item.path)}
+            sx={{
+              cursor: 'pointer',
+              backgroundColor: location.pathname === item.path ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+              margin: '4px 8px',
+              borderRadius: 2,
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.1)'
+              }
+            }}
+          >
+            <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
+              {item.icon}
+            </ListItemIcon>
+            <ListItemText 
+              primary={item.label}
+              primaryTypographyProps={{ fontWeight: 600 }}
+            />
+          </ListItem>
+        ))}
+      </List>
+
+      {!user && (
+        <Box sx={{ p: 2, mt: 'auto' }}>
+          <Button
+            fullWidth
+            variant="contained"
+            onClick={() => {
+              onAuthAction('register');
+              onClose();
+            }}
+            sx={{
+              backgroundColor: 'white',
+              color: '#2E7D32',
+              mb: 1,
+              '&:hover': {
+                backgroundColor: '#f5f5f5'
+              }
+            }}
+          >
+            Get Started
+          </Button>
+          <Button
+            fullWidth
+            variant="outlined"
+            onClick={() => {
+              onAuthAction('login');
+              onClose();
+            }}
+            sx={{
+              borderColor: 'white',
+              color: 'white',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.1)'
+              }
+            }}
+          >
+            Login
+          </Button>
+        </Box>
+      )}
+    </Drawer>
   );
 };
 
@@ -210,6 +363,7 @@ const AuthButtons = () => {
 const MobileBottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const navigationItems = [
     { label: 'Home', icon: <HomeIcon />, path: '/' },
@@ -218,11 +372,30 @@ const MobileBottomNav = () => {
   ];
 
   return (
-    <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1000 }} elevation={3}>
+    <Paper sx={{ 
+      position: 'fixed', 
+      bottom: 0, 
+      left: 0, 
+      right: 0, 
+      zIndex: 1000,
+      borderTopLeftRadius: 16,
+      borderTopRightRadius: 16
+    }} elevation={8}>
       <BottomNavigation
         value={location.pathname}
         onChange={(event, newValue) => navigate(newValue)}
         showLabels
+        sx={{
+          background: 'linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%)',
+          '& .MuiBottomNavigationAction-root': {
+            color: 'rgba(255, 255, 255, 0.7)',
+            minWidth: 'auto',
+            padding: '8px 12px'
+          },
+          '& .Mui-selected': {
+            color: 'white',
+          }
+        }}
       >
         {navigationItems.map((item) => (
           <BottomNavigationAction
@@ -231,10 +404,10 @@ const MobileBottomNav = () => {
             value={item.path}
             icon={item.icon}
             sx={{
-              color: location.pathname === item.path ? '#2E7D32' : 'inherit',
               '& .MuiBottomNavigationAction-label': {
                 fontSize: '0.75rem',
                 fontWeight: location.pathname === item.path ? 600 : 400,
+                mt: 0.5
               },
             }}
           />
@@ -245,9 +418,11 @@ const MobileBottomNav = () => {
 };
 
 // Modern Header Component
-const Header = () => {
+const Header = ({ onAuthAction }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const navigationItems = [
     { label: 'Home', path: '/' },
@@ -256,41 +431,82 @@ const Header = () => {
   ];
 
   return (
-    <AppBar position="sticky" elevation={0}>
-      <Toolbar>
-        <Container maxWidth="lg" sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-          {/* Logo */}
-          <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1, cursor: 'pointer' }} onClick={() => navigate('/')}>
-            <Mosque sx={{ fontSize: 32, color: '#2E7D32', mr: 2 }} />
-            <Typography variant="h5" component="div" fontWeight="700">
-              Muslim<span style={{ color: '#FF9800' }}>Daily</span>
-            </Typography>
-          </Box>
-
-          {/* Desktop Navigation */}
-          <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 3, mr: 4 }}>
-            {navigationItems.map((item) => (
-              <Button
-                key={item.path}
+    <>
+      <AppBar 
+        position="sticky" 
+        elevation={0}
+        sx={{
+          background: 'linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%)',
+        }}
+      >
+        <Toolbar sx={{ minHeight: { xs: 64, md: 72 } }}>
+          <Container maxWidth="lg" sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+            {/* Mobile Menu Button */}
+            {isMobile && (
+              <IconButton
+                edge="start"
                 color="inherit"
-                onClick={() => navigate(item.path)}
-                sx={{
-                  fontWeight: 600,
-                  color: location.pathname === item.path ? '#2E7D32' : 'inherit',
-                  borderBottom: location.pathname === item.path ? '2px solid #2E7D32' : 'none',
-                  borderRadius: 0,
-                }}
+                onClick={() => setDrawerOpen(true)}
+                sx={{ mr: 2 }}
               >
-                {item.label}
-              </Button>
-            ))}
-          </Box>
+                <MenuIcon />
+              </IconButton>
+            )}
 
-          {/* Auth Controls */}
-          <AuthButtons />
-        </Container>
-      </Toolbar>
-    </AppBar>
+            {/* Logo */}
+            <Box 
+              sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                flexGrow: 1, 
+                cursor: 'pointer' 
+              }} 
+              onClick={() => navigate('/')}
+            >
+              <Mosque sx={{ fontSize: { xs: 28, md: 32 }, mr: 2 }} />
+              <Typography variant="h5" component="div" fontWeight="700">
+                Muslim<span style={{ color: '#FF9800' }}>Daily</span>
+              </Typography>
+            </Box>
+
+            {/* Desktop Navigation */}
+            <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 3, mr: 4 }}>
+              {navigationItems.map((item) => (
+                <Button
+                  key={item.path}
+                  color="inherit"
+                  onClick={() => navigate(item.path)}
+                  sx={{
+                    fontWeight: 600,
+                    color: location.pathname === item.path ? '#FF9800' : 'white',
+                    borderBottom: location.pathname === item.path ? '2px solid #FF9800' : 'none',
+                    borderRadius: 0,
+                    fontSize: '1rem'
+                  }}
+                >
+                  {item.label}
+                </Button>
+              ))}
+            </Box>
+
+            {/* Auth Controls */}
+            <Box sx={{ display: { xs: 'none', md: 'block' } }}>
+              <AuthButtons onAuthAction={onAuthAction} />
+            </Box>
+            <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+              <AuthButtons onAuthAction={onAuthAction} />
+            </Box>
+          </Container>
+        </Toolbar>
+      </AppBar>
+
+      {/* Mobile Drawer */}
+      <MobileDrawer 
+        open={drawerOpen} 
+        onClose={() => setDrawerOpen(false)}
+        onAuthAction={onAuthAction}
+      />
+    </>
   );
 };
 
@@ -305,7 +521,8 @@ const PWAInstallPrompt = () => {
       sx={{
         position: 'fixed',
         bottom: { xs: 70, md: 24 },
-        right: 24,
+        right: { xs: 16, md: 24 },
+        left: { xs: 16, md: 'auto' },
         background: 'linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%)',
         color: 'white',
         padding: '12px 20px',
@@ -315,9 +532,11 @@ const PWAInstallPrompt = () => {
         zIndex: 1001,
         display: 'flex',
         alignItems: 'center',
+        justifyContent: 'center',
         gap: 2,
         fontSize: '14px',
         fontWeight: '600',
+        textAlign: 'center'
       }}
       onClick={installApp}
     >
@@ -329,6 +548,14 @@ const PWAInstallPrompt = () => {
 
 // Main App Component
 function App() {
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState('login');
+
+  const handleAuthAction = (mode) => {
+    setAuthMode(mode);
+    setAuthModalOpen(true);
+  };
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
@@ -340,14 +567,14 @@ function App() {
               background: 'linear-gradient(135deg, #f8fdf8 0%, #e8f5e8 100%)',
               pb: { xs: 7, md: 0 }, // Space for mobile bottom nav
             }}>
-              <Header />
+              <Header onAuthAction={handleAuthAction} />
               
-              <Container maxWidth="lg" sx={{ py: 3 }}>
+              <Container maxWidth="lg" sx={{ py: { xs: 2, md: 3 } }}>
                 <Routes>
-                  <Route path="/" element={<Home />} />
+                  <Route path="/" element={<Home onAuthAction={handleAuthAction} />} />
                   <Route path="/progress" element={<Progress />} />
                   <Route path="/settings" element={<Settings />} />
-                  <Route path="*" element={<Home />} />
+                  <Route path="*" element={<Home onAuthAction={handleAuthAction} />} />
                 </Routes>
               </Container>
 
@@ -357,6 +584,12 @@ function App() {
               </Box>
 
               <PWAInstallPrompt />
+
+              <AuthModal 
+                open={authModalOpen}
+                onClose={() => setAuthModalOpen(false)}
+                initialMode={authMode}
+              />
             </Box>
           </Router>
         </PracticeProvider>
