@@ -22,7 +22,8 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
-  useMediaQuery
+  useMediaQuery,
+  Badge
 } from '@mui/material';
 import {
   AccountCircle,
@@ -34,7 +35,11 @@ import {
   Analytics,
   Settings as SettingsIcon,
   Menu as MenuIcon,
-  Close
+  Close,
+  Notifications,
+  Explore,
+  Book,
+  Psychology
 } from '@mui/icons-material';
 import { usePWAInstall } from './hooks/usePWAInstall';
 import { PracticeProvider } from './context/PracticeContext';
@@ -46,37 +51,52 @@ import Progress from './pages/Progress';
 import Settings from './pages/Settings';
 import AuthModal from './components/Auth/AuthModal';
 
-// Modern professional theme
+// Unique modern theme - Sophisticated purple/amber scheme
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#2E7D32',
-      light: '#4CAF50',
-      dark: '#1B5E20',
+      main: '#6366F1',
+      light: '#818CF8',
+      dark: '#4F46E5',
+      contrastText: '#FFFFFF',
     },
     secondary: {
-      main: '#FF9800',
-      light: '#FFB74D',
-      dark: '#F57C00',
+      main: '#F59E0B',
+      light: '#FBBF24',
+      dark: '#D97706',
     },
     background: {
-      default: '#f8fdf8',
-      paper: '#ffffff',
+      default: '#FAFAFA',
+      paper: '#FFFFFF',
     },
+    text: {
+      primary: '#1F2937',
+      secondary: '#6B7280',
+    },
+    grey: {
+      50: '#F9FAFB',
+      100: '#F3F4F6',
+      200: '#E5E7EB',
+      300: '#D1D5DB',
+    }
   },
   typography: {
-    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
+    fontFamily: '"Plus Jakarta Sans", "Inter", "Roboto", sans-serif',
     h4: { 
-      fontWeight: 700,
-      fontSize: { xs: '1.75rem', md: '2.125rem' }
+      fontWeight: 800,
+      fontSize: { xs: '1.75rem', md: '2.125rem' },
+      background: 'linear-gradient(135deg, #6366F1 0%, #F59E0B 100%)',
+      backgroundClip: 'text',
+      WebkitBackgroundClip: 'text',
+      WebkitTextFillColor: 'transparent',
     },
     h5: { 
-      fontWeight: 600,
-      fontSize: { xs: '1.5rem', md: '1.75rem' }
+      fontWeight: 700,
+      fontSize: { xs: '1.5rem', md: '1.75rem' },
     },
     h6: { 
       fontWeight: 600,
-      fontSize: { xs: '1.25rem', md: '1.5rem' }
+      fontSize: { xs: '1.25rem', md: '1.5rem' },
     },
     button: { 
       fontWeight: 600, 
@@ -84,18 +104,19 @@ const theme = createTheme({
       fontSize: { xs: '0.875rem', md: '0.9375rem' }
     },
   },
-  shape: { borderRadius: 12 },
+  shape: { borderRadius: 16 },
   components: {
     MuiCard: {
       styleOverrides: {
         root: {
-          boxShadow: '0 4px 20px rgba(46, 125, 50, 0.1)',
-          border: '1px solid #e8f5e8',
-          borderRadius: 16,
-          transition: 'all 0.3s ease',
+          boxShadow: '0 4px 25px rgba(0, 0, 0, 0.08)',
+          border: '1px solid #F3F4F6',
+          borderRadius: 20,
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          overflow: 'visible',
           '&:hover': {
-            boxShadow: '0 8px 30px rgba(46, 125, 50, 0.15)',
-            transform: 'translateY(-2px)',
+            boxShadow: '0 8px 40px rgba(99, 102, 241, 0.12)',
+            transform: 'translateY(-4px)',
           },
         },
       },
@@ -103,10 +124,52 @@ const theme = createTheme({
     MuiButton: {
       styleOverrides: {
         root: {
-          borderRadius: 10,
-          padding: { xs: '8px 16px', md: '10px 24px' },
+          borderRadius: 12,
+          padding: { xs: '10px 20px', md: '12px 28px' },
           fontWeight: 600,
-          fontSize: { xs: '0.875rem', md: '0.9375rem' }
+          fontSize: { xs: '0.875rem', md: '0.9375rem' },
+          transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+          position: 'relative',
+          overflow: 'hidden',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: '-100%',
+            width: '100%',
+            height: '100%',
+            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent)',
+            transition: 'left 0.5s',
+          },
+          '&:hover::before': {
+            left: '100%',
+          }
+        },
+        contained: {
+          background: 'linear-gradient(135deg, #6366F1 0%, #818CF8 100%)',
+          boxShadow: '0 4px 20px rgba(99, 102, 241, 0.3)',
+          '&:hover': {
+            boxShadow: '0 6px 25px rgba(99, 102, 241, 0.4)',
+            transform: 'translateY(-2px)',
+          },
+        },
+        outlined: {
+          border: '2px solid',
+          borderColor: '#E5E7EB',
+          '&:hover': {
+            borderColor: '#6366F1',
+            backgroundColor: 'rgba(99, 102, 241, 0.04)',
+          },
+        },
+      },
+    },
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(20px)',
+          boxShadow: '0 4px 30px rgba(0, 0, 0, 0.1)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
         },
       },
     },
@@ -150,21 +213,33 @@ const UserMenu = () => {
   return (
     <div>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Chip 
-          avatar={<Avatar sx={{ width: 24, height: 24, bgcolor: '#4CAF50' }}>
-            {user.name?.charAt(0).toUpperCase()}
-          </Avatar>}
-          label={user.name}
-          variant="outlined"
-          onClick={handleMenu}
-          sx={{ 
-            cursor: 'pointer', 
-            borderColor: '#4CAF50',
-            '& .MuiChip-label': { 
-              display: { xs: 'none', sm: 'block' } 
+        <Badge
+          overlap="circular"
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+          variant="dot"
+          sx={{
+            '& .MuiBadge-dot': {
+              backgroundColor: '#10B981',
+              width: 12,
+              height: 12,
+              borderRadius: '50%',
+              border: '2px solid white'
             }
           }}
-        />
+        >
+          <Avatar 
+            sx={{ 
+              width: 40, 
+              height: 40, 
+              background: 'linear-gradient(135deg, #6366F1 0%, #F59E0B 100%)',
+              cursor: 'pointer',
+              fontWeight: 600
+            }}
+            onClick={handleMenu}
+          >
+            {user.name?.charAt(0).toUpperCase()}
+          </Avatar>
+        </Badge>
       </Box>
       <Menu
         anchorEl={anchorEl}
@@ -174,7 +249,8 @@ const UserMenu = () => {
           sx: { 
             mt: 1.5, 
             borderRadius: 3,
-            minWidth: 200 
+            minWidth: 200,
+            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.1)'
           } 
         }}
       >
@@ -185,14 +261,14 @@ const UserMenu = () => {
           </Box>
         </MenuItem>
         <MenuItem onClick={() => handleNavigate('/progress')}>
-          <Analytics sx={{ mr: 2, color: '#4CAF50' }} />
+          <Analytics sx={{ mr: 2, color: '#6366F1' }} />
           My Progress
         </MenuItem>
         <MenuItem onClick={() => handleNavigate('/settings')}>
-          <SettingsIcon sx={{ mr: 2, color: '#4CAF50' }} />
+          <SettingsIcon sx={{ mr: 2, color: '#6366F1' }} />
           Settings
         </MenuItem>
-        <MenuItem onClick={handleLogout} sx={{ color: '#d32f2f' }}>
+        <MenuItem onClick={handleLogout} sx={{ color: '#EF4444' }}>
           <Logout sx={{ mr: 2 }} />
           Logout
         </MenuItem>
@@ -220,25 +296,24 @@ const AuthButtons = ({ onAuthAction }) => {
   if (user) return <UserMenu />;
 
   return (
-    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
       <Button
         onClick={handleLogin}
         variant="text"
         sx={{ 
-          color: 'white',
+          color: 'text.primary',
           fontWeight: 600
         }}
       >
-        Login
+        Sign In
       </Button>
       <Button
         onClick={handleGetStarted}
         variant="contained"
         sx={{ 
-          backgroundColor: 'white', 
-          color: '#2E7D32',
+          background: 'linear-gradient(135deg, #6366F1 0%, #818CF8 100%)',
           '&:hover': {
-            backgroundColor: '#f5f5f5'
+            transform: 'translateY(-2px)',
           }
         }}
       >
@@ -257,6 +332,7 @@ const MobileDrawer = ({ open, onClose, onAuthAction }) => {
   const navigationItems = [
     { label: 'Home', icon: <HomeIcon />, path: '/' },
     { label: 'Progress', icon: <Analytics />, path: '/progress' },
+    { label: 'Explore', icon: <Explore />, path: '/explore' },
     { label: 'Settings', icon: <SettingsIcon />, path: '/settings' },
   ];
 
@@ -272,52 +348,82 @@ const MobileDrawer = ({ open, onClose, onAuthAction }) => {
       onClose={onClose}
       PaperProps={{
         sx: {
-          width: 280,
-          background: 'linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%)',
-          color: 'white'
+          width: 300,
+          background: 'linear-gradient(135deg, #FAFAFA 0%, #FFFFFF 100%)',
+          borderRight: '1px solid #F3F4F6'
         }
       }}
     >
-      <Box sx={{ p: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box sx={{ p: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Mosque sx={{ fontSize: 32, mr: 2 }} />
-          <Typography variant="h6" fontWeight="700">
-            Muslim<span style={{ color: '#FF9800' }}>Daily</span>
+          <Box
+            sx={{
+              width: 40,
+              height: 40,
+              background: 'linear-gradient(135deg, #6366F1 0%, #F59E0B 100%)',
+              borderRadius: 12,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              mr: 2
+            }}
+          >
+            <Mosque sx={{ fontSize: 24, color: 'white' }} />
+          </Box>
+          <Typography variant="h6" fontWeight="800">
+            Soul<span style={{ color: '#F59E0B' }}>Space</span>
           </Typography>
         </Box>
-        <IconButton onClick={onClose} sx={{ color: 'white' }}>
+        <IconButton 
+          onClick={onClose} 
+          sx={{ 
+            color: 'text.primary',
+            background: 'rgba(99, 102, 241, 0.1)'
+          }}
+        >
           <Close />
         </IconButton>
       </Box>
 
-      <List sx={{ mt: 2 }}>
+      <List sx={{ mt: 2, px: 2 }}>
         {navigationItems.map((item) => (
           <ListItem 
             key={item.path}
             onClick={() => handleNavigation(item.path)}
             sx={{
               cursor: 'pointer',
-              backgroundColor: location.pathname === item.path ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
-              margin: '4px 8px',
-              borderRadius: 2,
+              background: location.pathname === item.path ? 
+                'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(245, 158, 11, 0.1) 100%)' : 'transparent',
+              border: location.pathname === item.path ? '1px solid rgba(99, 102, 241, 0.2)' : '1px solid transparent',
+              margin: '8px 0',
+              borderRadius: 3,
+              transition: 'all 0.3s ease',
               '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.1)'
+                background: 'rgba(99, 102, 241, 0.05)',
+                border: '1px solid rgba(99, 102, 241, 0.1)',
+                transform: 'translateX(4px)'
               }
             }}
           >
-            <ListItemIcon sx={{ color: 'white', minWidth: 40 }}>
+            <ListItemIcon sx={{ 
+              color: location.pathname === item.path ? '#6366F1' : 'text.secondary',
+              minWidth: 40 
+            }}>
               {item.icon}
             </ListItemIcon>
             <ListItemText 
               primary={item.label}
-              primaryTypographyProps={{ fontWeight: 600 }}
+              primaryTypographyProps={{ 
+                fontWeight: 600,
+                color: location.pathname === item.path ? '#6366F1' : 'text.primary'
+              }}
             />
           </ListItem>
         ))}
       </List>
 
       {!user && (
-        <Box sx={{ p: 2, mt: 'auto' }}>
+        <Box sx={{ p: 3, mt: 'auto' }}>
           <Button
             fullWidth
             variant="contained"
@@ -326,12 +432,10 @@ const MobileDrawer = ({ open, onClose, onAuthAction }) => {
               onClose();
             }}
             sx={{
-              backgroundColor: 'white',
-              color: '#2E7D32',
-              mb: 1,
-              '&:hover': {
-                backgroundColor: '#f5f5f5'
-              }
+              background: 'linear-gradient(135deg, #6366F1 0%, #818CF8 100%)',
+              mb: 2,
+              borderRadius: 3,
+              py: 1.5
             }}
           >
             Get Started
@@ -344,14 +448,11 @@ const MobileDrawer = ({ open, onClose, onAuthAction }) => {
               onClose();
             }}
             sx={{
-              borderColor: 'white',
-              color: 'white',
-              '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.1)'
-              }
+              borderRadius: 3,
+              py: 1.5
             }}
           >
-            Login
+            Sign In
           </Button>
         </Box>
       )}
@@ -363,11 +464,11 @@ const MobileDrawer = ({ open, onClose, onAuthAction }) => {
 const MobileBottomNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user } = useAuth();
 
   const navigationItems = [
     { label: 'Home', icon: <HomeIcon />, path: '/' },
     { label: 'Progress', icon: <Analytics />, path: '/progress' },
+    { label: 'Explore', icon: <Explore />, path: '/explore' },
     { label: 'Settings', icon: <SettingsIcon />, path: '/settings' },
   ];
 
@@ -378,22 +479,27 @@ const MobileBottomNav = () => {
       left: 0, 
       right: 0, 
       zIndex: 1000,
-      borderTopLeftRadius: 16,
-      borderTopRightRadius: 16
+      borderRadius: '20px 20px 0 0',
+      background: 'rgba(255, 255, 255, 0.95)',
+      backdropFilter: 'blur(20px)',
+      borderTop: '1px solid rgba(255, 255, 255, 0.2)'
     }} elevation={8}>
       <BottomNavigation
         value={location.pathname}
         onChange={(event, newValue) => navigate(newValue)}
         showLabels
         sx={{
-          background: 'linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%)',
+          background: 'transparent',
+          height: 70,
           '& .MuiBottomNavigationAction-root': {
-            color: 'rgba(255, 255, 255, 0.7)',
+            color: '#9CA3AF',
             minWidth: 'auto',
-            padding: '8px 12px'
+            padding: '8px 12px',
+            transition: 'all 0.3s ease',
           },
           '& .Mui-selected': {
-            color: 'white',
+            color: '#6366F1',
+            transform: 'translateY(-2px)',
           }
         }}
       >
@@ -406,8 +512,9 @@ const MobileBottomNav = () => {
             sx={{
               '& .MuiBottomNavigationAction-label': {
                 fontSize: '0.75rem',
-                fontWeight: location.pathname === item.path ? 600 : 400,
-                mt: 0.5
+                fontWeight: location.pathname === item.path ? 700 : 500,
+                mt: 0.5,
+                transition: 'all 0.3s ease',
               },
             }}
           />
@@ -427,27 +534,25 @@ const Header = ({ onAuthAction }) => {
   const navigationItems = [
     { label: 'Home', path: '/' },
     { label: 'Progress', path: '/progress' },
+    { label: 'Explore', path: '/explore' },
     { label: 'Settings', path: '/settings' },
   ];
 
   return (
     <>
-      <AppBar 
-        position="sticky" 
-        elevation={0}
-        sx={{
-          background: 'linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%)',
-        }}
-      >
-        <Toolbar sx={{ minHeight: { xs: 64, md: 72 } }}>
+      <AppBar position="sticky" elevation={0}>
+        <Toolbar sx={{ minHeight: { xs: 70, md: 80 } }}>
           <Container maxWidth="lg" sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
             {/* Mobile Menu Button */}
             {isMobile && (
               <IconButton
                 edge="start"
-                color="inherit"
+                sx={{ 
+                  mr: 2,
+                  color: 'text.primary',
+                  background: 'rgba(99, 102, 241, 0.1)'
+                }}
                 onClick={() => setDrawerOpen(true)}
-                sx={{ mr: 2 }}
               >
                 <MenuIcon />
               </IconButton>
@@ -463,25 +568,44 @@ const Header = ({ onAuthAction }) => {
               }} 
               onClick={() => navigate('/')}
             >
-              <Mosque sx={{ fontSize: { xs: 28, md: 32 }, mr: 2 }} />
-              <Typography variant="h5" component="div" fontWeight="700">
-                Muslim<span style={{ color: '#FF9800' }}>Daily</span>
+              <Box
+                sx={{
+                  width: { xs: 36, md: 44 },
+                  height: { xs: 36, md: 44 },
+                  background: 'linear-gradient(135deg, #6366F1 0%, #F59E0B 100%)',
+                  borderRadius: 12,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  mr: 2
+                }}
+              >
+                <Mosque sx={{ fontSize: { xs: 20, md: 24 }, color: 'white' }} />
+              </Box>
+              <Typography variant="h5" component="div" fontWeight="800">
+                Soul<span style={{ color: '#F59E0B' }}>Space</span>
               </Typography>
             </Box>
 
             {/* Desktop Navigation */}
-            <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 3, mr: 4 }}>
+            <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 1, mr: 4 }}>
               {navigationItems.map((item) => (
                 <Button
                   key={item.path}
-                  color="inherit"
                   onClick={() => navigate(item.path)}
                   sx={{
                     fontWeight: 600,
-                    color: location.pathname === item.path ? '#FF9800' : 'white',
-                    borderBottom: location.pathname === item.path ? '2px solid #FF9800' : 'none',
-                    borderRadius: 0,
-                    fontSize: '1rem'
+                    color: location.pathname === item.path ? '#6366F1' : 'text.primary',
+                    background: location.pathname === item.path ? 
+                      'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(245, 158, 11, 0.1) 100%)' : 'transparent',
+                    borderRadius: 3,
+                    px: 3,
+                    py: 1,
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      background: 'rgba(99, 102, 241, 0.05)',
+                      transform: 'translateY(-1px)'
+                    }
                   }}
                 >
                   {item.label}
@@ -520,15 +644,15 @@ const PWAInstallPrompt = () => {
     <Box
       sx={{
         position: 'fixed',
-        bottom: { xs: 70, md: 24 },
+        bottom: { xs: 80, md: 24 },
         right: { xs: 16, md: 24 },
         left: { xs: 16, md: 'auto' },
-        background: 'linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%)',
+        background: 'linear-gradient(135deg, #6366F1 0%, #818CF8 100%)',
         color: 'white',
-        padding: '12px 20px',
+        padding: '16px 24px',
         borderRadius: 16,
         cursor: 'pointer',
-        boxShadow: '0 8px 30px rgba(46, 125, 50, 0.3)',
+        boxShadow: '0 8px 40px rgba(99, 102, 241, 0.3)',
         zIndex: 1001,
         display: 'flex',
         alignItems: 'center',
@@ -536,11 +660,28 @@ const PWAInstallPrompt = () => {
         gap: 2,
         fontSize: '14px',
         fontWeight: '600',
-        textAlign: 'center'
+        textAlign: 'center',
+        transition: 'all 0.3s ease',
+        '&:hover': {
+          transform: 'translateY(-2px)',
+          boxShadow: '0 12px 50px rgba(99, 102, 241, 0.4)',
+        }
       }}
       onClick={installApp}
     >
-      <span style={{ fontSize: '20px' }}>📱</span>
+      <Box
+        sx={{
+          width: 32,
+          height: 32,
+          background: 'rgba(255, 255, 255, 0.2)',
+          borderRadius: 8,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}
+      >
+        <Typography sx={{ fontSize: '18px' }}>📱</Typography>
+      </Box>
       Install App
     </Box>
   );
@@ -564,8 +705,8 @@ function App() {
           <Router>
             <Box sx={{ 
               minHeight: '100vh', 
-              background: 'linear-gradient(135deg, #f8fdf8 0%, #e8f5e8 100%)',
-              pb: { xs: 7, md: 0 }, // Space for mobile bottom nav
+              background: 'linear-gradient(135deg, #FAFAFA 0%, #F3F4F6 100%)',
+              pb: { xs: 7, md: 0 },
             }}>
               <Header onAuthAction={handleAuthAction} />
               
@@ -573,6 +714,7 @@ function App() {
                 <Routes>
                   <Route path="/" element={<Home onAuthAction={handleAuthAction} />} />
                   <Route path="/progress" element={<Progress />} />
+                  <Route path="/explore" element={<div>Explore Page</div>} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="*" element={<Home onAuthAction={handleAuthAction} />} />
                 </Routes>
