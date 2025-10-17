@@ -11,149 +11,79 @@ export const usePractice = () => {
 };
 
 export const PracticeProvider = ({ children }) => {
-  const [practices, setPractices] = useState({});
-  const [streak, setStreak] = useState(0);
-  const [todayStats, setTodayStats] = useState({
-    prayersCompleted: 0,
-    totalPrayers: 5,
-    progress: 0
-  });
+  const [prayerProgress, setPrayerProgress] = useState({});
+  const [quranProgress, setQuranProgress] = useState(0);
+  const [dhikrCount, setDhikrCount] = useState(0);
 
-  // Load practices from localStorage on app start
+  // Load from localStorage on mount
   useEffect(() => {
-    const savedPractices = localStorage.getItem('muslimDaily_practices');
-    const savedStreak = localStorage.getItem('muslimDaily_streak');
-    
-    if (savedPractices) {
-      setPractices(JSON.parse(savedPractices));
+    const savedProgress = localStorage.getItem('muslimDiary_progress');
+    if (savedProgress) {
+      const { prayerProgress: savedPrayers, quranProgress: savedQuran, dhikrCount: savedDhikr } = JSON.parse(savedProgress);
+      setPrayerProgress(savedPrayers || {});
+      setQuranProgress(savedQuran || 0);
+      setDhikrCount(savedDhikr || 0);
     }
-    
-    if (savedStreak) {
-      setStreak(parseInt(savedStreak));
-    }
-    
-    updateTodayStats();
   }, []);
 
-  // Update today's stats whenever practices change
+  // Save to localStorage whenever progress changes
   useEffect(() => {
-    updateTodayStats();
-    saveToLocalStorage();
-  }, [practices]);
+    const progressData = {
+      prayerProgress,
+      quranProgress,
+      dhikrCount
+    };
+    localStorage.setItem('muslimDiary_progress', JSON.stringify(progressData));
+  }, [prayerProgress, quranProgress, dhikrCount]);
 
-  const updateTodayStats = () => {
-    const today = new Date().toDateString();
-    const todayPractices = practices[today] || {};
-    const prayerKeys = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
-    
-    const prayersCompleted = prayerKeys.filter(key => todayPractices[key]).length;
-    const progress = (prayersCompleted / 5) * 100;
-    
-    setTodayStats({
-      prayersCompleted,
-      totalPrayers: 5,
-      progress
-    });
-
-    // Update streak
-    updateStreak(todayPractices, today);
-  };
-
-  const updateStreak = (todayPractices, today) => {
-    const prayerKeys = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
-    const todayCompleted = prayerKeys.filter(key => todayPractices[key]).length;
-    
-    if (todayCompleted === 5) {
-      // Check if yesterday was also completed
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayKey = yesterday.toDateString();
-      const yesterdayPractices = practices[yesterdayKey] || {};
-      const yesterdayCompleted = prayerKeys.filter(key => yesterdayPractices[key]).length;
-      
-      if (yesterdayCompleted === 5) {
-        setStreak(prev => prev + 1);
-      } else {
-        setStreak(1);
-      }
+  const markPracticeCompleted = (practiceType) => {
+    if (practiceType.includes('prayer')) {
+      setPrayerProgress(prev => ({
+        ...prev,
+        [practiceType]: true
+      }));
     }
   };
 
-  const saveToLocalStorage = () => {
-    localStorage.setItem('muslimDaily_practices', JSON.stringify(practices));
-    localStorage.setItem('muslimDaily_streak', streak.toString());
-  };
-
-  const markPracticeCompleted = (practiceType, timestamp = new Date()) => {
-    const dateKey = timestamp.toDateString();
-    
-    setPractices(prev => ({
-      ...prev,
-      [dateKey]: {
-        ...prev[dateKey],
-        [practiceType]: {
-          completed: true,
-          timestamp: timestamp.toISOString(),
-          type: practiceType
-        }
-      }
-    }));
-  };
-
-  const markPracticeIncomplete = (practiceType, timestamp = new Date()) => {
-    const dateKey = timestamp.toDateString();
-    
-    setPractices(prev => {
-      const updated = { ...prev };
-      if (updated[dateKey] && updated[dateKey][practiceType]) {
-        delete updated[dateKey][practiceType];
-      }
-      return updated;
-    });
-  };
-
-  const isPracticeCompleted = (practiceType, date = new Date()) => {
-    const dateKey = date.toDateString();
-    return !!practices[dateKey]?.[practiceType]?.completed;
-  };
-
-  const getTodayPractices = () => {
-    const today = new Date().toDateString();
-    return practices[today] || {};
-  };
-
-  const getWeeklyProgress = () => {
-    const weekData = [];
-    const today = new Date();
-    
-    for (let i = 6; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      const dateKey = date.toDateString();
-      const dayPractices = practices[dateKey] || {};
-      const prayerKeys = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'];
-      const completed = prayerKeys.filter(key => dayPractices[key]).length;
-      
-      weekData.push({
-        date: dateKey,
-        day: date.toLocaleDateString('en-US', { weekday: 'short' }),
-        completed,
-        total: 5
-      });
+  const markPracticeIncomplete = (practiceType) => {
+    if (practiceType.includes('prayer')) {
+      setPrayerProgress(prev => ({
+        ...prev,
+        [practiceType]: false
+      }));
     }
-    
-    return weekData;
+  };
+
+  const isPracticeCompleted = (practiceType) => {
+    return prayerProgress[practiceType] || false;
+  };
+
+  const updateQuranProgress = (pages) => {
+    setQuranProgress(prev => prev + pages);
+  };
+
+  const incrementDhikr = () => {
+    setDhikrCount(prev => prev + 1);
+  };
+
+  // Calculate today's stats
+  const todayStats = {
+    prayersCompleted: Object.values(prayerProgress).filter(Boolean).length,
+    progress: (Object.values(prayerProgress).filter(Boolean).length / 5) * 100,
+    quranPages: quranProgress,
+    dhikrCount: dhikrCount
   };
 
   const value = {
-    practices,
-    streak,
+    prayerProgress,
+    quranProgress,
+    dhikrCount,
     todayStats,
     markPracticeCompleted,
     markPracticeIncomplete,
     isPracticeCompleted,
-    getTodayPractices,
-    getWeeklyProgress
+    updateQuranProgress,
+    incrementDhikr
   };
 
   return (

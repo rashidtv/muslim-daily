@@ -5,7 +5,7 @@ const AuthContext = createContext();
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error('useAuth must be used within AuthProvider');
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };
@@ -15,68 +15,41 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    checkAuthStatus();
+    // Check for stored user session
+    const storedUser = localStorage.getItem('muslimDiary_user');
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+    setLoading(false);
   }, []);
 
-  const checkAuthStatus = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (token) {
-        const response = await fetch('https://muslimdailybackend.onrender.com/api/auth/me', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        if (response.ok) {
-          const userData = await response.json();
-          setUser(userData.user);
-        } else {
-          localStorage.removeItem('token');
-        }
-      }
-    } catch (error) {
-      console.error('Auth check failed:', error);
-      localStorage.removeItem('token');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const login = async (email, password) => {
-    const response = await fetch('https://muslimdailybackend.onrender.com/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    
-    const data = await response.json();
-    if (data.success) {
-      localStorage.setItem('token', data.token);
-      setUser(data.user);
-    }
-    return data;
+    // Simulate API call
+    const userData = {
+      id: 1,
+      name: 'Test User',
+      email: email,
+    };
+    setUser(userData);
+    localStorage.setItem('muslimDiary_user', JSON.stringify(userData));
+    return userData;
   };
 
-  const register = async (userData) => {
-    const response = await fetch('https://muslimdailybackend.onrender.com/api/auth/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(userData)
-    });
-    
-    const data = await response.json();
-    if (data.success) {
-      localStorage.setItem('token', data.token);
-      setUser(data.user);
-    }
-    return data;
+  const register = async (name, email, password) => {
+    // Simulate API call
+    const userData = {
+      id: 1,
+      name: name,
+      email: email,
+    };
+    setUser(userData);
+    localStorage.setItem('muslimDiary_user', JSON.stringify(userData));
+    return userData;
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
     setUser(null);
-  };
-
-  const updateUser = (updates) => {
-    setUser(prev => ({ ...prev, ...updates }));
+    localStorage.removeItem('muslimDiary_user');
   };
 
   const value = {
@@ -84,7 +57,6 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
-    updateUser,
     loading
   };
 
