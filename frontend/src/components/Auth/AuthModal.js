@@ -1,23 +1,17 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useAuth } from '../../context/AuthContext';
 import Login from './Login';
 import Register from './Register';
 
-const AuthModal = () => {
-  const { user, loading } = useAuth();
-  const [authMode, setAuthMode] = useState(null);
+const AuthModal = ({ open, onClose, initialMode = 'login' }) => {
+  const { user } = useAuth();
+  const [authMode, setAuthMode] = React.useState(initialMode);
 
   React.useEffect(() => {
-    if (!loading && !user) {
-      setTimeout(() => {
-        setAuthMode('login');
-      }, 1000);
+    if (user) {
+      onClose();
     }
-  }, [loading, user]);
-
-  const handleClose = () => {
-    setAuthMode(null);
-  };
+  }, [user, onClose]);
 
   const switchToRegister = () => {
     setAuthMode('register');
@@ -32,13 +26,13 @@ const AuthModal = () => {
   return (
     <>
       <Login 
-        open={authMode === 'login'} 
-        onClose={handleClose}
+        open={open && authMode === 'login'} 
+        onClose={onClose}
         switchToRegister={switchToRegister}
       />
       <Register 
-        open={authMode === 'register'} 
-        onClose={handleClose}
+        open={open && authMode === 'register'} 
+        onClose={onClose}
         switchToLogin={switchToLogin}
       />
     </>
