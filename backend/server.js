@@ -39,11 +39,19 @@ app.get('/', (req, res) => {
   });
 });
 
-// Add this after your existing routes
-const authRoutes = require('./routes/auth');
-app.use('/api/auth', authRoutes);
-
 // Add this health check route
+app.get('/health', (req, res) => {
+  res.json({ 
+    success: true, 
+    message: 'Muslim Daily API is running!',
+    timestamp: new Date().toISOString()
+  });
+});
+
+const prayerTimesRoutes = require('./routes/prayerTimes');
+app.use('/api/prayertimes', prayerTimesRoutes);
+
+// Health check - add this to your server.js
 app.get('/health', (req, res) => {
   res.json({ 
     success: true, 
