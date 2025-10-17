@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import {
@@ -13,7 +13,10 @@ import {
   MenuItem,
   Avatar,
   Container,
-  Chip
+  Chip,
+  BottomNavigation,
+  BottomNavigationAction,
+  Paper
 } from '@mui/material';
 import {
   AccountCircle,
@@ -21,7 +24,10 @@ import {
   Logout,
   PersonAdd,
   Mosque,
-  Notifications
+  Home as HomeIcon,
+  Analytics,
+  Settings as SettingsIcon,
+  Menu as MenuIcon
 } from '@mui/icons-material';
 import { usePWAInstall } from './hooks/usePWAInstall';
 import { PracticeProvider } from './context/PracticeContext';
@@ -37,44 +43,28 @@ import AuthModal from './components/Auth/AuthModal';
 const theme = createTheme({
   palette: {
     primary: {
-      main: '#2E7D32', // Islamic green
+      main: '#2E7D32',
       light: '#4CAF50',
       dark: '#1B5E20',
     },
     secondary: {
-      main: '#FF9800', // Golden accent
+      main: '#FF9800',
       light: '#FFB74D',
       dark: '#F57C00',
     },
     background: {
-      default: '#f8fdf8', // Very light green
+      default: '#f8fdf8',
       paper: '#ffffff',
-    },
-    text: {
-      primary: '#1B5E20',
-      secondary: '#4CAF50',
     },
   },
   typography: {
     fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
-    h4: {
-      fontWeight: 700,
-      fontSize: '1.75rem',
-    },
-    h5: {
-      fontWeight: 600,
-    },
-    h6: {
-      fontWeight: 600,
-    },
-    button: {
-      fontWeight: 600,
-      textTransform: 'none',
-    },
+    h4: { fontWeight: 700 },
+    h5: { fontWeight: 600 },
+    h6: { fontWeight: 600 },
+    button: { fontWeight: 600, textTransform: 'none' },
   },
-  shape: {
-    borderRadius: 12,
-  },
+  shape: { borderRadius: 12 },
   components: {
     MuiCard: {
       styleOverrides: {
@@ -96,25 +86,6 @@ const theme = createTheme({
           borderRadius: 10,
           padding: '10px 24px',
           fontWeight: 600,
-          textTransform: 'none',
-          transition: 'all 0.3s ease',
-        },
-        contained: {
-          boxShadow: '0 4px 14px rgba(46, 125, 50, 0.3)',
-          '&:hover': {
-            boxShadow: '0 6px 20px rgba(46, 125, 50, 0.4)',
-            transform: 'translateY(-1px)',
-          },
-        },
-      },
-    },
-    MuiAppBar: {
-      styleOverrides: {
-        root: {
-          backgroundColor: '#ffffff',
-          color: '#1B5E20',
-          boxShadow: '0 2px 20px rgba(46, 125, 50, 0.1)',
-          borderBottom: '1px solid #e8f5e8',
         },
       },
     },
@@ -125,6 +96,7 @@ const theme = createTheme({
 const UserMenu = () => {
   const { user, logout } = useAuth();
   const [anchorEl, setAnchorEl] = useState(null);
+  const navigate = useNavigate();
 
   const handleMenu = (event) => {
     setAnchorEl(event.currentTarget);
@@ -139,69 +111,45 @@ const UserMenu = () => {
     handleClose();
   };
 
+  const handleNavigate = (path) => {
+    navigate(path);
+    handleClose();
+  };
+
   if (!user) return null;
 
   return (
     <div>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <Chip 
-          icon={<AccountCircle />}
+          avatar={<Avatar sx={{ width: 24, height: 24, bgcolor: '#4CAF50' }}>
+            {user.name?.charAt(0).toUpperCase()}
+          </Avatar>}
           label={user.name}
           variant="outlined"
-          color="primary"
           onClick={handleMenu}
-          sx={{
-            cursor: 'pointer',
-            borderColor: '#4CAF50',
-            color: '#1B5E20',
-            '&:hover': {
-              backgroundColor: '#f1f8e9',
-            },
-          }}
+          sx={{ cursor: 'pointer', borderColor: '#4CAF50' }}
         />
-        <IconButton
-          onClick={handleMenu}
-          sx={{
-            color: '#1B5E20',
-            backgroundColor: '#f1f8e9',
-            '&:hover': {
-              backgroundColor: '#e8f5e8',
-            },
-          }}
-        >
-          <AccountCircle />
-        </IconButton>
       </Box>
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={handleClose}
-        PaperProps={{
-          sx: {
-            mt: 1.5,
-            borderRadius: 3,
-            boxShadow: '0 8px 30px rgba(46, 125, 50, 0.15)',
-            border: '1px solid #e8f5e8',
-          },
-        }}
+        PaperProps={{ sx: { mt: 1.5, borderRadius: 3 } }}
       >
-        <MenuItem sx={{ cursor: 'default', '&:hover': { backgroundColor: 'transparent' } }}>
+        <MenuItem sx={{ cursor: 'default' }}>
           <Box>
-            <Typography variant="subtitle1" fontWeight="600">
-              {user.name}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {user.email}
-            </Typography>
+            <Typography variant="subtitle1" fontWeight="600">{user.name}</Typography>
+            <Typography variant="body2" color="text.secondary">{user.email}</Typography>
           </Box>
         </MenuItem>
-        <MenuItem onClick={handleClose}>
-          <AccountCircle sx={{ mr: 2, color: '#4CAF50' }} />
-          Profile
+        <MenuItem onClick={() => handleNavigate('/progress')}>
+          <Analytics sx={{ mr: 2, color: '#4CAF50' }} />
+          My Progress
         </MenuItem>
-        <MenuItem onClick={handleClose}>
-          <Notifications sx={{ mr: 2, color: '#4CAF50' }} />
-          Notifications
+        <MenuItem onClick={() => handleNavigate('/settings')}>
+          <SettingsIcon sx={{ mr: 2, color: '#4CAF50' }} />
+          Settings
         </MenuItem>
         <MenuItem onClick={handleLogout} sx={{ color: '#d32f2f' }}>
           <Logout sx={{ mr: 2 }} />
@@ -236,14 +184,7 @@ const AuthButtons = () => {
         startIcon={<Login />}
         onClick={handleLogin}
         variant="outlined"
-        sx={{
-          borderColor: '#4CAF50',
-          color: '#1B5E20',
-          '&:hover': {
-            borderColor: '#2E7D32',
-            backgroundColor: '#f1f8e9',
-          },
-        }}
+        sx={{ borderColor: '#4CAF50', color: '#1B5E20' }}
       >
         Login
       </Button>
@@ -251,17 +192,11 @@ const AuthButtons = () => {
         startIcon={<PersonAdd />}
         onClick={handleRegister}
         variant="contained"
-        sx={{
-          backgroundColor: '#2E7D32',
-          '&:hover': {
-            backgroundColor: '#1B5E20',
-          },
-        }}
+        sx={{ backgroundColor: '#2E7D32' }}
       >
         Register
       </Button>
       
-      {/* Auth Modal */}
       <AuthModal 
         open={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
@@ -271,31 +206,84 @@ const AuthButtons = () => {
   );
 };
 
+// Mobile Bottom Navigation
+const MobileBottomNav = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const navigationItems = [
+    { label: 'Home', icon: <HomeIcon />, path: '/' },
+    { label: 'Progress', icon: <Analytics />, path: '/progress' },
+    { label: 'Settings', icon: <SettingsIcon />, path: '/settings' },
+  ];
+
+  return (
+    <Paper sx={{ position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 1000 }} elevation={3}>
+      <BottomNavigation
+        value={location.pathname}
+        onChange={(event, newValue) => navigate(newValue)}
+        showLabels
+      >
+        {navigationItems.map((item) => (
+          <BottomNavigationAction
+            key={item.path}
+            label={item.label}
+            value={item.path}
+            icon={item.icon}
+            sx={{
+              color: location.pathname === item.path ? '#2E7D32' : 'inherit',
+              '& .MuiBottomNavigationAction-label': {
+                fontSize: '0.75rem',
+                fontWeight: location.pathname === item.path ? 600 : 400,
+              },
+            }}
+          />
+        ))}
+      </BottomNavigation>
+    </Paper>
+  );
+};
+
 // Modern Header Component
 const Header = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const navigationItems = [
+    { label: 'Home', path: '/' },
+    { label: 'Progress', path: '/progress' },
+    { label: 'Settings', path: '/settings' },
+  ];
+
   return (
     <AppBar position="sticky" elevation={0}>
       <Toolbar>
         <Container maxWidth="lg" sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
           {/* Logo */}
-          <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1, cursor: 'pointer' }} onClick={() => navigate('/')}>
             <Mosque sx={{ fontSize: 32, color: '#2E7D32', mr: 2 }} />
             <Typography variant="h5" component="div" fontWeight="700">
               Muslim<span style={{ color: '#FF9800' }}>Daily</span>
             </Typography>
           </Box>
 
-          {/* Navigation */}
+          {/* Desktop Navigation */}
           <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 3, mr: 4 }}>
-            <Button color="inherit" sx={{ fontWeight: 600 }}>
-              Prayer Times
-            </Button>
-            <Button color="inherit" sx={{ fontWeight: 600 }}>
-              Progress
-            </Button>
-            <Button color="inherit" sx={{ fontWeight: 600 }}>
-              Quran
-            </Button>
+            {navigationItems.map((item) => (
+              <Button
+                key={item.path}
+                color="inherit"
+                onClick={() => navigate(item.path)}
+                sx={{
+                  fontWeight: 600,
+                  color: location.pathname === item.path ? '#2E7D32' : 'inherit',
+                  borderBottom: location.pathname === item.path ? '2px solid #2E7D32' : 'none',
+                  borderRadius: 0,
+                }}
+              >
+                {item.label}
+              </Button>
+            ))}
           </Box>
 
           {/* Auth Controls */}
@@ -316,7 +304,7 @@ const PWAInstallPrompt = () => {
     <Box
       sx={{
         position: 'fixed',
-        bottom: 24,
+        bottom: { xs: 70, md: 24 },
         right: 24,
         background: 'linear-gradient(135deg, #2E7D32 0%, #4CAF50 100%)',
         color: 'white',
@@ -324,18 +312,12 @@ const PWAInstallPrompt = () => {
         borderRadius: 16,
         cursor: 'pointer',
         boxShadow: '0 8px 30px rgba(46, 125, 50, 0.3)',
-        zIndex: 1000,
+        zIndex: 1001,
         display: 'flex',
         alignItems: 'center',
         gap: 2,
         fontSize: '14px',
         fontWeight: '600',
-        transition: 'all 0.3s ease',
-        border: '2px solid white',
-        '&:hover': {
-          transform: 'translateY(-2px)',
-          boxShadow: '0 12px 40px rgba(46, 125, 50, 0.4)',
-        },
       }}
       onClick={installApp}
     >
@@ -356,40 +338,24 @@ function App() {
             <Box sx={{ 
               minHeight: '100vh', 
               background: 'linear-gradient(135deg, #f8fdf8 0%, #e8f5e8 100%)',
-              position: 'relative',
+              pb: { xs: 7, md: 0 }, // Space for mobile bottom nav
             }}>
-              {/* Background Pattern */}
-              <Box
-                sx={{
-                  position: 'fixed',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundImage: `
-                    radial-gradient(circle at 20% 80%, rgba(76, 175, 80, 0.05) 0%, transparent 50%),
-                    radial-gradient(circle at 80% 20%, rgba(255, 152, 0, 0.05) 0%, transparent 50%),
-                    radial-gradient(circle at 40% 40%, rgba(46, 125, 50, 0.03) 0%, transparent 50%)
-                  `,
-                  zIndex: 0,
-                }}
-              />
+              <Header />
               
-              {/* Content */}
-              <Box sx={{ position: 'relative', zIndex: 1 }}>
-                <Header />
-                
-                <Container maxWidth="lg" sx={{ py: 4 }}>
-                  <Routes>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/progress" element={<Progress />} />
-                    <Route path="/settings" element={<Settings />} />
-                    <Route path="*" element={<Home />} />
-                  </Routes>
-                </Container>
+              <Container maxWidth="lg" sx={{ py: 3 }}>
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/progress" element={<Progress />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="*" element={<Home />} />
+                </Routes>
+              </Container>
+
+              {/* Mobile Bottom Navigation */}
+              <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+                <MobileBottomNav />
               </Box>
 
-              {/* PWA Install Prompt */}
               <PWAInstallPrompt />
             </Box>
           </Router>
