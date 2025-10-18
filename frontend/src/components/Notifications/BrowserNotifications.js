@@ -15,8 +15,8 @@ import {
   Snackbar
 } from '@mui/material';
 import { NotificationsActive, Science } from '@mui/icons-material';
-import { useNotification } from '../../../context/NotificationContext';
-import { useAuth } from '../../../context/AuthContext';
+import { useNotification } from '../../context/NotificationContext'; // FIXED: Changed from ../../../ to ../../
+import { useAuth } from '../../context/AuthContext'; // FIXED: Also update this path if needed
 
 const BrowserNotifications = () => {
   const { user } = useAuth();
