@@ -141,3 +141,4 @@ export const PracticeProvider = ({ children }) => {
     </PracticeContext.Provider>
   );
 };
+export { PracticeContext, usePractice };
