@@ -141,11 +141,12 @@ const UserMenu = () => {
   );
 };
 
-// Auth Buttons Component
+// In the Header component, update the AuthButtons section:
 const AuthButtons = ({ onAuthAction }) => {
   const { user } = useAuth();
   const { darkMode } = useTheme();
-  const isMobile = useMediaQuery('(max-width: 900px)');
+  const isMobile = useMediaQuery('(max-width: 768px)');
+  const isSmallMobile = useMediaQuery('(max-width: 380px)');
 
   const handleGetStarted = () => {
     if (onAuthAction) {
@@ -162,26 +163,39 @@ const AuthButtons = ({ onAuthAction }) => {
   if (user) return <UserMenu />;
 
   return (
-    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+    <Box sx={{ 
+      display: 'flex', 
+      gap: { xs: 0.5, sm: 1 }, 
+      alignItems: 'center',
+      flexWrap: 'nowrap'
+    }}>
       <Button
         onClick={handleLogin}
         variant="text"
+        size="small"
         sx={{ 
           color: 'text.primary',
-          fontWeight: 600
+          fontWeight: 600,
+          fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.9rem' },
+          minWidth: 'auto',
+          px: { xs: 1, sm: 2 }
         }}
       >
-        Sign In
+        {isSmallMobile ? 'Login' : 'Sign In'}
       </Button>
       <Button
         onClick={handleGetStarted}
         variant="contained"
-        size={isMobile ? "small" : "medium"}
+        size="small"
         sx={{ 
-          fontWeight: 600
+          fontWeight: 600,
+          fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.9rem' },
+          minWidth: 'auto',
+          px: { xs: 1.5, sm: 2 },
+          whiteSpace: 'nowrap'
         }}
       >
-        {isMobile ? 'Start' : 'Get Started'}
+        {isSmallMobile ? 'Start' : (isMobile ? 'Get Started' : 'Get Started')}
       </Button>
     </Box>
   );
@@ -277,38 +291,41 @@ const MobileNavigationDrawer = ({ open, onClose, onAuthAction }) => {
         ))}
       </List>
 
-      {!user && (
-        <Box sx={{ p: 2, mt: 'auto', borderTop: '1px solid #E2E8F0' }}>
-          <Button
-            fullWidth
-            variant="contained"
-            onClick={() => {
-              onAuthAction('register');
-              onClose();
-            }}
-            sx={{
-              mb: 1,
-              borderRadius: 2,
-            }}
-          >
-            Get Started
-          </Button>
-          <Button
-            fullWidth
-            variant="outlined"
-            onClick={() => {
-              onAuthAction('login');
-              onClose();
-            }}
-            sx={{
-              borderRadius: 2,
-              borderColor: 'divider',
-            }}
-          >
-            Sign In
-          </Button>
-        </Box>
-      )}
+      // In MobileNavigationDrawer component, update the auth buttons section:
+{!user && (
+  <Box sx={{ p: 2, mt: 'auto', borderTop: '1px solid #E2E8F0' }}>
+    <Button
+      fullWidth
+      variant="contained"
+      onClick={() => {
+        onAuthAction('register');
+        onClose();
+      }}
+      sx={{
+        mb: 1,
+        borderRadius: 2,
+        fontSize: '0.9rem'
+      }}
+    >
+      Get Started
+    </Button>
+    <Button
+      fullWidth
+      variant="outlined"
+      onClick={() => {
+        onAuthAction('login');
+        onClose();
+      }}
+      sx={{
+        borderRadius: 2,
+        borderColor: 'divider',
+        fontSize: '0.9rem'
+      }}
+    >
+      Sign In
+    </Button>
+  </Box>
+)}
     </Drawer>
   );
 };

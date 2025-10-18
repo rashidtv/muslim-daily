@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   Card,
   CardContent,
@@ -19,6 +19,7 @@ import {
 } from '@mui/material';
 import { Refresh, CheckCircle, RadioButtonUnchecked, MyLocation, LocationOn } from '@mui/icons-material';
 import { usePractice } from '../../context/PracticeContext';
+import { useAuth } from '../../context/AuthContext';
 
 // EXACT same zones as e-solat.gov.my with optgroups
 const malaysianZones = [
@@ -251,8 +252,16 @@ const PrayerTimes = () => {
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   
-  const { markPracticeCompleted, markPracticeIncomplete, isPracticeCompleted } = usePractice();
+  const { trackPrayer, getTodayPrayers } = usePractice();
+  const { user } = useAuth();
   const theme = useTheme();
+
+  // Helper function to check if prayer is completed today
+  const isPrayerCompletedToday = (prayerName) => {
+    if (!user) return false;
+    const todayPrayers = getTodayPrayers();
+    return todayPrayers.some(prayer => prayer.name.toLowerCase() === prayerName.toLowerCase());
+  };
 
   // Get user's current location - SILENT background detection
   const getCurrentLocation = () => {
@@ -456,13 +465,23 @@ const PrayerTimes = () => {
     await loadPrayerTimes(zoneCode);
   };
 
-  const handlePracticeToggle = (prayerName) => {
-    const prayerType = prayerName.toLowerCase();
-    
-    if (isPracticeCompleted(prayerType)) {
-      markPracticeIncomplete(prayerType);
-    } else {
-      markPracticeCompleted(prayerType);
+  const handlePracticeToggle = async (prayerName) => {
+    if (!user) {
+      setSnackbarMessage('Please sign in to track prayers');
+      setSnackbarOpen(true);
+      return;
+    }
+
+    try {
+      await trackPrayer(prayerName);
+      setSnackbarMessage(`${prayerName} prayer tracked successfully!`);
+      setSnackbarOpen(true);
+      
+      // Refresh the UI to show updated completion status
+      setPrayerTimes(prev => ({ ...prev }));
+    } catch (error) {
+      setSnackbarMessage('Failed to track prayer');
+      setSnackbarOpen(true);
     }
   };
 
@@ -582,6 +601,12 @@ const PrayerTimes = () => {
             </Alert>
           )}
 
+          {!user && (
+            <Alert severity="info" sx={{ mb: 2, fontSize: '0.8rem' }}>
+              Sign in to track your prayers and see progress
+            </Alert>
+          )}
+
           {/* Zone Selection - UPDATED: Smaller fonts */}
           <FormControl fullWidth sx={{ mb: 2 }}>
             <InputLabel sx={{ fontSize: '0.8rem' }}>Select Zone</InputLabel>
@@ -660,7 +685,7 @@ const PrayerTimes = () => {
           {prayerTimes && (
             <Grid container spacing={1} sx={{ mb: 1 }}>
               {prayers.map((prayer) => {
-                const isCompleted = isPracticeCompleted(prayer.type);
+                const isCompleted = isPrayerCompletedToday(prayer.name);
                 const isNextPrayer = nextPrayer?.name === prayer.name;
                 
                 return (
@@ -709,16 +734,18 @@ const PrayerTimes = () => {
                         )}
                         
                         <IconButton
-                          onClick={() => handlePracticeToggle(prayer.type)}
+                          onClick={() => handlePracticeToggle(prayer.name)}
                           color={isCompleted ? "success" : "default"}
                           size="small"
+                          disabled={!user}
                           sx={{
                             border: isCompleted ? '2px solid' : '1px solid',
                             borderColor: isCompleted ? 'success.main' : 'grey.400',
                             width: '32px',
-                            height: '32px'
+                            height: '32px',
+                            opacity: !user ? 0.5 : 1
                           }}
-                          aria-label={isCompleted ? `Mark ${prayer.name} as incomplete` : `Mark ${prayer.name} as completed`}
+                          aria-label={!user ? 'Sign in to track prayers' : (isCompleted ? `Mark ${prayer.name} as incomplete` : `Mark ${prayer.name} as completed`)}
                         >
                           {isCompleted ? <CheckCircle /> : <RadioButtonUnchecked />}
                         </IconButton>
@@ -734,6 +761,7 @@ const PrayerTimes = () => {
           <Box sx={{ mt: 1, textAlign: 'center' }}>
             <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
               Live data from JAKIM • Zone: {selectedZone}
+              {userLocation && ` • GPS: ${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)}`}
             </Typography>
           </Box>
         </CardContent>

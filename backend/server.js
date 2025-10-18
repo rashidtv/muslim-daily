@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const prayerNotificationsRoutes = require('./routes/prayerNotifications');
 require('dotenv').config();
 
 const app = express();
@@ -438,6 +439,7 @@ app.get('/api/user/progress', (req, res) => {
   }
 });
 
+app.use('/api/notifications', prayerNotificationsRoutes);
 // ==================== EXISTING PRAYER TIMES ROUTES ====================
 
 // Import prayer times routes
