@@ -1,18 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
-import { CssBaseline } from '@mui/material';
+import { CssBaseline, Snackbar, Alert, Button } from '@mui/material';
 import {
   AppBar,
   Toolbar,
   Typography,
-  Button,
   Box,
   IconButton,
   Menu,
   MenuItem,
   Avatar,
   Container,
-  Chip,
   BottomNavigation,
   BottomNavigationAction,
   Paper,
@@ -27,7 +25,6 @@ import {
   AccountCircle,
   Login,
   Logout,
-  PersonAdd,
   Mosque,
   Home as HomeIcon,
   Analytics,
@@ -139,67 +136,6 @@ const UserMenu = () => {
         </MenuItem>
       </Menu>
     </div>
-  );
-};
-
-// Auth Buttons Component - Improved wording
-const AuthButtons = ({ onAuthAction }) => {
-  const { user } = useAuth();
-  const { darkMode } = useTheme();
-  const isMobile = useMediaQuery('(max-width: 768px)');
-  const isSmallMobile = useMediaQuery('(max-width: 380px)');
-
-  const handleGetStarted = () => {
-    if (onAuthAction) {
-      onAuthAction('register');
-    }
-  };
-
-  const handleLogin = () => {
-    if (onAuthAction) {
-      onAuthAction('login');
-    }
-  };
-
-  if (user) return <UserMenu />;
-
-  return (
-    <Box sx={{ 
-      display: 'flex', 
-      gap: { xs: 0.5, sm: 1 }, 
-      alignItems: 'center',
-      flexWrap: 'nowrap'
-    }}>
-      <Button
-        onClick={handleLogin}
-        variant="text"
-        size="small"
-        sx={{ 
-          color: 'text.primary',
-          fontWeight: 600,
-          fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.9rem' },
-          minWidth: 'auto',
-          px: { xs: 1, sm: 2 }
-        }}
-      >
-        {isSmallMobile ? 'Login' : 'Sign In'}
-      </Button>
-      <Button
-        onClick={handleGetStarted}
-        variant="contained"
-        size="small"
-        sx={{ 
-          fontWeight: 600,
-          fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.9rem' },
-          minWidth: 'auto',
-          px: { xs: 1.5, sm: 2 },
-          whiteSpace: 'nowrap',
-          background: 'linear-gradient(135deg, #0D9488 0%, #F59E0B 100%)'
-        }}
-      >
-        {isSmallMobile ? 'Join' : 'Start Free'}
-      </Button>
-    </Box>
   );
 };
 
@@ -595,10 +531,46 @@ const MosqueFinderComingSoon = () => (
 function App() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState('login');
+  const [updateAvailable, setUpdateAvailable] = useState(false);
 
   const handleAuthAction = (mode) => {
     setAuthMode(mode);
     setAuthModalOpen(true);
+  };
+
+  // Auto-update notification effect
+  useEffect(() => {
+    // Listen for service worker messages about updates
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'NEW_VERSION_AVAILABLE') {
+          console.log('🔄 Update detected in App.js');
+          setUpdateAvailable(true);
+        }
+      });
+    }
+
+    // Make update notification function available globally for index.js
+    window.showPWAUpdateNotification = () => {
+      console.log('🔄 Global update function called');
+      setUpdateAvailable(true);
+    };
+
+    // Cleanup
+    return () => {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.removeEventListener('message', () => {});
+      }
+    };
+  }, []);
+
+  const handleUpdate = () => {
+    console.log('🔄 User triggered update');
+    window.location.reload();
+  };
+
+  const handleCloseUpdateNotification = () => {
+    setUpdateAvailable(false);
   };
 
   return (
@@ -645,6 +617,38 @@ function App() {
                   onClose={() => setAuthModalOpen(false)}
                   initialMode={authMode}
                 />
+
+                {/* Auto-update notification */}
+                <Snackbar
+                  open={updateAvailable}
+                  autoHideDuration={8000}
+                  onClose={handleCloseUpdateNotification}
+                  anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                  sx={{ 
+                    bottom: { xs: 70, md: 24 } // Adjust for mobile bottom nav
+                  }}
+                >
+                  <Alert 
+                    severity="info" 
+                    variant="filled"
+                    action={
+                      <Button 
+                        color="inherit" 
+                        size="small" 
+                        onClick={handleUpdate}
+                        sx={{ fontWeight: 'bold' }}
+                      >
+                        UPDATE
+                      </Button>
+                    }
+                    sx={{ 
+                      width: '100%',
+                      alignItems: 'center'
+                    }}
+                  >
+                    🎉 New version available!
+                  </Alert>
+                </Snackbar>
               </Box>
             </Router>
           </NotificationProvider>

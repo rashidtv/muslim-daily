@@ -11,81 +11,88 @@ root.render(
   </React.StrictMode>
 );
 
-// Service Worker Registration with forced updates
+// Service Worker Registration with Auto-Updates
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    // Add cache-busting parameter to force update
-    navigator.serviceWorker.register('/sw.js?v=1.6')
-      .then((registration) => {
-        console.log('✅ SW registered: ', registration);
-        
-        // Force immediate update check
-        registration.update();
-        
-        // Check for updates every hour
-        setInterval(() => {
-          registration.update();
-        }, 60 * 60 * 1000); // 1 hour
-        
-        // Listen for new service worker installation
-        registration.addEventListener('updatefound', () => {
-          const newWorker = registration.installing;
-          console.log('🔄 New SW found, updating...');
+  window.addEventListener('load', async () => {
+    try {
+      // Use a cache-busting URL to force update detection
+      const registration = await navigator.serviceWorker.register('/sw.js?v=' + Date.now());
+      
+      console.log('✅ SW registered: ', registration);
+
+      // Check for updates immediately and every 30 minutes
+      registration.update();
+      setInterval(() => registration.update(), 30 * 60 * 1000);
+
+      // Listen for new service worker installation
+      registration.addEventListener('updatefound', () => {
+        const newWorker = registration.installing;
+        console.log('🔄 New SW update found!');
+
+        newWorker.addEventListener('statechange', () => {
+          console.log('🔄 SW state:', newWorker.state);
           
-          newWorker.addEventListener('statechange', () => {
-            console.log('🔄 SW state changed:', newWorker.state);
-            
-            if (newWorker.state === 'installed') {
-              if (navigator.serviceWorker.controller) {
-                // New content available
-                console.log('✅ New content available, please refresh!');
-                
-                // Show update notification to user
-                if (window.confirm('A new version of Muslim Diary is available! Reload to get the latest features?')) {
-                  window.location.reload();
-                }
-              } else {
-                // First installation
-                console.log('✅ Content is cached for offline use.');
-              }
-            }
-          });
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            // New content is available - show update notification
+            console.log('✅ New version available!');
+            showUpdateNotification();
+          }
         });
-      })
-      .catch((registrationError) => {
-        console.log('❌ SW registration failed: ', registrationError);
       });
+
+      // Listen for messages from service worker
+      navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'NEW_VERSION_AVAILABLE') {
+          showUpdateNotification();
+        }
+      });
+
+    } catch (error) {
+      console.log('❌ SW registration failed: ', error);
+    }
   });
 
-  // Handle controller changes (when a new service worker takes control)
-  let refreshing = false;
+  // Auto-reload when new service worker takes control
+  let isRefreshing = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!refreshing) {
-      console.log('🔄 Controller changed, reloading page...');
-      refreshing = true;
+    if (!isRefreshing) {
+      console.log('🔄 New SW activated, reloading...');
+      isRefreshing = true;
       window.location.reload();
     }
   });
 }
 
-// Optional: Add a manual update check function
+// Show update notification to user
+function showUpdateNotification() {
+  // Check if we're in a PWA
+  const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
+                window.navigator.standalone ||
+                document.referrer.includes('android-app://');
+
+  if (isPWA) {
+    // For PWA - show a subtle notification that auto-updates
+    if (window.showPWAUpdateNotification) {
+      window.showPWAUpdateNotification();
+    } else {
+      // Fallback: auto-update after short delay
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+    }
+  } else {
+    // For browser - show interactive notification
+    if (confirm('🎉 New version available! Reload to get the latest features?')) {
+      window.location.reload();
+    }
+  }
+}
+
+// Make update function available globally for App.js to use
 window.checkForUpdates = () => {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.ready.then((registration) => {
+    navigator.serviceWorker.ready.then(registration => {
       registration.update();
-      console.log('🔄 Manual update check triggered');
-    });
-  }
-};
-
-// Optional: Add a function to unregister service worker (for development)
-window.unregisterSW = () => {
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.ready.then((registration) => {
-      registration.unregister().then(() => {
-        console.log('🗑️ Service Worker unregistered');
-        window.location.reload();
-      });
     });
   }
 };
