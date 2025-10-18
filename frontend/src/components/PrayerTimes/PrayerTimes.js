@@ -17,7 +17,7 @@ import {
   Grid
 } from '@mui/material';
 import { Refresh, CheckCircle, RadioButtonUnchecked, MyLocation, LocationOn } from '@mui/icons-material';
-import { usePractice } from '../context/PracticeContext';
+import { usePractice } from '../../context/PracticeContext';
 
 // EXACT same zones as e-solat.gov.my with optgroups
 const malaysianZones = [
