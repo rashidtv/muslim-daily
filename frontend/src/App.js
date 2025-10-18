@@ -42,16 +42,14 @@ import {
   CalendarMonth,
   LocationOn
 } from '@mui/icons-material';
-import { usePWAInstall } from './hooks/usePWAInstall';
-import { PracticeProvider } from './context/PracticeContext';
-import { AuthProvider, useAuth } from './context/AuthContext';
-
-// Components
 import Home from './pages/Home';
 import Progress from './pages/Progress';
 import Settings from './pages/Settings';
 import Calendar from './pages/Calendar';
 import AuthModal from './components/Auth/AuthModal';
+import { usePWAInstall } from './hooks/usePWAInstall';
+import { PracticeProvider } from './context/PracticeContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 
 // Calming color scheme - Teal & Amber
 const theme = createTheme({
