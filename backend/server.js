@@ -1,4 +1,5 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const cors = require('cors');
 const prayerNotificationsRoutes = require('./routes/prayerNotifications');
 require('dotenv').config();
@@ -9,38 +10,40 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ==================== IN-MEMORY STORAGE ====================
-const users = new Map();
-const practices = new Map();
-const authUsers = new Map(); // email -> user data
-const userTokens = new Map(); // token -> user email
-
-// Simple user data structure
-const createUser = (id) => ({
-  id,
-  name: `User${id}`,
-  location: 'Kuala Lumpur',
-  zone: 'WLY01', // Default KL zone
-  createdAt: new Date().toISOString(),
-  streak: 0,
-  lastPracticeDate: null
-});
-
-// Helper function to generate simple tokens
-const generateToken = () => 'token_' + Math.random().toString(36).substr(2, 16) + Date.now().toString(36);
-
-// Helper function for dates
-function getYesterdayDate() {
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  return yesterday.toDateString();
-}
-
 // Enhanced startup logging
 console.log('🚀 Muslim Daily Backend Starting...');
 console.log('📅 Startup Time:', new Date().toISOString());
+console.log('🗄️  MongoDB Persistent Storage');
 console.log('💰 COMPLETELY FREE - No costs, no subscriptions');
-console.log('🔐 In-memory user storage active');
+
+// MongoDB connection
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/muslimdiary';
+
+mongoose.connect(MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => {
+  console.log('✅ MongoDB Connected Successfully');
+  console.log('🏠 Database:', mongoose.connection.name);
+})
+.catch((error) => {
+  console.error('❌ MongoDB connection error:', error);
+  process.exit(1);
+});
+
+// MongoDB connection events
+mongoose.connection.on('connected', () => {
+  console.log('✅ MongoDB Connected Successfully');
+  console.log('🏠 Database:', mongoose.connection.name);
+});
+
+mongoose.connection.on('error', (err) => {
+  console.error('❌ MongoDB connection error:', err);
+});
+
+// Import models
+const User = require('./models/User');
 
 // ==================== HEALTH MONITORING ENDPOINTS ====================
 
@@ -52,7 +55,7 @@ app.get('/api/health1', (req, res) => {
     timestamp: new Date().toISOString(),
     version: '1.0.0',
     environment: process.env.NODE_ENV || 'development',
-    storage: 'in-memory'
+    storage: 'mongodb-persistent'
   });
 });
 
@@ -69,41 +72,45 @@ app.get('/api/health2', (req, res) => {
     },
     uptime: `${Math.round(process.uptime())} seconds`,
     timestamp: new Date().toISOString(),
-    users: authUsers.size,
-    sessions: userTokens.size
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
   });
 });
 
 // Health check endpoint 3 - Detailed stats
-app.get('/api/health3', (req, res) => {
-  const userStats = {
-    totalUsers: authUsers.size,
-    activeSessions: userTokens.size,
-    totalPractices: Array.from(practices.values()).reduce((acc, userPractices) => acc + userPractices.length, 0),
-    serverUptime: `${Math.round(process.uptime())} seconds`
-  };
-
-  res.json({ 
-    status: 'healthy',
-    stats: userStats,
-    timestamp: new Date().toISOString(),
-    service: 'Muslim Daily API - In Memory Edition'
-  });
+app.get('/api/health3', async (req, res) => {
+  try {
+    const userCount = await User.countDocuments();
+    
+    res.json({ 
+      status: 'healthy',
+      stats: {
+        totalUsers: userCount,
+        serverUptime: `${Math.round(process.uptime())} seconds`,
+        database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+      },
+      timestamp: new Date().toISOString(),
+      service: 'Muslim Daily API - MongoDB Edition'
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      status: 'unhealthy',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // Warmup endpoint - Simulates real API call
 app.get('/api/warmup', async (req, res) => {
   try {
-    // Simulate some processing
-    const userCount = authUsers.size;
-    const practiceCount = Array.from(practices.values()).reduce((acc, userPractices) => acc + userPractices.length, 0);
+    const userCount = await User.countDocuments();
     
     res.json({ 
       status: 'warmed up',
       users: userCount,
-      practices: practiceCount,
       timestamp: new Date().toISOString(),
-      message: 'Muslim Daily backend is ready to handle requests'
+      message: 'Muslim Daily backend is ready to handle requests',
+      database: 'connected'
     });
   } catch (error) {
     res.json({ 
@@ -122,54 +129,74 @@ app.get('/api/ping', (req, res) => {
     timestamp: new Date().toISOString(),
     service: 'Muslim Daily API',
     version: '1.0.0',
-    message: 'Alhamdulillah! Serving the Muslim community for free!'
+    message: 'Alhamdulillah! Serving the Muslim community for free!',
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
   });
 });
 
-// ==================== EXISTING ROUTES (KEEP ALL YOUR CURRENT CODE) ====================
+// ==================== ROUTES ====================
 
 // Root endpoint
-app.get('/', (req, res) => {
-  res.json({ 
-    message: '🕌 MuslimDaily API - Free Muslim Practice Companion',
-    version: '1.0.0',
-    status: 'Alhamdulillah! Serving the Muslim community for free!',
-    features: [
-      'Prayer time tracking',
-      'Quran reading tracker', 
-      'Dhikr counter',
-      'Progress analytics',
-      'User authentication',
-      'Completely FREE forever'
-    ],
-    stats: {
-      totalUsers: authUsers.size,
-      activeSessions: userTokens.size,
-      serverTime: new Date().toISOString()
-    },
-    healthEndpoints: [
-      '/api/health1',
-      '/api/health2', 
-      '/api/health3',
-      '/api/warmup',
-      '/api/ping'
-    ]
-  });
+app.get('/', async (req, res) => {
+  try {
+    const userCount = await User.countDocuments();
+    
+    res.json({ 
+      message: '🕌 MuslimDaily API - Free Muslim Practice Companion',
+      version: '1.0.0',
+      status: 'Alhamdulillah! Serving the Muslim community for free!',
+      features: [
+        'Prayer time tracking',
+        'Quran reading tracker', 
+        'Dhikr counter',
+        'Progress analytics',
+        'User authentication',
+        'Persistent MongoDB storage',
+        'Completely FREE forever'
+      ],
+      stats: {
+        totalUsers: userCount,
+        serverTime: new Date().toISOString(),
+        database: 'MongoDB Persistent'
+      },
+      healthEndpoints: [
+        '/api/health1',
+        '/api/health2', 
+        '/api/health3',
+        '/api/warmup',
+        '/api/ping'
+      ]
+    });
+  } catch (error) {
+    res.json({ 
+      message: '🕌 MuslimDaily API - Free Muslim Practice Companion',
+      status: 'Starting up...',
+      error: error.message
+    });
+  }
 });
 
 // Health check (existing)
-app.get('/health', (req, res) => {
-  res.json({ 
-    success: true, 
-    message: 'Muslim Daily API is running!',
-    timestamp: new Date().toISOString(),
-    usersCount: authUsers.size,
-    sessionsCount: userTokens.size
-  });
+app.get('/health', async (req, res) => {
+  try {
+    const userCount = await User.countDocuments();
+    
+    res.json({ 
+      success: true, 
+      message: 'Muslim Daily API is running!',
+      timestamp: new Date().toISOString(),
+      usersCount: userCount,
+      database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
 });
 
-// ==================== ALL YOUR EXISTING AUTH ROUTES ====================
-// KEEP ALL YOUR EXISTING CODE FROM HERE...
+// ==================== AUTHENTICATION ROUTES ====================
 
 // Register endpoint
 app.post('/api/auth/register', async (req, res) => {
@@ -192,7 +219,8 @@ app.post('/api/auth/register', async (req, res) => {
     }
 
     // Check if user already exists
-    if (authUsers.has(email.toLowerCase())) {
+    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    if (existingUser) {
       return res.status(400).json({ 
         success: false, 
         error: 'User already exists' 
@@ -200,20 +228,16 @@ app.post('/api/auth/register', async (req, res) => {
     }
 
     // Create user
-    const userId = 'user_' + Date.now();
-    const user = {
-      id: userId,
+    const user = new User({
       email: email.toLowerCase(),
       name: name,
-      password: password, // In production, hash this with bcryptjs
+      password: password, // Will be hashed by the User model
       zone: 'SGR01',
       location: {
         latitude: null,
         longitude: null,
         autoDetected: false
       },
-      createdAt: new Date().toISOString(),
-      lastLogin: new Date().toISOString(),
       prayerProgress: {
         fajr: [],
         dhuhr: [],
@@ -221,14 +245,17 @@ app.post('/api/auth/register', async (req, res) => {
         maghrib: [],
         isha: []
       }
-    };
+    });
 
-    // Store user
-    authUsers.set(email.toLowerCase(), user);
-    
-    // Generate token
-    const token = generateToken();
-    userTokens.set(token, email.toLowerCase());
+    await user.save();
+
+    // Generate token (simple version for now)
+    const jwt = require('jsonwebtoken');
+    const token = jwt.sign(
+      { userId: user._id }, 
+      process.env.JWT_SECRET || 'muslim-daily-secret-key', 
+      { expiresIn: '7d' }
+    );
 
     console.log(`✅ New user registered: ${email}`);
 
@@ -236,7 +263,7 @@ app.post('/api/auth/register', async (req, res) => {
       success: true,
       token: token,
       user: {
-        id: user.id,
+        id: user._id,
         email: user.email,
         name: user.name,
         zone: user.zone,
@@ -248,7 +275,7 @@ app.post('/api/auth/register', async (req, res) => {
     console.error('Registration error:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Registration failed' 
+      error: 'Registration failed: ' + error.message
     });
   }
 });
@@ -266,7 +293,7 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     // Find user
-    const user = authUsers.get(email.toLowerCase());
+    const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
       return res.status(400).json({ 
         success: false, 
@@ -275,7 +302,8 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     // Check password
-    if (user.password !== password) {
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
       return res.status(400).json({ 
         success: false, 
         error: 'Invalid credentials' 
@@ -283,11 +311,16 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     // Update last login
-    user.lastLogin = new Date().toISOString();
+    user.lastLogin = new Date();
+    await user.save();
     
-    // Generate new token
-    const token = generateToken();
-    userTokens.set(token, email.toLowerCase());
+    // Generate token
+    const jwt = require('jsonwebtoken');
+    const token = jwt.sign(
+      { userId: user._id }, 
+      process.env.JWT_SECRET || 'muslim-daily-secret-key', 
+      { expiresIn: '7d' }
+    );
 
     console.log(`✅ User logged in: ${email}`);
 
@@ -295,7 +328,7 @@ app.post('/api/auth/login', async (req, res) => {
       success: true,
       token: token,
       user: {
-        id: user.id,
+        id: user._id,
         email: user.email,
         name: user.name,
         zone: user.zone,
@@ -307,13 +340,13 @@ app.post('/api/auth/login', async (req, res) => {
     console.error('Login error:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Login failed' 
+      error: 'Login failed: ' + error.message
     });
   }
 });
 
 // Get current user
-app.get('/api/auth/me', (req, res) => {
+app.get('/api/auth/me', async (req, res) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
@@ -324,15 +357,10 @@ app.get('/api/auth/me', (req, res) => {
       });
     }
 
-    const userEmail = userTokens.get(token);
-    if (!userEmail) {
-      return res.status(401).json({ 
-        success: false, 
-        error: 'Invalid token' 
-      });
-    }
-
-    const user = authUsers.get(userEmail);
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'muslim-daily-secret-key');
+    
+    const user = await User.findById(decoded.userId);
     if (!user) {
       return res.status(404).json({ 
         success: false, 
@@ -343,7 +371,7 @@ app.get('/api/auth/me', (req, res) => {
     res.json({
       success: true,
       user: {
-        id: user.id,
+        id: user._id,
         email: user.email,
         name: user.name,
         zone: user.zone,
@@ -360,20 +388,29 @@ app.get('/api/auth/me', (req, res) => {
 });
 
 // Auth test endpoint
-app.get('/api/auth/test', (req, res) => {
-  res.json({ 
-    success: true, 
-    message: 'Auth routes are working!',
-    usersCount: authUsers.size,
-    activeSessions: userTokens.size,
-    timestamp: new Date().toISOString()
-  });
+app.get('/api/auth/test', async (req, res) => {
+  try {
+    const userCount = await User.countDocuments();
+    
+    res.json({ 
+      success: true, 
+      message: 'Auth routes are working!',
+      usersCount: userCount,
+      timestamp: new Date().toISOString(),
+      database: 'MongoDB'
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      error: error.message 
+    });
+  }
 });
 
 // ==================== USER PROFILE ROUTES ====================
 
 // Update user location
-app.put('/api/user/location', (req, res) => {
+app.put('/api/user/location', async (req, res) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
@@ -384,15 +421,10 @@ app.put('/api/user/location', (req, res) => {
       });
     }
 
-    const userEmail = userTokens.get(token);
-    if (!userEmail) {
-      return res.status(401).json({ 
-        success: false, 
-        error: 'Invalid token' 
-      });
-    }
-
-    const user = authUsers.get(userEmail);
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'muslim-daily-secret-key');
+    
+    const user = await User.findById(decoded.userId);
     if (!user) {
       return res.status(404).json({ 
         success: false, 
@@ -405,10 +437,12 @@ app.put('/api/user/location', (req, res) => {
     if (location) user.location = location;
     if (zone) user.zone = zone;
 
+    await user.save();
+
     res.json({
       success: true,
       user: {
-        id: user.id,
+        id: user._id,
         email: user.email,
         name: user.name,
         zone: user.zone,
@@ -419,13 +453,13 @@ app.put('/api/user/location', (req, res) => {
   } catch (error) {
     res.status(500).json({ 
       success: false, 
-      error: 'Failed to update location' 
+      error: 'Failed to update location: ' + error.message
     });
   }
 });
 
 // Track prayer for authenticated user
-app.post('/api/user/prayer', (req, res) => {
+app.post('/api/user/prayer', async (req, res) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
@@ -436,15 +470,10 @@ app.post('/api/user/prayer', (req, res) => {
       });
     }
 
-    const userEmail = userTokens.get(token);
-    if (!userEmail) {
-      return res.status(401).json({ 
-        success: false, 
-        error: 'Invalid token' 
-      });
-    }
-
-    const user = authUsers.get(userEmail);
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'muslim-daily-secret-key');
+    
+    const user = await User.findById(decoded.userId);
     if (!user) {
       return res.status(404).json({ 
         success: false, 
@@ -476,6 +505,8 @@ app.post('/api/user/prayer', (req, res) => {
       }
     }
 
+    await user.save();
+
     res.json({
       success: true,
       prayerProgress: user.prayerProgress,
@@ -486,13 +517,13 @@ app.post('/api/user/prayer', (req, res) => {
     console.error('Prayer tracking error:', error);
     res.status(500).json({ 
       success: false, 
-      error: 'Failed to update prayer' 
+      error: 'Failed to update prayer: ' + error.message
     });
   }
 });
 
 // Get user prayer progress
-app.get('/api/user/progress', (req, res) => {
+app.get('/api/user/progress', async (req, res) => {
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
     
@@ -503,15 +534,10 @@ app.get('/api/user/progress', (req, res) => {
       });
     }
 
-    const userEmail = userTokens.get(token);
-    if (!userEmail) {
-      return res.status(401).json({ 
-        success: false, 
-        error: 'Invalid token' 
-      });
-    }
-
-    const user = authUsers.get(userEmail);
+    const jwt = require('jsonwebtoken');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'muslim-daily-secret-key');
+    
+    const user = await User.findById(decoded.userId);
     if (!user) {
       return res.status(404).json({ 
         success: false, 
@@ -523,7 +549,7 @@ app.get('/api/user/progress', (req, res) => {
       success: true,
       prayerProgress: user.prayerProgress,
       user: {
-        id: user.id,
+        id: user._id,
         name: user.name,
         email: user.email,
         zone: user.zone
@@ -533,7 +559,7 @@ app.get('/api/user/progress', (req, res) => {
   } catch (error) {
     res.status(500).json({ 
       success: false, 
-      error: 'Failed to get prayer progress' 
+      error: 'Failed to get prayer progress: ' + error.message
     });
   }
 });
@@ -546,133 +572,22 @@ app.use('/api/notifications', prayerNotificationsRoutes);
 const prayerTimesRoutes = require('./routes/prayerTimes');
 app.use('/api/prayertimes', prayerTimesRoutes);
 
-// Prayer times endpoint (legacy)
-app.get('/api/prayer-times/:zone?', async (req, res) => {
-  try {
-    const zone = req.params.zone || 'WLY01'; // Default to KL
-    
-    // Mock prayer times
-    const mockPrayerTimes = {
-      fajr: '5:45 AM',
-      dhuhr: '1:15 PM', 
-      asr: '4:30 PM',
-      maghrib: '7:05 PM',
-      isha: '8:20 PM',
-      source: 'JAKIM e-Solat',
-      zone: zone,
-      date: new Date().toDateString()
-    };
-    
-    res.json(mockPrayerTimes);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch prayer times' });
-  }
-});
-
-// ==================== EXISTING PRACTICE TRACKING ROUTES ====================
-
-// Track practice endpoint (legacy)
-app.post('/api/practices/track', (req, res) => {
-  try {
-    const { userId, practiceType, practiceData } = req.body;
-    
-    if (!userId) {
-      return res.status(400).json({ error: 'User ID is required' });
-    }
-    
-    // Create user if doesn't exist
-    if (!users.has(userId)) {
-      users.set(userId, createUser(userId));
-    }
-    
-    // Initialize practices array if doesn't exist
-    if (!practices.has(userId)) {
-      practices.set(userId, []);
-    }
-    
-    const practice = {
-      type: practiceType, // 'fajr', 'dhuhr', 'quran', 'dhikr', etc.
-      data: practiceData,
-      timestamp: new Date().toISOString(),
-      id: Date.now().toString()
-    };
-    
-    practices.get(userId).push(practice);
-    
-    // Update user streak
-    const user = users.get(userId);
-    const today = new Date().toDateString();
-    const lastDate = user.lastPracticeDate ? new Date(user.lastPracticeDate).toDateString() : null;
-    
-    if (lastDate !== today) {
-      user.streak = lastDate === getYesterdayDate() ? user.streak + 1 : 1;
-      user.lastPracticeDate = today;
-    }
-    
-    res.json({ 
-      success: true, 
-      message: `${practiceType} tracked successfully! 🎉`,
-      streak: user.streak,
-      practice
-    });
-    
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to track practice' });
-  }
-});
-
-// Get user progress (legacy)
-app.get('/api/users/:userId/progress', (req, res) => {
-  try {
-    const userId = req.params.userId;
-    const userPractices = practices.get(userId) || [];
-    const user = users.get(userId) || createUser(userId);
-    
-    const today = new Date().toDateString();
-    const todayPractices = userPractices.filter(p => 
-      new Date(p.timestamp).toDateString() === today
-    );
-    
-    // Count practices by type for today
-    const todayCounts = todayPractices.reduce((acc, practice) => {
-      acc[practice.type] = (acc[practice.type] || 0) + 1;
-      return acc;
-    }, {});
-    
-    res.json({
-      user: {
-        id: user.id,
-        streak: user.streak,
-        totalPractices: userPractices.length
-      },
-      today: {
-        date: today,
-        practices: todayPractices,
-        counts: todayCounts,
-        prayersCompleted: Object.keys(todayCounts).filter(k => 
-          ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'].includes(k)
-        ).length
-      },
-      streak: user.streak
-    });
-    
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch progress' });
-  }
-});
-
 // ==================== GRACEFUL SHUTDOWN HANDLING ====================
 
 process.on('SIGTERM', () => {
   console.log('🛑 SIGTERM received, shutting down gracefully');
-  console.log(`💾 Final stats: ${authUsers.size} users, ${userTokens.size} sessions`);
-  process.exit(0);
+  mongoose.connection.close(false, () => {
+    console.log('✅ MongoDB connection closed');
+    process.exit(0);
+  });
 });
 
 process.on('SIGINT', () => {
   console.log('🛑 SIGINT received, shutting down gracefully');
-  console.log(`💾 Final stats: ${authUsers.size} users, ${userTokens.size} sessions`);
-  process.exit(0);
+  mongoose.connection.close(false, () => {
+    console.log('✅ MongoDB connection closed');
+    process.exit(0);
+  });
 });
 
 // ==================== SERVER START ====================
@@ -682,8 +597,7 @@ const server = app.listen(PORT, () => {
   console.log(`🕌 MuslimDaily server running on port ${PORT}`);
   console.log(`💰 COMPLETELY FREE - No costs, no subscriptions`);
   console.log(`🌍 API available at: http://localhost:${PORT}`);
-  console.log(`🔐 AUTH ENABLED - In-memory user storage active`);
-  console.log(`📊 Stats: ${authUsers.size} users, ${userTokens.size} active sessions`);
+  console.log(`🗄️  MongoDB Persistent Storage Active`);
   console.log(`🏥 Health monitoring endpoints ready for UptimeRobot`);
   console.log(`📋 Available health endpoints:`);
   console.log(`   GET  /api/health1`);
