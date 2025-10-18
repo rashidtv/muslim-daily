@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
+import { CssBaseline } from '@mui/material';
 import {
   AppBar,
   Toolbar,
@@ -22,8 +21,7 @@ import {
   ListItem,
   ListItemIcon,
   ListItemText,
-  useMediaQuery,
-  Badge
+  useMediaQuery
 } from '@mui/material';
 import {
   AccountCircle,
@@ -45,6 +43,7 @@ import {
 import { usePWAInstall } from './hooks/usePWAInstall';
 import { PracticeProvider } from './context/PracticeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider, useTheme } from './context/ThemeContext';
 
 // Components
 import Home from './pages/Home';
@@ -52,94 +51,7 @@ import Progress from './pages/Progress';
 import Settings from './pages/Settings';
 import Calendar from './pages/Calendar';
 import AuthModal from './components/Auth/AuthModal';
-
-// Calming color scheme - Teal & Amber
-const theme = createTheme({
-  palette: {
-    primary: {
-      main: '#0D9488',
-      light: '#14B8A6',
-      dark: '#0F766E',
-      contrastText: '#FFFFFF',
-    },
-    secondary: {
-      main: '#F59E0B',
-      light: '#FBBF24',
-      dark: '#D97706',
-    },
-    background: {
-      default: '#F0FDFA',
-      paper: '#FFFFFF',
-    },
-    text: {
-      primary: '#1E293B',
-      secondary: '#64748B',
-    },
-  },
-  typography: {
-    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
-    h4: { 
-      fontWeight: 700,
-      fontSize: { xs: '1.5rem', md: '2rem' },
-    },
-    h5: { 
-      fontWeight: 600,
-      fontSize: { xs: '1.25rem', md: '1.5rem' },
-    },
-    h6: { 
-      fontWeight: 600,
-      fontSize: { xs: '1.1rem', md: '1.25rem' },
-    },
-    body1: {
-      fontSize: { xs: '0.875rem', md: '1rem' },
-    },
-    button: { 
-      fontWeight: 600, 
-      textTransform: 'none',
-      fontSize: { xs: '0.8rem', md: '0.9rem' }
-    },
-  },
-  shape: { borderRadius: 12 },
-  components: {
-    MuiCard: {
-      styleOverrides: {
-        root: {
-          boxShadow: '0 2px 12px rgba(13, 148, 136, 0.08)',
-          border: '1px solid #E2E8F0',
-          borderRadius: 16,
-          transition: 'all 0.2s ease',
-          '&:hover': {
-            boxShadow: '0 4px 20px rgba(13, 148, 136, 0.12)',
-          },
-        },
-      },
-    },
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          borderRadius: 10,
-          padding: { xs: '8px 16px', md: '10px 24px' },
-          fontWeight: 600,
-          fontSize: { xs: '0.8rem', md: '0.9rem' },
-        },
-        contained: {
-          backgroundColor: '#0D9488',
-          '&:hover': {
-            backgroundColor: '#0F766E',
-          },
-        },
-      },
-    },
-    MuiContainer: {
-      styleOverrides: {
-        root: {
-          paddingLeft: { xs: '16px', sm: '24px' },
-          paddingRight: { xs: '16px', sm: '24px' }
-        }
-      }
-    }
-  },
-});
+import ThemeToggle from './components/Accessibility/ThemeToggle';
 
 // User Profile Menu Component
 const UserMenu = () => {
@@ -170,34 +82,20 @@ const UserMenu = () => {
   return (
     <div>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Badge
-          overlap="circular"
-          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-          variant="dot"
-          sx={{
-            '& .MuiBadge-dot': {
-              backgroundColor: '#10B981',
-              width: 10,
-              height: 10,
-              borderRadius: '50%',
-              border: '2px solid white'
-            }
+        <Avatar 
+          sx={{ 
+            width: 36, 
+            height: 36, 
+            background: 'linear-gradient(135deg, #0D9488 0%, #F59E0B 100%)',
+            cursor: 'pointer',
+            fontWeight: 600,
+            fontSize: '0.9rem'
           }}
+          onClick={handleMenu}
+          aria-label="User menu"
         >
-          <Avatar 
-            sx={{ 
-              width: 36, 
-              height: 36, 
-              background: 'linear-gradient(135deg, #0D9488 0%, #F59E0B 100%)',
-              cursor: 'pointer',
-              fontWeight: 600,
-              fontSize: '0.9rem'
-            }}
-            onClick={handleMenu}
-          >
-            {user.name?.charAt(0).toUpperCase()}
-          </Avatar>
-        </Badge>
+          {user.name?.charAt(0).toUpperCase()}
+        </Avatar>
       </Box>
       <Menu
         anchorEl={anchorEl}
@@ -219,18 +117,18 @@ const UserMenu = () => {
           </Box>
         </MenuItem>
         <MenuItem onClick={() => handleNavigate('/progress')}>
-          <Analytics sx={{ mr: 2, fontSize: '1.2rem', color: '#0D9488' }} />
+          <Analytics sx={{ mr: 2, fontSize: '1.2rem', color: 'primary.main' }} />
           <Typography variant="body2">My Progress</Typography>
         </MenuItem>
         <MenuItem onClick={() => handleNavigate('/calendar')}>
-          <CalendarMonth sx={{ mr: 2, fontSize: '1.2rem', color: '#0D9488' }} />
+          <CalendarMonth sx={{ mr: 2, fontSize: '1.2rem', color: 'primary.main' }} />
           <Typography variant="body2">My Calendar</Typography>
         </MenuItem>
         <MenuItem onClick={() => handleNavigate('/settings')}>
-          <SettingsIcon sx={{ mr: 2, fontSize: '1.2rem', color: '#0D9488' }} />
+          <SettingsIcon sx={{ mr: 2, fontSize: '1.2rem', color: 'primary.main' }} />
           <Typography variant="body2">Settings</Typography>
         </MenuItem>
-        <MenuItem onClick={handleLogout} sx={{ color: '#DC2626' }}>
+        <MenuItem onClick={handleLogout} sx={{ color: 'error.main' }}>
           <Logout sx={{ mr: 2, fontSize: '1.2rem' }} />
           <Typography variant="body2">Logout</Typography>
         </MenuItem>
@@ -242,7 +140,8 @@ const UserMenu = () => {
 // Auth Buttons Component
 const AuthButtons = ({ onAuthAction }) => {
   const { user } = useAuth();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { darkMode } = useTheme();
+  const isMobile = useMediaQuery('(max-width: 900px)');
 
   const handleGetStarted = () => {
     if (onAuthAction) {
@@ -275,10 +174,7 @@ const AuthButtons = ({ onAuthAction }) => {
         variant="contained"
         size={isMobile ? "small" : "medium"}
         sx={{ 
-          backgroundColor: '#0D9488',
-          '&:hover': {
-            backgroundColor: '#0F766E',
-          }
+          fontWeight: 600
         }}
       >
         {isMobile ? 'Start' : 'Get Started'}
@@ -334,13 +230,13 @@ const MobileNavigationDrawer = ({ open, onClose, onAuthAction }) => {
               border: '1px solid rgba(13, 148, 136, 0.2)'
             }}
           >
-            <Book sx={{ fontSize: 18, color: '#0D9488' }} />
+            <Book sx={{ fontSize: 18, color: 'primary.main' }} />
           </Box>
           <Typography variant="h6" fontWeight="700">
             Muslim<span style={{ color: '#F59E0B' }}>Diary</span>
           </Typography>
         </Box>
-        <IconButton onClick={onClose} size="small">
+        <IconButton onClick={onClose} size="small" aria-label="Close menu">
           <Close />
         </IconButton>
       </Box>
@@ -361,7 +257,7 @@ const MobileNavigationDrawer = ({ open, onClose, onAuthAction }) => {
             }}
           >
             <ListItemIcon sx={{ 
-              color: location.pathname === item.path ? '#0D9488' : 'text.secondary',
+              color: location.pathname === item.path ? 'primary.main' : 'text.secondary',
               minWidth: 40 
             }}>
               {item.icon}
@@ -387,7 +283,6 @@ const MobileNavigationDrawer = ({ open, onClose, onAuthAction }) => {
               onClose();
             }}
             sx={{
-              backgroundColor: '#0D9488',
               mb: 1,
               borderRadius: 2,
             }}
@@ -403,7 +298,7 @@ const MobileNavigationDrawer = ({ open, onClose, onAuthAction }) => {
             }}
             sx={{
               borderRadius: 2,
-              borderColor: '#E2E8F0',
+              borderColor: 'divider',
             }}
           >
             Sign In
@@ -433,7 +328,8 @@ const MobileBottomNav = () => {
       left: 0, 
       right: 0, 
       zIndex: 1000,
-      borderTop: '1px solid #E2E8F0',
+      borderTop: '1px solid',
+      borderColor: 'divider',
     }} elevation={3}>
       <BottomNavigation
         value={location.pathname}
@@ -451,7 +347,7 @@ const MobileBottomNav = () => {
             value={item.path}
             icon={item.icon}
             sx={{
-              color: location.pathname === item.path ? '#0D9488' : '#64748B',
+              color: location.pathname === item.path ? 'primary.main' : 'text.secondary',
               minWidth: '60px',
               '& .MuiBottomNavigationAction-label': {
                 fontSize: '0.7rem',
@@ -466,11 +362,11 @@ const MobileBottomNav = () => {
   );
 };
 
-// Modern Header Component - FIXED: Added Desktop Navigation
+// Modern Header Component
 const Header = ({ onAuthAction }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const isMobile = useMediaQuery('(max-width: 900px)');
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Desktop navigation items
@@ -483,15 +379,16 @@ const Header = ({ onAuthAction }) => {
 
   return (
     <>
-      <AppBar position="sticky" elevation={1}>
+      <AppBar position="sticky" elevation={1} sx={{ backgroundColor: 'background.paper', color: 'text.primary' }}>
         <Toolbar sx={{ minHeight: { xs: '60px', md: '68px' }, py: 1 }}>
           <Container maxWidth="lg" sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
             {/* Mobile Menu Button */}
             {isMobile && (
               <IconButton
                 edge="start"
-                sx={{ mr: 1 }}
+                sx={{ mr: 1, color: 'text.primary' }}
                 onClick={() => setDrawerOpen(true)}
+                aria-label="Open menu"
               >
                 <MenuIcon />
               </IconButton>
@@ -506,6 +403,7 @@ const Header = ({ onAuthAction }) => {
                 cursor: 'pointer' 
               }} 
               onClick={() => navigate('/')}
+              aria-label="Muslim Diary Home"
             >
               <Box
                 sx={{
@@ -520,14 +418,14 @@ const Header = ({ onAuthAction }) => {
                   border: '1px solid rgba(13, 148, 136, 0.2)'
                 }}
               >
-                <Book sx={{ fontSize: { xs: 18, md: 20 }, color: '#0D9488' }} />
+                <Book sx={{ fontSize: { xs: 18, md: 20 }, color: 'primary.main' }} />
               </Box>
               <Typography variant="h6" component="div" fontWeight="700">
                 Muslim<span style={{ color: '#F59E0B' }}>Diary</span>
               </Typography>
             </Box>
 
-            {/* Desktop Navigation - FIXED: Now visible on desktop */}
+            {/* Desktop Navigation */}
             {!isMobile && (
               <Box sx={{ display: 'flex', gap: 2, mr: 4 }}>
                 {navigationItems.map((item) => (
@@ -536,7 +434,7 @@ const Header = ({ onAuthAction }) => {
                     onClick={() => navigate(item.path)}
                     sx={{
                       fontWeight: 600,
-                      color: location.pathname === item.path ? '#0D9488' : 'text.primary',
+                      color: location.pathname === item.path ? 'primary.main' : 'text.primary',
                       fontSize: '0.9rem',
                       px: 2,
                       borderRadius: 2,
@@ -552,8 +450,11 @@ const Header = ({ onAuthAction }) => {
               </Box>
             )}
 
-            {/* Auth Controls */}
-            <AuthButtons onAuthAction={onAuthAction} />
+            {/* Theme Toggle and Auth Controls */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              <ThemeToggle />
+              <AuthButtons onAuthAction={onAuthAction} />
+            </Box>
           </Container>
         </Toolbar>
       </AppBar>
@@ -581,7 +482,7 @@ const PWAInstallPrompt = () => {
         bottom: { xs: 72, md: 24 },
         right: { xs: 16, md: 24 },
         left: { xs: 16, md: 'auto' },
-        backgroundColor: '#0D9488',
+        backgroundColor: 'primary.main',
         color: 'white',
         padding: '12px 16px',
         borderRadius: 12,
@@ -597,6 +498,8 @@ const PWAInstallPrompt = () => {
         textAlign: 'center'
       }}
       onClick={installApp}
+      role="button"
+      aria-label="Install Muslim Diary app"
     >
       <Box
         sx={{
@@ -609,12 +512,35 @@ const PWAInstallPrompt = () => {
           justifyContent: 'center'
         }}
       >
-        <Typography sx={{ fontSize: '14px' }}>📱</Typography>
+        <span style={{ fontSize: '14px' }}>📱</span>
       </Box>
       Install App
     </Box>
   );
 };
+
+// Simple Coming Soon Components
+const PrayerTimesComingSoon = () => (
+  <Container maxWidth="lg" sx={{ py: 3, textAlign: 'center' }}>
+    <Typography variant="h4" fontWeight="700" gutterBottom>
+      Prayer Times
+    </Typography>
+    <Typography variant="h6" color="text.secondary">
+      Coming Soon
+    </Typography>
+  </Container>
+);
+
+const MosqueFinderComingSoon = () => (
+  <Container maxWidth="lg" sx={{ py: 3, textAlign: 'center' }}>
+    <Typography variant="h4" fontWeight="700" gutterBottom>
+      Mosque Finder
+    </Typography>
+    <Typography variant="h6" color="text.secondary">
+      Coming Soon
+    </Typography>
+  </Container>
+);
 
 // Main App Component
 function App() {
@@ -627,7 +553,7 @@ function App() {
   };
 
   return (
-    <ThemeProvider theme={theme}>
+    <ThemeProvider>
       <CssBaseline />
       <AuthProvider>
         <PracticeProvider>
@@ -676,28 +602,5 @@ function App() {
     </ThemeProvider>
   );
 }
-
-// Simple Coming Soon Components
-const PrayerTimesComingSoon = () => (
-  <Container maxWidth="lg" sx={{ py: 3, textAlign: 'center' }}>
-    <Typography variant="h4" fontWeight="700" gutterBottom>
-      Prayer Times
-    </Typography>
-    <Typography variant="h6" color="text.secondary">
-      Coming Soon
-    </Typography>
-  </Container>
-);
-
-const MosqueFinderComingSoon = () => (
-  <Container maxWidth="lg" sx={{ py: 3, textAlign: 'center' }}>
-    <Typography variant="h4" fontWeight="700" gutterBottom>
-      Mosque Finder
-    </Typography>
-    <Typography variant="h6" color="text.secondary">
-      Coming Soon
-    </Typography>
-  </Container>
-);
 
 export default App;

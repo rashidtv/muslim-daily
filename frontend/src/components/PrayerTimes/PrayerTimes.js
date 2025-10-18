@@ -14,7 +14,8 @@ import {
   IconButton,
   Alert,
   Snackbar,
-  Grid
+  Grid,
+  useTheme
 } from '@mui/material';
 import { Refresh, CheckCircle, RadioButtonUnchecked, MyLocation, LocationOn } from '@mui/icons-material';
 import { usePractice } from '../../context/PracticeContext';
@@ -251,6 +252,7 @@ const PrayerTimes = () => {
   const [snackbarMessage, setSnackbarMessage] = useState('');
   
   const { markPracticeCompleted, markPracticeIncomplete, isPracticeCompleted } = usePractice();
+  const theme = useTheme();
 
   // Get user's current location - SILENT background detection
   const getCurrentLocation = () => {
@@ -539,7 +541,7 @@ const PrayerTimes = () => {
       <Card sx={{ borderRadius: 3, boxShadow: 3 }}>
         <CardContent sx={{ textAlign: 'center', py: 4 }}>
           <CircularProgress />
-          <Typography variant="body1" sx={{ mt: 2 }}>
+          <Typography variant="body1" sx={{ mt: 2, fontSize: '0.9rem' }}>
             {locationLoading ? 'Detecting your location...' : 'Loading prayer times...'}
           </Typography>
         </CardContent>
@@ -554,7 +556,7 @@ const PrayerTimes = () => {
           {/* Header - COMPACT */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
             <Box>
-              <Typography variant="h5" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Typography variant="h5" sx={{ display: 'flex', alignItems: 'center', gap: 1, fontSize: '1.25rem' }}>
                 🕌 Prayer Times
               </Typography>
             </Box>
@@ -567,6 +569,7 @@ const PrayerTimes = () => {
                 disabled={locationLoading}
                 variant={usingGPS ? "contained" : "outlined"}
                 color={usingGPS ? "success" : "primary"}
+                sx={{ fontSize: '0.8rem' }}
               >
                 {locationLoading ? 'Detecting...' : 'Refresh Location'}
               </Button>
@@ -574,19 +577,26 @@ const PrayerTimes = () => {
           </Box>
 
           {error && (
-            <Alert severity="error" sx={{ mb: 2 }}>
+            <Alert severity="error" sx={{ mb: 2, fontSize: '0.8rem' }}>
               {error}
             </Alert>
           )}
 
-          {/* Zone Selection - COMPACT */}
+          {/* Zone Selection - UPDATED: Smaller fonts */}
           <FormControl fullWidth sx={{ mb: 2 }}>
-            <InputLabel>Select Zone</InputLabel>
+            <InputLabel sx={{ fontSize: '0.8rem' }}>Select Zone</InputLabel>
             <Select
               value={selectedZone}
               label="Select Zone"
               onChange={(e) => handleZoneChange(e.target.value)}
               disabled={loading}
+              sx={{
+                fontSize: '0.8rem',
+                '& .MuiSelect-select': {
+                  fontSize: '0.8rem',
+                  py: 1
+                }
+              }}
             >
               {malaysianZones.map((state) => [
                 <Typography 
@@ -596,15 +606,26 @@ const PrayerTimes = () => {
                     px: 2, 
                     py: 1, 
                     fontWeight: 'bold', 
-                    backgroundColor: 'grey.100',
+                    backgroundColor: theme.palette.mode === 'dark' ? 'grey.800' : 'grey.100',
                     borderBottom: '1px solid',
-                    borderColor: 'divider'
+                    borderColor: 'divider',
+                    fontSize: '0.75rem', // Smaller group headers
+                    color: 'text.secondary'
                   }}
                 >
                   {state.group}
                 </Typography>,
                 ...state.zones.map(zone => (
-                  <MenuItem key={zone.value} value={zone.value} sx={{ pl: 3 }}>
+                  <MenuItem 
+                    key={zone.value} 
+                    value={zone.value} 
+                    sx={{ 
+                      pl: 3,
+                      fontSize: '0.75rem', // Smaller menu items
+                      py: 0.5, // Tighter padding
+                      minHeight: '32px', // Smaller height
+                    }}
+                  >
                     {zone.label}
                   </MenuItem>
                 ))
@@ -622,13 +643,13 @@ const PrayerTimes = () => {
               mb: 2,
               textAlign: 'center'
             }}>
-              <Typography variant="h6" gutterBottom>
+              <Typography variant="h6" gutterBottom sx={{ fontSize: '0.9rem' }}>
                 🎯 Next Prayer
               </Typography>
-              <Typography variant="h4" fontWeight="bold">
+              <Typography variant="h4" fontWeight="bold" sx={{ fontSize: { xs: '1.25rem', md: '1.5rem' } }}>
                 {nextPrayer.name}
               </Typography>
-              <Typography variant="h6">
+              <Typography variant="h6" sx={{ fontSize: '0.9rem' }}>
                 {nextPrayer.time}
                 {nextPrayer.isTomorrow && ' (Tomorrow)'}
               </Typography>
@@ -658,19 +679,20 @@ const PrayerTimes = () => {
                       }}
                     >
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Typography variant="h6">{prayer.icon}</Typography>
+                        <Typography variant="h6" sx={{ fontSize: '1.25rem' }}>{prayer.icon}</Typography>
                         <Box>
                           <Typography 
                             variant="body1"
                             fontWeight="600"
                             sx={{ 
                               textDecoration: isCompleted ? 'line-through' : 'none',
-                              color: isCompleted ? 'text.secondary' : 'text.primary'
+                              color: isCompleted ? 'text.secondary' : 'text.primary',
+                              fontSize: '0.9rem'
                             }}
                           >
                             {prayer.name}
                           </Typography>
-                          <Typography variant="body2" color="text.secondary">
+                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
                             {prayer.time || '--:--'}
                           </Typography>
                         </Box>
@@ -682,6 +704,7 @@ const PrayerTimes = () => {
                             label="Next" 
                             color="primary" 
                             size="small"
+                            sx={{ fontSize: '0.65rem', height: '20px' }}
                           />
                         )}
                         
@@ -691,8 +714,11 @@ const PrayerTimes = () => {
                           size="small"
                           sx={{
                             border: isCompleted ? '2px solid' : '1px solid',
-                            borderColor: isCompleted ? 'success.main' : 'grey.400'
+                            borderColor: isCompleted ? 'success.main' : 'grey.400',
+                            width: '32px',
+                            height: '32px'
                           }}
+                          aria-label={isCompleted ? `Mark ${prayer.name} as incomplete` : `Mark ${prayer.name} as completed`}
                         >
                           {isCompleted ? <CheckCircle /> : <RadioButtonUnchecked />}
                         </IconButton>
@@ -706,7 +732,7 @@ const PrayerTimes = () => {
 
           {/* Footer Info - SIMPLIFIED */}
           <Box sx={{ mt: 1, textAlign: 'center' }}>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
               Live data from JAKIM • Zone: {selectedZone}
             </Typography>
           </Box>
