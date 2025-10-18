@@ -71,19 +71,19 @@ function showUpdateNotification() {
                 document.referrer.includes('android-app://');
 
   if (isPWA) {
-    // For PWA - show a subtle notification that auto-updates
+    // For PWA - rely on the App.js notification system
+    if (window.showPWAUpdateNotification) {
+      window.showPWAUpdateNotification();
+    }
+  } else {
+    // For browser - use the App.js notification system
     if (window.showPWAUpdateNotification) {
       window.showPWAUpdateNotification();
     } else {
       // Fallback: auto-update after short delay
       setTimeout(() => {
         window.location.reload();
-      }, 2000);
-    }
-  } else {
-    // For browser - show interactive notification
-    if (confirm('🎉 New version available! Reload to get the latest features?')) {
-      window.location.reload();
+      }, 3000);
     }
   }
 }
