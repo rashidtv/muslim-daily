@@ -1,4 +1,6 @@
 /* src/index.css */
+@import './styles/accessibility.css';
+
 * {
   margin: 0;
   padding: 0;
@@ -47,4 +49,17 @@ a {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+/* High contrast scrollbar */
+.high-contrast ::-webkit-scrollbar-track {
+  background: #1a1a1a !important;
+}
+
+.high-contrast ::-webkit-scrollbar-thumb {
+  background: #ffff00 !important;
+}
+
+.high-contrast ::-webkit-scrollbar-thumb:hover {
+  background: #cccc00 !important;
 }

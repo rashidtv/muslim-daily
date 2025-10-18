@@ -1,10 +1,11 @@
+// Create a new file: frontend/src/components/Accessibility/AccessibilityMenu.js
 import React, { useState } from 'react';
-import { IconButton, Tooltip, Menu, MenuItem, Chip, Box } from '@mui/material';
-import { Contrast, TextIncrease, TextDecrease } from '@mui/icons-material';
+import { IconButton, Tooltip, Menu, MenuItem, Box } from '@mui/material';
+import { Accessibility, Contrast, TextIncrease, TextDecrease } from '@mui/icons-material';
 
-const HighContrastMode = () => {
-  const [fontSize, setFontSize] = useState(100); // percentage
+const AccessibilityMenu = () => {
   const [anchorEl, setAnchorEl] = useState(null);
+  const [fontSize, setFontSize] = useState(100);
 
   const increaseFontSize = () => {
     setFontSize(prev => Math.min(prev + 10, 150));
@@ -23,29 +24,19 @@ const HighContrastMode = () => {
 
   const toggleHighContrast = () => {
     document.body.classList.toggle('high-contrast');
+    setAnchorEl(null); // Close menu after selection
   };
 
   return (
-    <Box sx={{ display: 'flex', gap: 1 }}>
-      <Tooltip title="Adjust text size">
+    <Box>
+      <Tooltip title="Accessibility options">
         <IconButton
           onClick={(e) => setAnchorEl(e.currentTarget)}
           color="inherit"
           sx={{ minWidth: '44px', minHeight: '44px' }}
-          aria-label="Adjust text size"
+          aria-label="Accessibility options"
         >
-          <TextIncrease />
-        </IconButton>
-      </Tooltip>
-
-      <Tooltip title="High contrast mode">
-        <IconButton
-          onClick={toggleHighContrast}
-          color="inherit"
-          sx={{ minWidth: '44px', minHeight: '44px' }}
-          aria-label="Toggle high contrast mode"
-        >
-          <Contrast />
+          <Accessibility />
         </IconButton>
       </Tooltip>
 
@@ -53,7 +44,18 @@ const HighContrastMode = () => {
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
         onClose={() => setAnchorEl(null)}
+        PaperProps={{
+          sx: { 
+            mt: 1, 
+            borderRadius: 2,
+            minWidth: 200
+          }
+        }}
       >
+        <MenuItem onClick={toggleHighContrast}>
+          <Contrast sx={{ mr: 1 }} />
+          High Contrast Mode
+        </MenuItem>
         <MenuItem onClick={increaseFontSize}>
           <TextIncrease sx={{ mr: 1 }} />
           Increase Text Size
@@ -65,12 +67,12 @@ const HighContrastMode = () => {
         <MenuItem onClick={resetFontSize}>
           Reset Text Size
         </MenuItem>
-        <MenuItem>
-          <Chip label={`${fontSize}%`} size="small" />
+        <MenuItem disabled>
+          Current: {fontSize}%
         </MenuItem>
       </Menu>
     </Box>
   );
 };
 
-export default HighContrastMode;
+export default AccessibilityMenu;

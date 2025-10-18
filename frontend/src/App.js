@@ -52,6 +52,10 @@ import Settings from './pages/Settings';
 import Calendar from './pages/Calendar';
 import AuthModal from './components/Auth/AuthModal';
 import ThemeToggle from './components/Accessibility/ThemeToggle';
+import AccessibilityMenu from './components/Accessibility/AccessibilityMenu';
+
+// Import accessibility CSS
+import './styles/accessibility.css';
 
 // User Profile Menu Component
 const UserMenu = () => {
@@ -450,8 +454,9 @@ const Header = ({ onAuthAction }) => {
               </Box>
             )}
 
-            {/* Theme Toggle and Auth Controls */}
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            {/* Accessibility Menu and Theme Toggle */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <AccessibilityMenu />
               <ThemeToggle />
               <AuthButtons onAuthAction={onAuthAction} />
             </Box>

@@ -13,10 +13,12 @@ export const useTheme = () => {
 
 export const ThemeProvider = ({ children }) => {
   const [darkMode, setDarkMode] = useState(false);
+  const [highContrast, setHighContrast] = useState(false);
 
   useEffect(() => {
     // Check user's system preference or saved preference
     const savedTheme = localStorage.getItem('muslimDiary_theme');
+    const savedHighContrast = localStorage.getItem('muslimDiary_highContrast');
     const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     
     if (savedTheme) {
@@ -24,12 +26,31 @@ export const ThemeProvider = ({ children }) => {
     } else {
       setDarkMode(systemPrefersDark);
     }
+
+    if (savedHighContrast) {
+      setHighContrast(savedHighContrast === 'true');
+      if (savedHighContrast === 'true') {
+        document.body.classList.add('high-contrast');
+      }
+    }
   }, []);
 
   const toggleDarkMode = () => {
     const newDarkMode = !darkMode;
     setDarkMode(newDarkMode);
     localStorage.setItem('muslimDiary_theme', newDarkMode ? 'dark' : 'light');
+  };
+
+  const toggleHighContrast = () => {
+    const newHighContrast = !highContrast;
+    setHighContrast(newHighContrast);
+    localStorage.setItem('muslimDiary_highContrast', newHighContrast.toString());
+    
+    if (newHighContrast) {
+      document.body.classList.add('high-contrast');
+    } else {
+      document.body.classList.remove('high-contrast');
+    }
   };
 
   // Enhanced theme with better accessibility
@@ -155,6 +176,8 @@ export const ThemeProvider = ({ children }) => {
   const value = {
     darkMode,
     toggleDarkMode,
+    highContrast,
+    toggleHighContrast,
   };
 
   return (
