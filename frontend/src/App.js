@@ -44,6 +44,7 @@ import { usePWAInstall } from './hooks/usePWAInstall';
 import { PracticeProvider } from './context/PracticeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { NotificationProvider } from './context/NotificationContext';
 
 // Components
 import Home from './pages/Home';

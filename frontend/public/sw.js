@@ -1,65 +1,100 @@
-const CACHE_NAME = 'muslim-daily-v1.0.3';
+const CACHE_NAME = 'muslim-daily-v1.3';
+const urlsToCache = [
+  '/',
+  '/static/js/bundle.js',
+  '/static/css/main.css',
+  '/manifest.json',
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png'
+];
 
-// Install event
 self.addEventListener('install', (event) => {
-  console.log('Service Worker: Installing...');
-  self.skipWaiting();
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(urlsToCache))
+  );
 });
 
-// Activate event
-self.addEventListener('activate', (event) => {
-  console.log('Service Worker: Activated');
-  event.waitUntil(self.clients.claim());
-});
-
-// Fetch event - CRITICAL for PWA routing
 self.addEventListener('fetch', (event) => {
-  // Skip non-GET requests
-  if (event.request.method !== 'GET') return;
-
-  // Handle navigation requests (HTML pages)
-  if (event.request.mode === 'navigate') {
-    event.respondWith(
-      fetch(event.request)
-        .catch(() => {
-          // If fetch fails, return the index.html from cache
-          return caches.match('/index.html');
-        })
-    );
-    return;
-  }
-
-  // For all other requests, try cache first then network
   event.respondWith(
     caches.match(event.request)
-      .then((cachedResponse) => {
-        // Return cached version if found
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-
-        // Otherwise get from network
-        return fetch(event.request)
-          .then((fetchResponse) => {
-            // Cache the new response if valid
-            if (fetchResponse && fetchResponse.status === 200) {
-              const responseToCache = fetchResponse.clone();
-              caches.open(CACHE_NAME)
-                .then((cache) => {
-                  cache.put(event.request, responseToCache);
-                });
-            }
-            return fetchResponse;
-          })
-          .catch(() => {
-            // If both fail, for API calls return null, for assets try cache
-            if (event.request.url.includes('/api/')) {
-              return new Response(JSON.stringify({ error: 'Offline' }), {
-                status: 503,
-                headers: { 'Content-Type': 'application/json' }
-              });
-            }
-          });
-      })
+      .then((response) => response || fetch(event.request))
   );
+});
+
+// ==================== PUSH NOTIFICATIONS ====================
+
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+
+  const data = event.data.json();
+  
+  const options = {
+    body: data.body,
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/icon-192x192.png',
+    vibrate: [200, 100, 200],
+    tag: data.tag || 'prayer-notification',
+    requireInteraction: true,
+    actions: [
+      {
+        action: 'track-prayer',
+        title: '📿 Mark as Completed',
+        icon: '/icons/icon-192x192.png'
+      },
+      {
+        action: 'snooze',
+        title: '⏰ Remind in 10 min',
+        icon: '/icons/icon-192x192.png'
+      }
+    ],
+    data: data.data || {}
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  if (event.action === 'track-prayer') {
+    // Mark prayer as completed
+    event.waitUntil(
+      clients.matchAll({ type: 'window' }).then((windowClients) => {
+        if (windowClients.length > 0) {
+          windowClients[0].postMessage({
+            type: 'TRACK_PRAYER',
+            prayer: event.notification.data.prayerName
+          });
+          return windowClients[0].focus();
+        } else {
+          return clients.openWindow('/');
+        }
+      })
+    );
+  } else if (event.action === 'snooze') {
+    // Snooze for 10 minutes
+    event.waitUntil(
+      self.registration.showNotification(event.notification.title, {
+        body: `⏰ Reminder: ${event.notification.body}`,
+        icon: '/icons/icon-192x192.png',
+        tag: 'prayer-reminder',
+        requireInteraction: true,
+        data: event.notification.data
+      })
+    );
+  } else {
+    // Open the app when notification is clicked
+    event.waitUntil(
+      clients.matchAll({ type: 'window' }).then((windowClients) => {
+        if (windowClients.length > 0) {
+          return windowClients[0].focus();
+        } else {
+          return clients.openWindow('/');
+        }
+      })
+    );
+  }
 });
