@@ -36,7 +36,97 @@ function getYesterdayDate() {
   return yesterday.toDateString();
 }
 
-// ==================== ROUTES ====================
+// Enhanced startup logging
+console.log('🚀 Muslim Daily Backend Starting...');
+console.log('📅 Startup Time:', new Date().toISOString());
+console.log('💰 COMPLETELY FREE - No costs, no subscriptions');
+console.log('🔐 In-memory user storage active');
+
+// ==================== HEALTH MONITORING ENDPOINTS ====================
+
+// Health check endpoint 1 - Basic
+app.get('/api/health1', (req, res) => {
+  res.json({ 
+    status: 'healthy',
+    service: 'Muslim Daily Backend',
+    timestamp: new Date().toISOString(),
+    version: '1.0.0',
+    environment: process.env.NODE_ENV || 'development',
+    storage: 'in-memory'
+  });
+});
+
+// Health check endpoint 2 - Memory usage
+app.get('/api/health2', (req, res) => {
+  const used = process.memoryUsage();
+  res.json({ 
+    status: 'healthy',
+    memory: {
+      rss: `${Math.round(used.rss / 1024 / 1024)} MB`,
+      heapTotal: `${Math.round(used.heapTotal / 1024 / 1024)} MB`,
+      heapUsed: `${Math.round(used.heapUsed / 1024 / 1024)} MB`,
+      external: `${Math.round(used.external / 1024 / 1024)} MB`
+    },
+    uptime: `${Math.round(process.uptime())} seconds`,
+    timestamp: new Date().toISOString(),
+    users: authUsers.size,
+    sessions: userTokens.size
+  });
+});
+
+// Health check endpoint 3 - Detailed stats
+app.get('/api/health3', (req, res) => {
+  const userStats = {
+    totalUsers: authUsers.size,
+    activeSessions: userTokens.size,
+    totalPractices: Array.from(practices.values()).reduce((acc, userPractices) => acc + userPractices.length, 0),
+    serverUptime: `${Math.round(process.uptime())} seconds`
+  };
+
+  res.json({ 
+    status: 'healthy',
+    stats: userStats,
+    timestamp: new Date().toISOString(),
+    service: 'Muslim Daily API - In Memory Edition'
+  });
+});
+
+// Warmup endpoint - Simulates real API call
+app.get('/api/warmup', async (req, res) => {
+  try {
+    // Simulate some processing
+    const userCount = authUsers.size;
+    const practiceCount = Array.from(practices.values()).reduce((acc, userPractices) => acc + userPractices.length, 0);
+    
+    res.json({ 
+      status: 'warmed up',
+      users: userCount,
+      practices: practiceCount,
+      timestamp: new Date().toISOString(),
+      message: 'Muslim Daily backend is ready to handle requests'
+    });
+  } catch (error) {
+    res.json({ 
+      status: 'warming up',
+      error: error.message,
+      timestamp: new Date().toISOString(),
+      message: 'Backend is starting up...'
+    });
+  }
+});
+
+// Simple ping endpoint
+app.get('/api/ping', (req, res) => {
+  res.json({ 
+    pong: true,
+    timestamp: new Date().toISOString(),
+    service: 'Muslim Daily API',
+    version: '1.0.0',
+    message: 'Alhamdulillah! Serving the Muslim community for free!'
+  });
+});
+
+// ==================== EXISTING ROUTES (KEEP ALL YOUR CURRENT CODE) ====================
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -56,21 +146,30 @@ app.get('/', (req, res) => {
       totalUsers: authUsers.size,
       activeSessions: userTokens.size,
       serverTime: new Date().toISOString()
-    }
+    },
+    healthEndpoints: [
+      '/api/health1',
+      '/api/health2', 
+      '/api/health3',
+      '/api/warmup',
+      '/api/ping'
+    ]
   });
 });
 
-// Health check
+// Health check (existing)
 app.get('/health', (req, res) => {
   res.json({ 
     success: true, 
     message: 'Muslim Daily API is running!',
     timestamp: new Date().toISOString(),
-    usersCount: authUsers.size
+    usersCount: authUsers.size,
+    sessionsCount: userTokens.size
   });
 });
 
-// ==================== AUTHENTICATION ROUTES ====================
+// ==================== ALL YOUR EXISTING AUTH ROUTES ====================
+// KEEP ALL YOUR EXISTING CODE FROM HERE...
 
 // Register endpoint
 app.post('/api/auth/register', async (req, res) => {
@@ -440,6 +539,7 @@ app.get('/api/user/progress', (req, res) => {
 });
 
 app.use('/api/notifications', prayerNotificationsRoutes);
+
 // ==================== EXISTING PRAYER TIMES ROUTES ====================
 
 // Import prayer times routes
@@ -561,21 +661,34 @@ app.get('/api/users/:userId/progress', (req, res) => {
   }
 });
 
+// ==================== GRACEFUL SHUTDOWN HANDLING ====================
+
+process.on('SIGTERM', () => {
+  console.log('🛑 SIGTERM received, shutting down gracefully');
+  console.log(`💾 Final stats: ${authUsers.size} users, ${userTokens.size} sessions`);
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('🛑 SIGINT received, shutting down gracefully');
+  console.log(`💾 Final stats: ${authUsers.size} users, ${userTokens.size} sessions`);
+  process.exit(0);
+});
+
 // ==================== SERVER START ====================
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🕌 MuslimDaily server running on port ${PORT}`);
   console.log(`💰 COMPLETELY FREE - No costs, no subscriptions`);
   console.log(`🌍 API available at: http://localhost:${PORT}`);
   console.log(`🔐 AUTH ENABLED - In-memory user storage active`);
   console.log(`📊 Stats: ${authUsers.size} users, ${userTokens.size} active sessions`);
-  console.log(`📋 Available endpoints:`);
-  console.log(`   GET  /health`);
-  console.log(`   POST /api/auth/register`);
-  console.log(`   POST /api/auth/login`);
-  console.log(`   GET  /api/auth/me`);
-  console.log(`   PUT  /api/user/location`);
-  console.log(`   POST /api/user/prayer`);
-  console.log(`   GET  /api/prayertimes/:zone`);
+  console.log(`🏥 Health monitoring endpoints ready for UptimeRobot`);
+  console.log(`📋 Available health endpoints:`);
+  console.log(`   GET  /api/health1`);
+  console.log(`   GET  /api/health2`);
+  console.log(`   GET  /api/health3`);
+  console.log(`   GET  /api/warmup`);
+  console.log(`   GET  /api/ping`);
 });
