@@ -14,7 +14,7 @@ import {
   FormLabel,
   Snackbar
 } from '@mui/material';
-import { NotificationsActive, NotificationsOff, TestTube } from '@mui/icons-material';
+import { NotificationsActive, NotificationsOff, Science } from '@mui/icons-material'; // Changed TestTube to Science
 import { useNotification } from '../../context/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
 
@@ -209,7 +209,7 @@ const BrowserNotifications = () => {
 
         <Box sx={{ mt: 3, display: 'flex', gap: 1 }}>
           <Button
-            startIcon={<TestTube />}
+            startIcon={<Science />} {/* Changed from TestTube to Science */}
             onClick={handleTestNotification}
             variant="outlined"
             disabled={!notificationsEnabled}
