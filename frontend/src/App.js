@@ -291,7 +291,6 @@ const MobileNavigationDrawer = ({ open, onClose, onAuthAction }) => {
         ))}
       </List>
 
-      // In MobileNavigationDrawer component, update the auth buttons section:
 {!user && (
   <Box sx={{ p: 2, mt: 'auto', borderTop: '1px solid #E2E8F0' }}>
     <Button
