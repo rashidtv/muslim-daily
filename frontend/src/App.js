@@ -606,46 +606,48 @@ function App() {
       <CssBaseline />
       <AuthProvider>
         <PracticeProvider>
-          <Router>
-            <Box sx={{ 
-              minHeight: '100vh', 
-              backgroundColor: 'background.default',
-              pb: { xs: '65px', md: 0 },
-            }}>
-              <Header onAuthAction={handleAuthAction} />
-              
-              <Container 
-                maxWidth="lg" 
-                sx={{ 
-                  py: { xs: 2, md: 3 },
-                  px: { xs: 2, sm: 3 } 
-                }}
-              >
-                <Routes>
-                  <Route path="/" element={<Home onAuthAction={handleAuthAction} />} />
-                  <Route path="/progress" element={<Progress />} />
-                  <Route path="/prayers" element={<PrayerTimesComingSoon />} />
-                  <Route path="/calendar" element={<Calendar />} />
-                  <Route path="/mosques" element={<MosqueFinderComingSoon />} />
-                  <Route path="/settings" element={<Settings />} />
-                  <Route path="*" element={<Home onAuthAction={handleAuthAction} />} />
-                </Routes>
-              </Container>
+          <NotificationProvider>
+            <Router>
+              <Box sx={{ 
+                minHeight: '100vh', 
+                backgroundColor: 'background.default',
+                pb: { xs: '65px', md: 0 },
+              }}>
+                <Header onAuthAction={handleAuthAction} />
+                
+                <Container 
+                  maxWidth="lg" 
+                  sx={{ 
+                    py: { xs: 2, md: 3 },
+                    px: { xs: 2, sm: 3 } 
+                  }}
+                >
+                  <Routes>
+                    <Route path="/" element={<Home onAuthAction={handleAuthAction} />} />
+                    <Route path="/progress" element={<Progress />} />
+                    <Route path="/prayers" element={<PrayerTimesComingSoon />} />
+                    <Route path="/calendar" element={<Calendar />} />
+                    <Route path="/mosques" element={<MosqueFinderComingSoon />} />
+                    <Route path="/settings" element={<Settings />} />
+                    <Route path="*" element={<Home onAuthAction={handleAuthAction} />} />
+                  </Routes>
+                </Container>
 
-              {/* Mobile Bottom Navigation */}
-              <Box sx={{ display: { xs: 'block', md: 'none' } }}>
-                <MobileBottomNav />
+                {/* Mobile Bottom Navigation */}
+                <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+                  <MobileBottomNav />
+                </Box>
+
+                <PWAInstallPrompt />
+
+                <AuthModal 
+                  open={authModalOpen}
+                  onClose={() => setAuthModalOpen(false)}
+                  initialMode={authMode}
+                />
               </Box>
-
-              <PWAInstallPrompt />
-
-              <AuthModal 
-                open={authModalOpen}
-                onClose={() => setAuthModalOpen(false)}
-                initialMode={authMode}
-              />
-            </Box>
-          </Router>
+            </Router>
+          </NotificationProvider>
         </PracticeProvider>
       </AuthProvider>
     </ThemeProvider>

@@ -14,12 +14,30 @@ import {
   FormLabel,
   Snackbar
 } from '@mui/material';
-import { NotificationsActive, NotificationsOff, Science } from '@mui/icons-material';
-import { useNotification } from '../../context/NotificationContext';
-import { useAuth } from '../../context/AuthContext';
+import { NotificationsActive, Science } from '@mui/icons-material';
+import { useNotification } from '../../../context/NotificationContext';
+import { useAuth } from '../../../context/AuthContext';
 
 const BrowserNotifications = () => {
   const { user } = useAuth();
+  
+  // Safety check for NotificationContext
+  let notificationContext;
+  try {
+    notificationContext = useNotification();
+  } catch (error) {
+    console.warn('Notification context not available:', error);
+    return (
+      <Card sx={{ borderRadius: 3, mb: 3 }}>
+        <CardContent>
+          <Alert severity="warning">
+            Notifications are temporarily unavailable. Please refresh the page.
+          </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
+
   const {
     permission,
     notificationsEnabled,
@@ -28,7 +46,7 @@ const BrowserNotifications = () => {
     disableNotifications,
     sendTestNotification,
     checkPermission
-  } = useNotification();
+  } = notificationContext;
 
   const [selectedPrayers, setSelectedPrayers] = useState(['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha']);
   const [loading, setLoading] = useState(false);
