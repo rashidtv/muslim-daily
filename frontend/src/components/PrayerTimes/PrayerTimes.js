@@ -608,9 +608,10 @@ const PrayerTimes = () => {
             </Alert>
           )}
 
-          {!user && (
+       // In PrayerTimes.js, update the alert message:
+{!user && (
   <Alert severity="info" sx={{ mb: 2, fontSize: '0.8rem' }}>
-    Sign in or register to track your prayers and view progress
+    Click on "Start Your Journey" to track your prayers and view progress
   </Alert>
 )}
 

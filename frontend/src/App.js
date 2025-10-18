@@ -202,7 +202,7 @@ const AuthButtons = ({ onAuthAction }) => {
   );
 };
 
-// Mobile Navigation Drawer
+// Enhanced Mobile Navigation Drawer with "Start Your Journey"
 const MobileNavigationDrawer = ({ open, onClose, onAuthAction }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -292,42 +292,64 @@ const MobileNavigationDrawer = ({ open, onClose, onAuthAction }) => {
         ))}
       </List>
 
-
-{!user && (
-  <Box sx={{ p: 2, mt: 'auto', borderTop: '1px solid #E2E8F0' }}>
-    <Button
-      fullWidth
-      variant="contained"
-      onClick={() => {
-        onAuthAction('register');
-        onClose();
-      }}
-      sx={{
-        mb: 1,
-        borderRadius: 2,
-        fontSize: '0.9rem',
-        background: 'linear-gradient(135deg, #0D9488 0%, #F59E0B 100%)'
-      }}
-    >
-      Start Free
-    </Button>
-    <Button
-      fullWidth
-      variant="outlined"
-      onClick={() => {
-        onAuthAction('login');
-        onClose();
-      }}
-      sx={{
-        borderRadius: 2,
-        borderColor: 'divider',
-        fontSize: '0.9rem'
-      }}
-    >
-      Sign In
-    </Button>
-  </Box>
-)}
+      {/* Enhanced "Start Your Journey" Section - Show for both logged in/out but different content */}
+      <Box sx={{ p: 3, mt: 'auto', borderTop: '1px solid #E2E8F0', textAlign: 'center' }}>
+        {!user ? (
+          <>
+            <Typography variant="h6" fontWeight="600" gutterBottom>
+              Start Your Journey
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Track your prayers, monitor progress, and grow spiritually
+            </Typography>
+            <Button
+              fullWidth
+              variant="contained"
+              onClick={() => {
+                onAuthAction('register');
+                onClose();
+              }}
+              sx={{
+                mb: 2,
+                borderRadius: 2,
+                fontSize: '1rem',
+                py: 1.5,
+                background: 'linear-gradient(135deg, #0D9488 0%, #F59E0B 100%)',
+                fontWeight: '600'
+              }}
+            >
+              Start Your Journey
+            </Button>
+            <Typography variant="caption" color="text.secondary">
+              Click to track prayers and view progress
+            </Typography>
+          </>
+        ) : (
+          <>
+            <Typography variant="h6" fontWeight="600" gutterBottom>
+              Welcome Back!
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              Continue your spiritual journey
+            </Typography>
+            <Button
+              fullWidth
+              variant="outlined"
+              onClick={() => {
+                navigate('/progress');
+                onClose();
+              }}
+              sx={{
+                borderRadius: 2,
+                fontSize: '0.9rem',
+                py: 1.5
+              }}
+            >
+              View My Progress
+            </Button>
+          </>
+        )}
+      </Box>
     </Drawer>
   );
 };
@@ -385,12 +407,13 @@ const MobileBottomNav = () => {
   );
 };
 
-// Modern Header Component
+// Modern Header Component - Remove auth buttons from header
 const Header = ({ onAuthAction }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width: 900px)');
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { user } = useAuth(); // Add this to check if user is logged in
 
   // Desktop navigation items
   const navigationItems = [
@@ -448,8 +471,8 @@ const Header = ({ onAuthAction }) => {
               </Typography>
             </Box>
 
-            {/* Desktop Navigation */}
-            {!isMobile && (
+            {/* Desktop Navigation - Only show if user is logged in */}
+            {!isMobile && user && (
               <Box sx={{ display: 'flex', gap: 2, mr: 4 }}>
                 {navigationItems.map((item) => (
                   <Button
@@ -473,11 +496,12 @@ const Header = ({ onAuthAction }) => {
               </Box>
             )}
 
-            {/* Accessibility Menu and Theme Toggle */}
+            {/* Only show theme and accessibility controls - NO AUTH BUTTONS */}
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <AccessibilityMenu />
               <ThemeToggle />
-              <AuthButtons onAuthAction={onAuthAction} />
+              {/* Show user menu if logged in, nothing if logged out */}
+              {user && <UserMenu />}
             </Box>
           </Container>
         </Toolbar>
