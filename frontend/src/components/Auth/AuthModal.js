@@ -34,24 +34,27 @@ const AuthModal = ({ open, onClose, initialMode = 'login' }) => {
     });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      if (mode === 'login') {
-        await login(formData.email, formData.password);
-      } else {
-        if (formData.password !== formData.confirmPassword) {
-          alert('Passwords do not match');
-          return;
-        }
-        await register(formData.name, formData.email, formData.password);
-      }
-      onClose();
-      setFormData({ name: '', email: '', password: '', confirmPassword: '' });
-    } catch (error) {
-      console.error('Auth error:', error);
+  // In your AuthModal.js, update the handleSubmit function:
+const handleSubmit = async (formData) => {
+  try {
+    let result;
+    
+    if (mode === 'login') {
+      result = await login(formData.email, formData.password);
+    } else {
+      result = await register(formData.name, formData.email, formData.password);
     }
-  };
+
+    if (result.success) {
+      setSnackbar({ open: true, message: `Successfully ${mode === 'login' ? 'signed in' : 'registered'}!`, severity: 'success' });
+      onClose();
+    } else {
+      setSnackbar({ open: true, message: result.error, severity: 'error' });
+    }
+  } catch (error) {
+    setSnackbar({ open: true, message: error.message, severity: 'error' });
+  }
+};
 
   return (
     <Modal open={open} onClose={onClose}>
