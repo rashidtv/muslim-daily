@@ -28,7 +28,8 @@ import {
   BugReport,
   Storage,
   Wifi,
-  Language
+  Language,
+  Email
 } from '@mui/icons-material';
 import { useTheme } from '../context/ThemeContext';
 import BrowserNotifications from '../components/Notifications/BrowserNotifications';
@@ -87,6 +88,21 @@ const Settings = () => {
       }
     }
   ];
+
+  const handleEmailSupport = () => {
+    const email = 'rashidbaseresourcesenterprise@gmail.com';
+    const subject = 'Muslim Diary App Support';
+    const body = 'Assalamu alaikum,%0D%0A%0D%0AI need help with the Muslim Diary app:%0D%0A%0D%0A[Please describe your issue here]%0D%0A%0D%0AJazakAllah Khair';
+    
+    window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+  };
+
+  const handleCopyEmail = () => {
+    const email = 'rashidbaseresourcesenterprise@gmail.com';
+    navigator.clipboard.writeText(email).then(() => {
+      alert('Email address copied to clipboard!');
+    });
+  };
 
   return (
     <Container maxWidth="lg" sx={{ py: 3, pb: { xs: 10, md: 3 } }}>
@@ -321,10 +337,7 @@ const Settings = () => {
               <List>
                 <ListItem
                   button
-                  component="a"
-                  href="https://github.com/rashidtv/muslim-daily/issues"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  onClick={handleEmailSupport}
                   sx={{
                     borderRadius: 2,
                     mb: 1,
@@ -334,20 +347,17 @@ const Settings = () => {
                   }}
                 >
                   <ListItemIcon>
-                    <BugReport />
+                    <Email />
                   </ListItemIcon>
                   <ListItemText
-                    primary="Report an Issue"
-                    secondary="Found a bug? Let us know"
+                    primary="Email Support"
+                    secondary="Get help with any issues"
                   />
                 </ListItem>
 
                 <ListItem
                   button
-                  component="a"
-                  href="https://github.com/rashidtv/muslim-daily"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  onClick={handleCopyEmail}
                   sx={{
                     borderRadius: 2,
                     '&:hover': {
@@ -356,14 +366,20 @@ const Settings = () => {
                   }}
                 >
                   <ListItemIcon>
-                    <Info />
+                    <BugReport />
                   </ListItemIcon>
                   <ListItemText
-                    primary="GitHub Repository"
-                    secondary="View source code and contribute"
+                    primary="Copy Email Address"
+                    secondary="rashidbaseresourcesenterprise@gmail.com"
                   />
                 </ListItem>
               </List>
+
+              <Alert severity="info" sx={{ mt: 2, mb: 2 }}>
+                <Typography variant="body2">
+                  📧 We're here to help! Email us for any questions or issues.
+                </Typography>
+              </Alert>
 
               <Button
                 fullWidth
@@ -380,7 +396,7 @@ const Settings = () => {
                     alert('App link copied to clipboard!');
                   }
                 }}
-                sx={{ mt: 2 }}
+                sx={{ mt: 1 }}
               >
                 Share This App
               </Button>
@@ -394,6 +410,11 @@ const Settings = () => {
         <Typography variant="caption" color="text.secondary">
           Made with ❤️ for the Muslim community • Alhamdulillah for everything
         </Typography>
+        <Box sx={{ mt: 1 }}>
+          <Typography variant="caption" color="text.secondary">
+            Need help? Email: rashidbaseresourcesenterprise@gmail.com
+          </Typography>
+        </Box>
       </Box>
     </Container>
   );
