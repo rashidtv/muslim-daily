@@ -132,7 +132,7 @@ export const PracticeProvider = ({ children }) => {
     trackDhikr,
     getTodayPrayers,
     getWeeklyProgress,
-    clearTodayPrayers // Optional: for testing
+    clearTodayPrayers
   };
 
   return (
@@ -141,4 +141,3 @@ export const PracticeProvider = ({ children }) => {
     </PracticeContext.Provider>
   );
 };
-export { PracticeContext, usePractice };

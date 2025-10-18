@@ -141,7 +141,7 @@ const UserMenu = () => {
   );
 };
 
-// In the Header component, update the AuthButtons section:
+// Auth Buttons Component - Improved wording
 const AuthButtons = ({ onAuthAction }) => {
   const { user } = useAuth();
   const { darkMode } = useTheme();
@@ -192,10 +192,11 @@ const AuthButtons = ({ onAuthAction }) => {
           fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.9rem' },
           minWidth: 'auto',
           px: { xs: 1.5, sm: 2 },
-          whiteSpace: 'nowrap'
+          whiteSpace: 'nowrap',
+          background: 'linear-gradient(135deg, #0D9488 0%, #F59E0B 100%)'
         }}
       >
-        {isSmallMobile ? 'Start' : (isMobile ? 'Get Started' : 'Get Started')}
+        {isSmallMobile ? 'Join' : 'Start Free'}
       </Button>
     </Box>
   );
@@ -291,6 +292,7 @@ const MobileNavigationDrawer = ({ open, onClose, onAuthAction }) => {
         ))}
       </List>
 
+
 {!user && (
   <Box sx={{ p: 2, mt: 'auto', borderTop: '1px solid #E2E8F0' }}>
     <Button
@@ -303,10 +305,11 @@ const MobileNavigationDrawer = ({ open, onClose, onAuthAction }) => {
       sx={{
         mb: 1,
         borderRadius: 2,
-        fontSize: '0.9rem'
+        fontSize: '0.9rem',
+        background: 'linear-gradient(135deg, #0D9488 0%, #F59E0B 100%)'
       }}
     >
-      Get Started
+      Start Free
     </Button>
     <Button
       fullWidth

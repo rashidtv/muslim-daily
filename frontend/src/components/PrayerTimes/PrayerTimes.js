@@ -609,10 +609,10 @@ const PrayerTimes = () => {
           )}
 
           {!user && (
-            <Alert severity="info" sx={{ mb: 2, fontSize: '0.8rem' }}>
-              Sign in to track your prayers and see progress
-            </Alert>
-          )}
+  <Alert severity="info" sx={{ mb: 2, fontSize: '0.8rem' }}>
+    Sign in or register to track your prayers and view progress
+  </Alert>
+)}
 
           {/* Zone Selection - UPDATED: Smaller fonts */}
           <FormControl fullWidth sx={{ mb: 2 }}>
