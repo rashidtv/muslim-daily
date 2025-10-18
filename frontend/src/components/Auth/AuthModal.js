@@ -1,25 +1,24 @@
 import React, { useState } from 'react';
 import {
-  Modal,
-  Box,
-  Typography,
-  TextField,
-  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
   Tabs,
   Tab,
-  Container,
-  IconButton
+  Box,
+  Snackbar,
+  Alert
 } from '@mui/material';
-import { Close } from '@mui/icons-material';
 import { useAuth } from '../../context/AuthContext';
+import Login from './Login';
+import Register from './Register';
 
 const AuthModal = ({ open, onClose, initialMode = 'login' }) => {
   const [mode, setMode] = useState(initialMode);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: ''
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'info'
   });
   const { login, register } = useAuth();
 
@@ -27,124 +26,125 @@ const AuthModal = ({ open, onClose, initialMode = 'login' }) => {
     setMode(newValue);
   };
 
-  const handleInputChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+  const handleSubmit = async (formData) => {
+    try {
+      let result;
+      
+      if (mode === 'login') {
+        result = await login(formData.email, formData.password);
+      } else {
+        result = await register(formData.name, formData.email, formData.password);
+      }
+
+      if (result.success) {
+        setSnackbar({ 
+          open: true, 
+          message: `Successfully ${mode === 'login' ? 'signed in' : 'registered'}!`, 
+          severity: 'success' 
+        });
+        onClose();
+      } else {
+        setSnackbar({ 
+          open: true, 
+          message: result.error, 
+          severity: 'error' 
+        });
+      }
+    } catch (error) {
+      setSnackbar({ 
+        open: true, 
+        message: error.message, 
+        severity: 'error' 
+      });
+    }
   };
 
-  // In your AuthModal.js, update the handleSubmit function:
-const handleSubmit = async (formData) => {
-  try {
-    let result;
-    
-    if (mode === 'login') {
-      result = await login(formData.email, formData.password);
-    } else {
-      result = await register(formData.name, formData.email, formData.password);
-    }
-
-    if (result.success) {
-      setSnackbar({ open: true, message: `Successfully ${mode === 'login' ? 'signed in' : 'registered'}!`, severity: 'success' });
-      onClose();
-    } else {
-      setSnackbar({ open: true, message: result.error, severity: 'error' });
-    }
-  } catch (error) {
-    setSnackbar({ open: true, message: error.message, severity: 'error' });
-  }
-};
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
 
   return (
-    <Modal open={open} onClose={onClose}>
-      <Box
-        sx={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: { xs: '90%', sm: 400 },
-          bgcolor: 'background.paper',
-          borderRadius: 2,
-          boxShadow: 24,
-          p: 0
+    <>
+      <Dialog 
+        open={open} 
+        onClose={onClose} 
+        maxWidth="sm" 
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+            background: 'linear-gradient(135deg, #f0fdfa 0%, #ffffff 100%)'
+          }
         }}
       >
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', position: 'relative' }}>
-          <Tabs value={mode} onChange={handleTabChange} centered>
-            <Tab label="Sign In" value="login" />
-            <Tab label="Create Account" value="register" />
-          </Tabs>
-          <IconButton
-            onClick={onClose}
-            sx={{
-              position: 'absolute',
-              right: 8,
-              top: 8
-            }}
-          >
-            <Close />
-          </IconButton>
-        </Box>
+        <DialogTitle sx={{ 
+          textAlign: 'center', 
+          pb: 1,
+          background: 'linear-gradient(135deg, #0D9488 0%, #F59E0B 100%)',
+          color: 'white',
+          borderTopLeftRadius: 8,
+          borderTopRightRadius: 8
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+            <span style={{ fontSize: '24px' }}>🕌</span>
+            <Box>
+              <div style={{ fontSize: '1.5rem', fontWeight: '700' }}>
+                Muslim<span style={{ color: '#FFD700' }}>Diary</span>
+              </div>
+              <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>
+                {mode === 'login' ? 'Welcome Back!' : 'Start Your Journey'}
+              </div>
+            </Box>
+          </Box>
+        </DialogTitle>
 
-        <Container sx={{ py: 3 }}>
-          <form onSubmit={handleSubmit}>
-            {mode === 'register' && (
-              <TextField
-                fullWidth
-                label="Full Name"
-                name="name"
-                value={formData.name}
-                onChange={handleInputChange}
-                margin="normal"
-                required
-              />
-            )}
-            <TextField
-              fullWidth
-              label="Email"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleInputChange}
-              margin="normal"
-              required
-            />
-            <TextField
-              fullWidth
-              label="Password"
-              name="password"
-              type="password"
-              value={formData.password}
-              onChange={handleInputChange}
-              margin="normal"
-              required
-            />
-            {mode === 'register' && (
-              <TextField
-                fullWidth
-                label="Confirm Password"
-                name="confirmPassword"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={handleInputChange}
-                margin="normal"
-                required
-              />
-            )}
-            <Button
-              type="submit"
-              fullWidth
-              variant="contained"
-              sx={{ mt: 3, mb: 2 }}
+        <DialogContent sx={{ p: 0 }}>
+          <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+            <Tabs 
+              value={mode} 
+              onChange={handleTabChange} 
+              centered
+              sx={{
+                '& .MuiTab-root': {
+                  fontWeight: 600,
+                  fontSize: '0.9rem',
+                  textTransform: 'none',
+                  minWidth: 'auto',
+                  px: 3,
+                  py: 2
+                }
+              }}
             >
-              {mode === 'login' ? 'Sign In' : 'Create Account'}
-            </Button>
-          </form>
-        </Container>
-      </Box>
-    </Modal>
+              <Tab label="Sign In" value="login" />
+              <Tab label="Register" value="register" />
+            </Tabs>
+          </Box>
+
+          <Box sx={{ p: 3 }}>
+            {mode === 'login' ? (
+              <Login onSubmit={handleSubmit} onSwitchToRegister={() => setMode('register')} />
+            ) : (
+              <Register onSubmit={handleSubmit} onSwitchToLogin={() => setMode('login')} />
+            )}
+          </Box>
+        </DialogContent>
+      </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={handleCloseSnackbar} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </>
   );
 };
 
