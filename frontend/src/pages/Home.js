@@ -61,7 +61,7 @@ const Home = ({ onAuthAction }) => {
 
   return (
     <Box sx={{ pb: { xs: 1, md: 0 } }}>
-      {/* Hero Section - SHORTER & IMPACTFUL */}
+      {/* Hero Section */}
       <Box sx={{ 
         textAlign: 'center', 
         mb: { xs: 3, md: 4 },
@@ -149,7 +149,7 @@ const Home = ({ onAuthAction }) => {
         <PrayerTimes />
       </Box>
 
-      {/* Features Grid - SIMPLIFIED */}
+      {/* Features Grid */}
       <Container maxWidth="lg" sx={{ mb: { xs: 3, md: 4 } }}>
         <Typography 
           variant={isMobile ? "h5" : "h4"} 
@@ -193,7 +193,7 @@ const Home = ({ onAuthAction }) => {
         </Grid>
       </Container>
 
-      {/* WhatsApp Integration - SIMPLIFIED */}
+      {/* WhatsApp Integration */}
       {!user && (
         <Container maxWidth="md" sx={{ mt: { xs: 3, md: 4 }, textAlign: 'center' }}>
           <Card sx={{ 

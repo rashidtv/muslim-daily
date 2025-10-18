@@ -12,10 +12,12 @@ import {
   InputLabel,
   CircularProgress,
   IconButton,
-  Alert
+  Alert,
+  Snackbar,
+  Grid
 } from '@mui/material';
 import { Refresh, CheckCircle, RadioButtonUnchecked, MyLocation, LocationOn } from '@mui/icons-material';
-import { usePractice } from '../../context/PracticeContext';
+import { usePractice } from '../context/PracticeContext';
 
 // EXACT same zones as e-solat.gov.my with optgroups
 const malaysianZones = [
@@ -245,8 +247,10 @@ const PrayerTimes = () => {
   const [error, setError] = useState(null);
   const [usingGPS, setUsingGPS] = useState(false);
   const [userLocation, setUserLocation] = useState(null);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
   
-  const { markPracticeCompleted, markPracticeIncomplete, isPracticeCompleted, todayStats } = usePractice();
+  const { markPracticeCompleted, markPracticeIncomplete, isPracticeCompleted } = usePractice();
 
   // Get user's current location - SILENT background detection
   const getCurrentLocation = () => {
@@ -288,6 +292,10 @@ const PrayerTimes = () => {
       setUsingGPS(true);
       await loadPrayerTimes(zoneCode);
       
+      // Show snackbar notification instead of alert
+      setSnackbarMessage(`Location auto-detected: Zone ${zoneCode}`);
+      setSnackbarOpen(true);
+      
       console.log('✅ Auto-location detected:', {
         coordinates: `${location.latitude.toFixed(4)}, ${location.longitude.toFixed(4)}`,
         zone: zoneCode,
@@ -296,7 +304,6 @@ const PrayerTimes = () => {
       
     } catch (error) {
       console.log('❌ Auto-location failed, using default:', error);
-      // Use detected zone or fallback
       setUsingGPS(false);
       await loadPrayerTimes(selectedZone);
     } finally {
@@ -316,8 +323,8 @@ const PrayerTimes = () => {
       setUsingGPS(true);
       await loadPrayerTimes(zoneCode);
       
-      setError(`📍 Location detected! Zone: ${zoneCode}`);
-      setTimeout(() => setError(null), 3000);
+      setSnackbarMessage(`📍 Location detected! Zone: ${zoneCode}`);
+      setSnackbarOpen(true);
       
     } catch (error) {
       console.error('❌ Location detection failed:', error);
@@ -363,67 +370,67 @@ const PrayerTimes = () => {
     }
   };
 
-const fetchPrayerTimes = async (zoneCode) => {
-  try {
-    setError(null);
-    
-    // Dynamic API URL for different environments
-    const getApiBase = () => {
-      // Development - works on localhost
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        return 'http://localhost:5000';
-      }
-      // Production - your Render backend URL
-      return 'https://muslimdailybackend.onrender.com';
-    };
-
-    const API_BASE = getApiBase();
-    const response = await fetch(`${API_BASE}/api/prayertimes/${zoneCode}`);
-    
-    if (!response.ok) {
-      throw new Error('Failed to fetch prayer times from server');
-    }
-    
-    const data = await response.json();
-    
-    if (data.success && data.data) {
-      const formattedTimes = {
-        fajr: formatTimeTo12Hour(data.data.fajr),
-        dhuhr: formatTimeTo12Hour(data.data.dhuhr),
-        asr: formatTimeTo12Hour(data.data.asr),
-        maghrib: formatTimeTo12Hour(data.data.maghrib),
-        isha: formatTimeTo12Hour(data.data.isha),
-        method: 'JAKIM e-solat.gov.my (Live)',
-        zone: zoneCode,
-        success: true
-      };
+  const fetchPrayerTimes = async (zoneCode) => {
+    try {
+      setError(null);
       
-      return formattedTimes;
-    } else {
-      throw new Error(data.error || 'No prayer times data received');
-    }
-  } catch (error) {
-    console.error('API Error:', error);
-    
-    // Fallback to sample times if API fails
-    setError('Unable to fetch live prayer times. Using sample times.');
-    return getSamplePrayerTimes(zoneCode);
-  }
-};
+      // Dynamic API URL for different environments
+      const getApiBase = () => {
+        // Development - works on localhost
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          return 'http://localhost:5000';
+        }
+        // Production - your Render backend URL
+        return 'https://muslimdailybackend.onrender.com';
+      };
 
-// Add this fallback function
-const getSamplePrayerTimes = (zoneCode) => {
-  return {
-    fajr: '5:45 AM',
-    dhuhr: '1:15 PM', 
-    asr: '4:30 PM',
-    maghrib: '7:15 PM',
-    isha: '8:30 PM',
-    method: 'Sample Times (Backend Unavailable)',
-    zone: zoneCode,
-    success: true
+      const API_BASE = getApiBase();
+      const response = await fetch(`${API_BASE}/api/prayertimes/${zoneCode}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch prayer times from server');
+      }
+      
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        const formattedTimes = {
+          fajr: formatTimeTo12Hour(data.data.fajr),
+          dhuhr: formatTimeTo12Hour(data.data.dhuhr),
+          asr: formatTimeTo12Hour(data.data.asr),
+          maghrib: formatTimeTo12Hour(data.data.maghrib),
+          isha: formatTimeTo12Hour(data.data.isha),
+          method: 'JAKIM e-solat.gov.my (Live)',
+          zone: zoneCode,
+          success: true
+        };
+        
+        return formattedTimes;
+      } else {
+        throw new Error(data.error || 'No prayer times data received');
+      }
+    } catch (error) {
+      console.error('API Error:', error);
+      
+      // Fallback to sample times if API fails
+      setError('Unable to fetch live prayer times. Using sample times.');
+      return getSamplePrayerTimes(zoneCode);
+    }
   };
-};
+
+  // Add this fallback function
+  const getSamplePrayerTimes = (zoneCode) => {
+    return {
+      fajr: '5:45 AM',
+      dhuhr: '1:15 PM', 
+      asr: '4:30 PM',
+      maghrib: '7:15 PM',
+      isha: '8:30 PM',
+      method: 'Sample Times (Backend Unavailable)',
+      zone: zoneCode,
+      success: true
+    };
+  };
 
   const loadPrayerTimes = async (zoneCode = selectedZone) => {
     setLoading(true);
@@ -533,7 +540,7 @@ const getSamplePrayerTimes = (zoneCode) => {
         <CardContent sx={{ textAlign: 'center', py: 4 }}>
           <CircularProgress />
           <Typography variant="body1" sx={{ mt: 2 }}>
-            {locationLoading ? 'Auto-detecting your location...' : 'Loading prayer times...'}
+            {locationLoading ? 'Detecting your location...' : 'Loading prayer times...'}
           </Typography>
         </CardContent>
       </Card>
@@ -541,221 +548,180 @@ const getSamplePrayerTimes = (zoneCode) => {
   }
 
   return (
-    <Card sx={{ borderRadius: 3, boxShadow: 3 }}>
-      <CardContent>
-        {/* Header */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-          <Box>
-            <Typography variant="h5" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              🕌 Prayer Times
-            </Typography>
-            <Typography variant="body2" color="primary.main" sx={{ mt: 0.5 }}>
-              {todayStats.prayersCompleted}/5 prayers completed today
-              {usingGPS && ' • Location Auto-detected'}
-            </Typography>
+    <>
+      <Card sx={{ borderRadius: 3, boxShadow: 3 }}>
+        <CardContent>
+          {/* Header - COMPACT */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Box>
+              <Typography variant="h5" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                🕌 Prayer Times
+              </Typography>
+            </Box>
+            
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                size="small"
+                startIcon={<MyLocation />}
+                onClick={handleDetectLocation}
+                disabled={locationLoading}
+                variant={usingGPS ? "contained" : "outlined"}
+                color={usingGPS ? "success" : "primary"}
+              >
+                {locationLoading ? 'Detecting...' : 'Refresh Location'}
+              </Button>
+            </Box>
           </Box>
-          
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <Button
-              size="small"
-              startIcon={<MyLocation />}
-              onClick={handleDetectLocation}
-              disabled={locationLoading}
-              variant={usingGPS ? "contained" : "outlined"}
-              color={usingGPS ? "success" : "primary"}
-            >
-              {locationLoading ? 'Detecting...' : 'Refresh Location'}
-            </Button>
-            <Button
-              size="small"
-              startIcon={<Refresh />}
-              onClick={() => loadPrayerTimes()}
+
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+
+          {/* Zone Selection - COMPACT */}
+          <FormControl fullWidth sx={{ mb: 2 }}>
+            <InputLabel>Select Zone</InputLabel>
+            <Select
+              value={selectedZone}
+              label="Select Zone"
+              onChange={(e) => handleZoneChange(e.target.value)}
               disabled={loading}
             >
-              Refresh
-            </Button>
-          </Box>
-        </Box>
-
-        {error && (
-          <Alert severity={error.includes('detected') ? "success" : "error"} sx={{ mb: 2 }}>
-            {error}
-          </Alert>
-        )}
-
-        {/* Location Info */}
-        {usingGPS && userLocation && (
-          <Alert severity="success" sx={{ mb: 2 }}>
-            <Typography variant="body2" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <LocationOn fontSize="small" />
-              Auto-detected your location 
-              {userLocation.accuracy && ` (Accuracy: ${Math.round(userLocation.accuracy)}m)`}
-            </Typography>
-            <Typography variant="body2">
-              Zone: <strong>{selectedZone}</strong>
-            </Typography>
-          </Alert>
-        )}
-
-        {/* Progress Bar */}
-        <Box sx={{ mb: 3 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-            <Typography variant="body2" color="text.secondary">
-              Today's Progress
-            </Typography>
-            <Typography variant="body2" color="primary.main" fontWeight="bold">
-              {todayStats.prayersCompleted}/5
-            </Typography>
-          </Box>
-          <Box sx={{ 
-            width: '100%', 
-            height: 8, 
-            backgroundColor: 'grey.200', 
-            borderRadius: 4,
-            overflow: 'hidden'
-          }}>
-            <Box 
-              sx={{ 
-                width: `${todayStats.progress}%`, 
-                height: '100%', 
-                backgroundColor: 'primary.main',
-                borderRadius: 4,
-                transition: 'width 0.3s ease'
-              }}
-            />
-          </Box>
-        </Box>
-
-        {/* Zone Selection */}
-        <FormControl fullWidth sx={{ mb: 3 }}>
-          <InputLabel>Select Zone</InputLabel>
-          <Select
-            value={selectedZone}
-            label="Select Zone"
-            onChange={(e) => handleZoneChange(e.target.value)}
-            disabled={loading}
-          >
-            {malaysianZones.map((state) => [
-              <Typography 
-                key={state.group} 
-                component="div" 
-                sx={{ 
-                  px: 2, 
-                  py: 1, 
-                  fontWeight: 'bold', 
-                  backgroundColor: 'grey.100',
-                  borderBottom: '1px solid',
-                  borderColor: 'divider'
-                }}
-              >
-                {state.group}
-              </Typography>,
-              ...state.zones.map(zone => (
-                <MenuItem key={zone.value} value={zone.value} sx={{ pl: 3 }}>
-                  {zone.label}
-                </MenuItem>
-              ))
-            ])}
-          </Select>
-        </FormControl>
-
-        {/* Next Prayer */}
-        {nextPrayer && (
-          <Box sx={{ 
-            bgcolor: 'primary.main', 
-            color: 'white', 
-            p: 2, 
-            borderRadius: 2, 
-            mb: 3,
-            textAlign: 'center'
-          }}>
-            <Typography variant="h6" gutterBottom>
-              🎯 Next Prayer
-            </Typography>
-            <Typography variant="h4" fontWeight="bold">
-              {nextPrayer.name}
-            </Typography>
-            <Typography variant="h6">
-              {nextPrayer.time}
-              {nextPrayer.isTomorrow && ' (Tomorrow)'}
-            </Typography>
-          </Box>
-        )}
-
-        {/* Prayer Times List */}
-        {prayerTimes && (
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {prayers.map((prayer) => {
-              const isCompleted = isPracticeCompleted(prayer.type);
-              const isNextPrayer = nextPrayer?.name === prayer.name;
-              
-              return (
-                <Box 
-                  key={prayer.name}
+              {malaysianZones.map((state) => [
+                <Typography 
+                  key={state.group} 
+                  component="div" 
                   sx={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center',
-                    p: 2,
-                    borderRadius: 2,
-                    bgcolor: isNextPrayer ? 'action.hover' : 'transparent',
-                    border: isNextPrayer ? '2px solid' : '1px solid',
-                    borderColor: isNextPrayer ? 'primary.main' : 'divider',
-                    opacity: isCompleted ? 0.8 : 1
+                    px: 2, 
+                    py: 1, 
+                    fontWeight: 'bold', 
+                    backgroundColor: 'grey.100',
+                    borderBottom: '1px solid',
+                    borderColor: 'divider'
                   }}
                 >
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                    <Typography variant="h5">{prayer.icon}</Typography>
-                    <Box>
-                      <Typography 
-                        variant="h6"
-                        sx={{ 
-                          textDecoration: isCompleted ? 'line-through' : 'none',
-                          color: isCompleted ? 'text.secondary' : 'text.primary'
-                        }}
-                      >
-                        {prayer.name}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {prayer.time || '--:--'}
-                      </Typography>
-                    </Box>
-                  </Box>
-                  
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    {isNextPrayer && (
-                      <Chip 
-                        label="Next" 
-                        color="primary" 
-                        size="small"
-                      />
-                    )}
-                    
-                    <IconButton
-                      onClick={() => handlePracticeToggle(prayer.type)}
-                      color={isCompleted ? "success" : "default"}
-                      sx={{
-                        border: isCompleted ? '2px solid' : '1px solid',
-                        borderColor: isCompleted ? 'success.main' : 'grey.400'
+                  {state.group}
+                </Typography>,
+                ...state.zones.map(zone => (
+                  <MenuItem key={zone.value} value={zone.value} sx={{ pl: 3 }}>
+                    {zone.label}
+                  </MenuItem>
+                ))
+              ])}
+            </Select>
+          </FormControl>
+
+          {/* Next Prayer - COMPACT */}
+          {nextPrayer && (
+            <Box sx={{ 
+              bgcolor: 'primary.main', 
+              color: 'white', 
+              p: 2, 
+              borderRadius: 2, 
+              mb: 2,
+              textAlign: 'center'
+            }}>
+              <Typography variant="h6" gutterBottom>
+                🎯 Next Prayer
+              </Typography>
+              <Typography variant="h4" fontWeight="bold">
+                {nextPrayer.name}
+              </Typography>
+              <Typography variant="h6">
+                {nextPrayer.time}
+                {nextPrayer.isTomorrow && ' (Tomorrow)'}
+              </Typography>
+            </Box>
+          )}
+
+          {/* Prayer Times List - COMPACT GRID */}
+          {prayerTimes && (
+            <Grid container spacing={1} sx={{ mb: 1 }}>
+              {prayers.map((prayer) => {
+                const isCompleted = isPracticeCompleted(prayer.type);
+                const isNextPrayer = nextPrayer?.name === prayer.name;
+                
+                return (
+                  <Grid item xs={12} key={prayer.name}>
+                    <Box 
+                      sx={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        p: 1.5,
+                        borderRadius: 2,
+                        bgcolor: isNextPrayer ? 'action.hover' : 'transparent',
+                        border: isNextPrayer ? '2px solid' : '1px solid',
+                        borderColor: isNextPrayer ? 'primary.main' : 'divider',
+                        opacity: isCompleted ? 0.8 : 1
                       }}
                     >
-                      {isCompleted ? <CheckCircle /> : <RadioButtonUnchecked />}
-                    </IconButton>
-                  </Box>
-                </Box>
-              );
-            })}
-          </Box>
-        )}
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Typography variant="h6">{prayer.icon}</Typography>
+                        <Box>
+                          <Typography 
+                            variant="body1"
+                            fontWeight="600"
+                            sx={{ 
+                              textDecoration: isCompleted ? 'line-through' : 'none',
+                              color: isCompleted ? 'text.secondary' : 'text.primary'
+                            }}
+                          >
+                            {prayer.name}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {prayer.time || '--:--'}
+                          </Typography>
+                        </Box>
+                      </Box>
+                      
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        {isNextPrayer && (
+                          <Chip 
+                            label="Next" 
+                            color="primary" 
+                            size="small"
+                          />
+                        )}
+                        
+                        <IconButton
+                          onClick={() => handlePracticeToggle(prayer.type)}
+                          color={isCompleted ? "success" : "default"}
+                          size="small"
+                          sx={{
+                            border: isCompleted ? '2px solid' : '1px solid',
+                            borderColor: isCompleted ? 'success.main' : 'grey.400'
+                          }}
+                        >
+                          {isCompleted ? <CheckCircle /> : <RadioButtonUnchecked />}
+                        </IconButton>
+                      </Box>
+                    </Box>
+                  </Grid>
+                );
+              })}
+            </Grid>
+          )}
 
-        {/* Footer Info */}
-        <Box sx={{ mt: 2, textAlign: 'center' }}>
-  <Typography variant="caption" color="text.secondary">
-    Live data from JAKIM • Zone: {selectedZone}
-  </Typography>
-</Box>
-      </CardContent>
-    </Card>
+          {/* Footer Info - SIMPLIFIED */}
+          <Box sx={{ mt: 1, textAlign: 'center' }}>
+            <Typography variant="caption" color="text.secondary">
+              Live data from JAKIM • Zone: {selectedZone}
+            </Typography>
+          </Box>
+        </CardContent>
+      </Card>
+
+      {/* Snackbar for location detection */}
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => setSnackbarOpen(false)}
+        message={snackbarMessage}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      />
+    </>
   );
 };
 

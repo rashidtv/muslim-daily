@@ -239,7 +239,7 @@ const UserMenu = () => {
   );
 };
 
-// Auth Buttons Component - FIXED: Now properly shows Sign In & Get Started
+// Auth Buttons Component
 const AuthButtons = ({ onAuthAction }) => {
   const { user } = useAuth();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -466,7 +466,7 @@ const MobileBottomNav = () => {
   );
 };
 
-// Modern Header Component - FIXED: Now includes AuthButtons
+// Modern Header Component
 const Header = ({ onAuthAction }) => {
   const navigate = useNavigate();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -518,7 +518,7 @@ const Header = ({ onAuthAction }) => {
               </Typography>
             </Box>
 
-            {/* Auth Controls - FIXED: Now properly visible */}
+            {/* Auth Controls */}
             <AuthButtons onAuthAction={onAuthAction} />
           </Container>
         </Toolbar>
