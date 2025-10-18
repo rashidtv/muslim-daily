@@ -1,5 +1,5 @@
-// public/sw.js
-const CACHE_NAME = 'muslim-daily-v1.5';
+// public/sw.js - Updated version with cache busting
+const CACHE_NAME = 'muslim-daily-v1.6'; // Changed version to force update
 const urlsToCache = [
   '/',
   '/static/js/bundle.js',
@@ -9,46 +9,27 @@ const urlsToCache = [
 ];
 
 self.addEventListener('install', (event) => {
-  console.log('🔄 Service Worker installing...');
+  console.log('🔄 Service Worker installing (v1.6)...');
   
-  // Skip waiting to activate immediately
-  self.skipWaiting();
-  
+  // Delete old caches first
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('📦 Opened cache, adding files...');
-        
-        // Use cache.addAll but with better error handling
-        return Promise.allSettled(
-          urlsToCache.map(url => 
-            fetch(url)
-              .then(response => {
-                if (!response.ok) {
-                  throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                return cache.put(url, response);
-              })
-              .catch(error => {
-                console.warn(`⚠️ Could not cache ${url}:`, error);
-                // Don't fail the entire installation if one file fails
-                return Promise.resolve();
-              })
-          )
-        );
-      })
-      .then(() => {
-        console.log('✅ All files processed (some may have failed)');
-      })
-      .catch(error => {
-        console.error('❌ Cache installation failed:', error);
-        // Don't fail the installation
-      })
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          console.log('🗑️ Deleting old cache:', cacheName);
+          return caches.delete(cacheName);
+        })
+      );
+    }).then(() => {
+      console.log('✅ All old caches deleted');
+      return self.skipWaiting();
+    })
   );
 });
 
 self.addEventListener('activate', (event) => {
-  console.log('🔄 Service Worker activating...');
+  console.log('🔄 Service Worker activating (v1.6)...');
+  
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
@@ -59,11 +40,13 @@ self.addEventListener('activate', (event) => {
           }
         })
       );
+    }).then(() => {
+      // Take control of all clients immediately
+      return self.clients.claim();
     })
   );
   
-  // Take control immediately
-  event.waitUntil(self.clients.claim());
+  console.log('✅ New Service Worker activated');
 });
 
 self.addEventListener('fetch', (event) => {
@@ -79,8 +62,7 @@ self.addEventListener('fetch', (event) => {
         }
 
         return fetch(event.request).catch(() => {
-          // If both cache and network fail, you could return a fallback
-          console.log('❌ Both cache and network failed for:', event.request.url);
+          console.log('❌ Network failed for:', event.request.url);
         });
       })
   );
@@ -114,14 +96,11 @@ self.addEventListener('notificationclick', (event) => {
 
   event.waitUntil(
     clients.matchAll({ type: 'window' }).then((windowClients) => {
-      // Check if there is already a window/tab open with the target URL
       for (let client of windowClients) {
-        // If so, just focus it.
         if (client.url === '/' && 'focus' in client) {
           return client.focus();
         }
       }
-      // If not, then open the target URL in a new window/tab.
       if (clients.openWindow) {
         return clients.openWindow('/');
       }
