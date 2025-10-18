@@ -466,24 +466,31 @@ const PrayerTimes = () => {
   };
 
   const handlePracticeToggle = async (prayerName) => {
-    if (!user) {
-      setSnackbarMessage('Please sign in to track prayers');
-      setSnackbarOpen(true);
-      return;
-    }
+  if (!user) {
+    setSnackbarMessage('Please sign in to track prayers');
+    setSnackbarOpen(true);
+    return;
+  }
 
-    try {
-      await trackPrayer(prayerName);
+  try {
+    const wasCompleted = isPrayerCompletedToday(prayerName);
+    await trackPrayer(prayerName);
+    
+    if (wasCompleted) {
+      setSnackbarMessage(`${prayerName} prayer marked as incomplete`);
+    } else {
       setSnackbarMessage(`${prayerName} prayer tracked successfully!`);
-      setSnackbarOpen(true);
-      
-      // Refresh the UI to show updated completion status
-      setPrayerTimes(prev => ({ ...prev }));
-    } catch (error) {
-      setSnackbarMessage('Failed to track prayer');
-      setSnackbarOpen(true);
     }
-  };
+    
+    setSnackbarOpen(true);
+    
+    // Refresh the UI to show updated completion status
+    setPrayerTimes(prev => ({ ...prev }));
+  } catch (error) {
+    setSnackbarMessage('Failed to track prayer');
+    setSnackbarOpen(true);
+  }
+};
 
   // Get next prayer
   const getNextPrayer = (prayerTimes) => {

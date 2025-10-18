@@ -33,20 +33,35 @@ export const PracticeProvider = ({ children }) => {
   const trackPrayer = async (prayerName) => {
     if (!user) throw new Error('User must be logged in to track prayers');
 
-    const newPrayerRecord = {
-      id: Date.now(),
-      name: prayerName,
-      timestamp: new Date().toISOString(),
-      date: new Date().toDateString()
-    };
+    const today = new Date().toDateString();
+    
+    // Check if prayer already tracked today
+    const existingPrayerIndex = prayerProgress.findIndex(
+      record => record.name === prayerName && record.date === today
+    );
 
-    const updatedProgress = [...prayerProgress, newPrayerRecord];
+    let updatedProgress;
+
+    if (existingPrayerIndex > -1) {
+      // Remove prayer (untoggle)
+      updatedProgress = prayerProgress.filter((_, index) => index !== existingPrayerIndex);
+    } else {
+      // Add prayer
+      const newPrayerRecord = {
+        id: Date.now(),
+        name: prayerName,
+        timestamp: new Date().toISOString(),
+        date: today
+      };
+      updatedProgress = [...prayerProgress, newPrayerRecord];
+    }
+
     setPrayerProgress(updatedProgress);
     
     // Save to localStorage
     localStorage.setItem(`muslimDiary_prayerProgress_${user.id}`, JSON.stringify(updatedProgress));
     
-    return newPrayerRecord;
+    return updatedProgress;
   };
 
   const trackQuran = async (pagesRead, surah) => {
@@ -97,6 +112,17 @@ export const PracticeProvider = ({ children }) => {
     return prayerProgress.filter(record => new Date(record.timestamp) > oneWeekAgo);
   };
 
+  // NEW: Clear today's prayers (useful for testing)
+  const clearTodayPrayers = () => {
+    if (!user) throw new Error('User must be logged in');
+    
+    const today = new Date().toDateString();
+    const filteredProgress = prayerProgress.filter(record => record.date !== today);
+    
+    setPrayerProgress(filteredProgress);
+    localStorage.setItem(`muslimDiary_prayerProgress_${user.id}`, JSON.stringify(filteredProgress));
+  };
+
   const value = {
     prayerProgress,
     quranProgress,
@@ -105,7 +131,8 @@ export const PracticeProvider = ({ children }) => {
     trackQuran,
     trackDhikr,
     getTodayPrayers,
-    getWeeklyProgress
+    getWeeklyProgress,
+    clearTodayPrayers // Optional: for testing
   };
 
   return (
