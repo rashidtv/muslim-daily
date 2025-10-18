@@ -42,14 +42,16 @@ import {
   CalendarMonth,
   LocationOn
 } from '@mui/icons-material';
+import { usePWAInstall } from './hooks/usePWAInstall';
+import { PracticeProvider } from './context/PracticeContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
+
+// Components
 import Home from './pages/Home';
 import Progress from './pages/Progress';
 import Settings from './pages/Settings';
 import Calendar from './pages/Calendar';
 import AuthModal from './components/Auth/AuthModal';
-import { usePWAInstall } from './hooks/usePWAInstall';
-import { PracticeProvider } from './context/PracticeContext';
-import { AuthProvider, useAuth } from './context/AuthContext';
 
 // Calming color scheme - Teal & Amber
 const theme = createTheme({
@@ -464,11 +466,20 @@ const MobileBottomNav = () => {
   );
 };
 
-// Modern Header Component
+// Modern Header Component - FIXED: Added Desktop Navigation
 const Header = ({ onAuthAction }) => {
+  const location = useLocation();
   const navigate = useNavigate();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Desktop navigation items
+  const navigationItems = [
+    { label: 'Home', path: '/' },
+    { label: 'Prayer Times', path: '/prayers' },
+    { label: 'Calendar', path: '/calendar' },
+    { label: 'Progress', path: '/progress' },
+  ];
 
   return (
     <>
@@ -515,6 +526,31 @@ const Header = ({ onAuthAction }) => {
                 Muslim<span style={{ color: '#F59E0B' }}>Diary</span>
               </Typography>
             </Box>
+
+            {/* Desktop Navigation - FIXED: Now visible on desktop */}
+            {!isMobile && (
+              <Box sx={{ display: 'flex', gap: 2, mr: 4 }}>
+                {navigationItems.map((item) => (
+                  <Button
+                    key={item.path}
+                    onClick={() => navigate(item.path)}
+                    sx={{
+                      fontWeight: 600,
+                      color: location.pathname === item.path ? '#0D9488' : 'text.primary',
+                      fontSize: '0.9rem',
+                      px: 2,
+                      borderRadius: 2,
+                      backgroundColor: location.pathname === item.path ? 'rgba(13, 148, 136, 0.08)' : 'transparent',
+                      '&:hover': {
+                        backgroundColor: 'rgba(13, 148, 136, 0.04)',
+                      }
+                    }}
+                  >
+                    {item.label}
+                  </Button>
+                ))}
+              </Box>
+            )}
 
             {/* Auth Controls */}
             <AuthButtons onAuthAction={onAuthAction} />
