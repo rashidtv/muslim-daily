@@ -160,7 +160,7 @@ const PrayerResources = () => {
           }}
         >
           S
-        </Text>
+        </Typography>
         <Typography
           variant="caption"
           fontWeight="bold"
