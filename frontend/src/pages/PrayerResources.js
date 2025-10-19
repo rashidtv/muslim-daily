@@ -1,65 +1,65 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Container,
   Card,
   CardContent,
   Typography,
-  Box
+  Box,
+  Button,
+  Alert,
+  CircularProgress
 } from '@mui/material';
-import {
-  CompassCalibration,
-  Mosque
-} from '@mui/icons-material';
+import { CompassCalibration, Mosque, Refresh } from '@mui/icons-material';
 
 const PrayerResources = () => {
-  return (
-    <Container maxWidth="md" sx={{ py: 3, pb: { xs: 10, md: 3 } }}>
-      <Box sx={{ mb: 4, textAlign: 'center' }}>
-        <Typography variant="h4" fontWeight="700" gutterBottom>
-          Prayer Resources
-        </Typography>
-      </Box>
+  const [qiblaDirection, setQiblaDirection] = useState(292); // Default for Malaysia
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
+  const getLocation = () => {
+    setLoading(true);
+    if (!navigator.geolocation) {
+      setError('Geolocation not supported');
+      setLoading(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      () => {
+        // For Malaysia, Qibla is always ~292°
+        setQiblaDirection(292);
+        setLoading(false);
+      },
+      () => {
+        setError('Location access needed for accurate Qibla');
+        setLoading(false);
+      }
+    );
+  };
+
+  return (
+    <Container maxWidth="md" sx={{ py: 3 }}>
       <Card sx={{ mb: 3 }}>
         <CardContent sx={{ textAlign: 'center' }}>
           <CompassCalibration sx={{ fontSize: 40, color: 'primary.main', mb: 2 }} />
-          <Typography variant="h5" gutterBottom>
-            Qibla Direction
-          </Typography>
+          <Typography variant="h5" gutterBottom>Qibla Direction</Typography>
           
-          {/* Simple Static Compass */}
+          {error && <Alert severity="warning" sx={{ mb: 2 }}>{error}</Alert>}
+
           <Box sx={{ position: 'relative', width: 200, height: 200, margin: '0 auto', mb: 3 }}>
             <Box sx={{
-              width: '100%',
-              height: '100%',
-              borderRadius: '50%',
-              border: '3px solid',
-              borderColor: 'primary.main',
-              position: 'relative',
-              backgroundColor: '#f8f9fa'
+              width: '100%', height: '100%', borderRadius: '50%', border: '3px solid',
+              borderColor: 'primary.main', position: 'relative', backgroundColor: '#f8f9fa'
             }}>
-              {/* Qibla Arrow - Fixed Northwest */}
               <Box sx={{
-                position: 'absolute',
-                top: '10%',
-                left: '50%',
-                width: 6,
-                height: '40%',
-                backgroundColor: '#FF0000',
-                transform: 'translateX(-50%) rotate(292deg)',
+                position: 'absolute', top: '10%', left: '50%', width: 4, height: '45%',
+                backgroundColor: '#FF0000', transform: `translateX(-50%) rotate(${qiblaDirection}deg)`,
                 transformOrigin: 'bottom center'
               }} />
               
               <Box sx={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                width: 16,
-                height: 16,
-                backgroundColor: 'primary.main',
-                borderRadius: '50%',
-                transform: 'translate(-50%, -50%)',
-                border: '2px solid white'
+                position: 'absolute', top: '50%', left: '50%', width: 12, height: 12,
+                backgroundColor: 'primary.main', borderRadius: '50%', transform: 'translate(-50%, -50%)'
               }} />
 
               <Typography variant="caption" fontWeight="bold" sx={{ position: 'absolute', top: '5%', left: '50%', transform: 'translateX(-50%)' }}>N</Typography>
@@ -70,28 +70,16 @@ const PrayerResources = () => {
           </Box>
 
           <Typography variant="h4" color="primary.main" gutterBottom>
-            292°
+            {qiblaDirection}°
           </Typography>
           
           <Typography variant="body1" gutterBottom>
-            Face Northwest direction for prayer
+            Face Northwest towards Mecca
           </Typography>
 
-          <Typography variant="caption" color="text.secondary">
-            For Malaysia: 292° Northwest towards Mecca
-          </Typography>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardContent sx={{ textAlign: 'center' }}>
-          <Mosque sx={{ fontSize: 40, color: 'primary.main', mb: 2 }} />
-          <Typography variant="h5" gutterBottom>
-            Mosque Finder
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Find nearby mosques and prayer facilities
-          </Typography>
+          <Button startIcon={<Refresh />} onClick={getLocation} variant="outlined">
+            {loading ? <CircularProgress size={20} /> : 'Recalibrate'}
+          </Button>
         </CardContent>
       </Card>
     </Container>

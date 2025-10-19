@@ -1,4 +1,5 @@
-// Empty service worker - no updates, no caching
+const CACHE_NAME = 'muslim-daily-v1';
+
 self.addEventListener('install', (event) => {
   self.skipWaiting();
 });

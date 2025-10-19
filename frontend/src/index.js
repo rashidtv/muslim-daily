@@ -11,5 +11,11 @@ root.render(
   </React.StrictMode>
 );
 
-// Remove ALL PWA update code - let browser handle updates automatically
+// Simple PWA registration - let browser handle updates
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js');
+  });
+}
+
 reportWebVitals();
