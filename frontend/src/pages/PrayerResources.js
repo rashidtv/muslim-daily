@@ -21,7 +21,8 @@ import {
   Navigation,
   MyLocation,
   CompassCalibration,
-  InstallMobile
+  InstallMobile,
+  Place
 } from '@mui/icons-material';
 
 const PrayerResources = () => {
@@ -31,10 +32,12 @@ const PrayerResources = () => {
   const [compassActive, setCompassActive] = useState(false);
   const [error, setError] = useState('');
   const [userLocation, setUserLocation] = useState(null);
+  const [locationName, setLocationName] = useState('');
   const [showCompassDialog, setShowCompassDialog] = useState(false);
   const [compassPermissionRequested, setCompassPermissionRequested] = useState(false);
   const [isPWA, setIsPWA] = useState(false);
   const [showPWAAlert, setShowPWAAlert] = useState(false);
+  const [gettingLocationName, setGettingLocationName] = useState(false);
 
   // Check if running in PWA mode
   const checkPWA = () => {
@@ -48,6 +51,90 @@ const PrayerResources = () => {
     }
     
     return isInPWA;
+  };
+
+  // Reverse geocoding to get location name
+  const getLocationName = async (latitude, longitude) => {
+    setGettingLocationName(true);
+    try {
+      // Using OpenStreetMap Nominatim API (free, no API key required)
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch location name');
+      }
+      
+      const data = await response.json();
+      
+      if (data && data.address) {
+        const address = data.address;
+        
+        // Build location name in a readable format
+        let locationParts = [];
+        
+        if (address.city) {
+          locationParts.push(address.city);
+        } else if (address.town) {
+          locationParts.push(address.town);
+        } else if (address.village) {
+          locationParts.push(address.village);
+        }
+        
+        if (address.state && !locationParts.includes(address.state)) {
+          locationParts.push(address.state);
+        }
+        
+        if (address.country && !locationParts.includes(address.country)) {
+          locationParts.push(address.country);
+        }
+        
+        const locationString = locationParts.join(', ');
+        setLocationName(locationString);
+        
+        // Also try to get more detailed name
+        if (data.display_name) {
+          const displayName = data.display_name.split(',').slice(0, 3).join(', ');
+          setLocationName(displayName);
+        }
+      } else {
+        setLocationName(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+      }
+    } catch (error) {
+      console.log('Error getting location name:', error);
+      // Fallback to coordinates if reverse geocoding fails
+      setLocationName(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+    } finally {
+      setGettingLocationName(false);
+    }
+  };
+
+  // Alternative geocoding service (LocationIQ - requires free API key)
+  const getLocationNameWithLocationIQ = async (latitude, longitude) => {
+    // You can get a free API key from https://locationiq.com/
+    const API_KEY = 'your_locationiq_api_key_here'; // Replace with your actual key
+    
+    try {
+      const response = await fetch(
+        `https://us1.locationiq.com/v1/reverse.php?key=${API_KEY}&lat=${latitude}&lon=${longitude}&format=json`
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch location name');
+      }
+      
+      const data = await response.json();
+      
+      if (data && data.display_name) {
+        const displayName = data.display_name.split(',').slice(0, 3).join(', ');
+        setLocationName(displayName);
+      }
+    } catch (error) {
+      console.log('LocationIQ error:', error);
+      // Fallback to OpenStreetMap
+      getLocationName(latitude, longitude);
+    }
   };
 
   // High-precision Qibla calculation
@@ -76,7 +163,6 @@ const PrayerResources = () => {
         return;
       }
 
-      // Enhanced permission handling for PWA
       if (typeof DeviceOrientationEvent.requestPermission === 'function') {
         try {
           const permission = await DeviceOrientationEvent.requestPermission();
@@ -92,7 +178,6 @@ const PrayerResources = () => {
           setShowCompassDialog(true);
         }
       } else {
-        // Direct access for Android and PWA
         setupCompass();
       }
     } catch (err) {
@@ -107,11 +192,6 @@ const PrayerResources = () => {
     setCompassActive(true);
     setError('');
     setShowCompassDialog(false);
-    
-    // Better experience in PWA
-    if (isPWA) {
-      console.log('Compass active in PWA mode');
-    }
   };
 
   const autoEnableCompass = async () => {
@@ -121,14 +201,11 @@ const PrayerResources = () => {
     
     setTimeout(async () => {
       try {
-        // More aggressive auto-enable in PWA
         if (isPWA || typeof DeviceOrientationEvent.requestPermission !== 'function') {
           if (window.DeviceOrientationEvent) {
             setupCompass();
-            console.log('Compass auto-enabled in ' + (isPWA ? 'PWA' : 'browser'));
           }
         } else {
-          // For iOS browser, suggest PWA installation
           setShowCompassDialog(true);
         }
       } catch (err) {
@@ -163,6 +240,7 @@ const PrayerResources = () => {
   const getLocation = () => {
     setLoading(true);
     setError('');
+    setLocationName('');
 
     if (!navigator.geolocation) {
       setError('Geolocation is not supported by your browser');
@@ -178,6 +256,9 @@ const PrayerResources = () => {
         try {
           const direction = calculateQiblaDirection(latitude, longitude);
           setQiblaDirection(direction);
+          
+          // Get location name
+          getLocationName(latitude, longitude);
           
           // Auto-enable compass after getting location
           autoEnableCompass();
@@ -271,6 +352,40 @@ const PrayerResources = () => {
             <Alert severity="warning" sx={{ mb: 2 }}>
               {error}
             </Alert>
+          )}
+
+          {/* Location Information */}
+          {userLocation && (
+            <Box sx={{ mb: 3, p: 2, backgroundColor: 'grey.50', borderRadius: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
+                <Place sx={{ fontSize: 20, color: 'primary.main', mr: 1 }} />
+                <Typography variant="h6" color="primary.main">
+                  Your Location
+                </Typography>
+              </Box>
+              
+              {gettingLocationName ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <CircularProgress size={16} sx={{ mr: 1 }} />
+                  <Typography variant="body2" color="text.secondary">
+                    Getting location name...
+                  </Typography>
+                </Box>
+              ) : locationName ? (
+                <>
+                  <Typography variant="body1" fontWeight="medium" gutterBottom>
+                    {locationName}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {userLocation.latitude.toFixed(4)}, {userLocation.longitude.toFixed(4)}
+                  </Typography>
+                </>
+              ) : (
+                <Typography variant="body1" color="text.secondary">
+                  {userLocation.latitude.toFixed(4)}, {userLocation.longitude.toFixed(4)}
+                </Typography>
+              )}
+            </Box>
           )}
 
           {/* Compass Container */}
@@ -389,7 +504,7 @@ const PrayerResources = () => {
         </CardContent>
       </Card>
 
-      {/* Compass Permission Dialog with PWA suggestion */}
+      {/* Compass Permission Dialog */}
       <Dialog open={showCompassDialog} onClose={() => setShowCompassDialog(false)}>
         <DialogTitle>
           <CompassCalibration sx={{ mr: 1, verticalAlign: 'middle' }} />
