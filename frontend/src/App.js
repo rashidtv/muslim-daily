@@ -530,24 +530,24 @@ function App() {
   };
 
   // FIXED PWA Update Detection - Immediate notifications
+const [showUpdateNotification, setShowUpdateNotification] = useState(false);
+
+// Add this useEffect:
 useEffect(() => {
-  const handleUpdateAvailable = (event) => {
-    setUpdateAvailable(true);
-    setWaitingWorker(event.detail.waitingWorker);
+  const handleShowUpdate = () => {
+    console.log('Showing update notification');
+    setShowUpdateNotification(true);
   };
 
-  window.addEventListener('pwaUpdateAvailable', handleUpdateAvailable);
+  window.addEventListener('showUpdateNotification', handleShowUpdate);
 
   return () => {
-    window.removeEventListener('pwaUpdateAvailable', handleUpdateAvailable);
+    window.removeEventListener('showUpdateNotification', handleShowUpdate);
   };
 }, []);
 
   const handleUpdate = () => {
-  if (waitingWorker) {
-    waitingWorker.postMessage({ type: 'SKIP_WAITING' });
-  }
-  setUpdateAvailable(false);
+  window.location.reload();
 };
 
   const handleCloseUpdateNotification = () => {
@@ -600,8 +600,9 @@ useEffect(() => {
 
                 {/* Auto-update notification */}
                 <Snackbar
-  open={updateAvailable}
-  autoHideDuration={null}
+  open={showUpdateNotification}
+  autoHideDuration={60000} // 60 seconds
+  onClose={() => setShowUpdateNotification(false)}
   anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
 >
   <Alert 
@@ -609,7 +610,7 @@ useEffect(() => {
     variant="filled"
     action={
       <Button color="inherit" size="small" onClick={handleUpdate}>
-        UPDATE NOW
+        UPDATE
       </Button>
     }
   >

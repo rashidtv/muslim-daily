@@ -11,54 +11,36 @@ root.render(
   </React.StrictMode>
 );
 
-// PROPER PWA Update Handling
+// PWA Update Detection - SIMPLE & RELIABLE
 if ('serviceWorker' in navigator) {
-  let refreshing = false;
-  
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!refreshing) {
-      refreshing = true;
-      window.location.reload();
-    }
-  });
-
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
+    navigator.serviceWorker.register('/sw.js?v=3.0.0')
       .then((registration) => {
         console.log('SW registered');
         
+        // Check for waiting service worker immediately
+        if (registration.waiting) {
+          console.log('Update waiting - showing notification');
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('showUpdateNotification'));
+          }, 3000); // Show after 3 seconds (after location loads)
+        }
+
+        // Listen for updates
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;
-          console.log('Update found');
-          
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              // New update available - show notification WITHOUT closing app
-              if (window.showUpdateNotification) {
-                window.showUpdateNotification(registration.waiting);
-              }
+              console.log('New update installed - showing notification');
+              setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('showUpdateNotification'));
+              }, 3000); // Show after 3 seconds
             }
           });
         });
       })
       .catch(console.error);
   });
-
-  // Global function to show update notification
-  window.showUpdateNotification = (waitingWorker) => {
-    // Create a custom event to trigger the update notification in App.js
-    const event = new CustomEvent('pwaUpdateAvailable', { 
-      detail: { waitingWorker } 
-    });
-    window.dispatchEvent(event);
-  };
-
-  // Global function to skip waiting and update
-  window.skipWaitingAndUpdate = () => {
-    if (navigator.serviceWorker.controller) {
-      navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
-    }
-  };
 }
 
 reportWebVitals();
