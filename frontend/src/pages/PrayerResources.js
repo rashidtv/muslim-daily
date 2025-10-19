@@ -22,8 +22,10 @@ import {
   MyLocation,
   CompassCalibration,
   InstallMobile,
-  Place
+  Place,
+  NotificationsActive
 } from '@mui/icons-material';
+import { useNotification } from '../context/NotificationContext';
 
 const PrayerResources = () => {
   const [qiblaDirection, setQiblaDirection] = useState(null);
@@ -38,6 +40,9 @@ const PrayerResources = () => {
   const [isPWA, setIsPWA] = useState(false);
   const [showPWAAlert, setShowPWAAlert] = useState(false);
   const [gettingLocationName, setGettingLocationName] = useState(false);
+
+  // Get notification status
+  const { notificationsEnabled, loading: notificationsLoading } = useNotification();
 
   const checkPWA = () => {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
@@ -295,6 +300,32 @@ const PrayerResources = () => {
           {isPWA && (
             <Alert severity="success" sx={{ mb: 2 }}>
               Running in app mode - Best experience! 
+            </Alert>
+          )}
+
+          {/* Prayer Notification Status */}
+          {notificationsEnabled && (
+            <Alert 
+              severity="success" 
+              sx={{ mb: 2 }}
+              icon={<NotificationsActive />}
+            >
+              Prayer time notifications are enabled automatically! You'll receive reminders for all 5 daily prayers.
+            </Alert>
+          )}
+
+          {!notificationsEnabled && !notificationsLoading && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              🔔 Prayer time notifications will be enabled automatically...
+            </Alert>
+          )}
+
+          {notificationsLoading && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <CircularProgress size={16} sx={{ mr: 1 }} />
+                Setting up prayer time notifications...
+              </Box>
             </Alert>
           )}
 
