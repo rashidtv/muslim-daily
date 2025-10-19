@@ -11,44 +11,74 @@ root.render(
   </React.StrictMode>
 );
 
-// Service Worker with Mobile PWA update detection
+// Working PWA Update Detection
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
+    // Use version parameter to force update detection
+    navigator.serviceWorker.register('/sw.js?v=2.3')
       .then((registration) => {
         console.log('✅ SW registered');
-        
-        // Check for updates
+
+        // Force update check
         registration.update();
 
-        // Listen for new service worker (MOBILE PWA only)
+        // Listen for controller changes (when new SW takes over)
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          console.log('🔄 New service worker activated');
+          // Show update notification
+          if (window.showPWAUpdateNotification) {
+            window.showPWAUpdateNotification();
+          }
+        });
+
+        // Check if there's a waiting service worker
+        if (registration.waiting) {
+          console.log('📱 Update already waiting - showing notification');
+          if (window.showPWAUpdateNotification) {
+            window.showPWAUpdateNotification();
+          }
+        }
+
+        // Listen for new service worker installation
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;
+          console.log('🔄 New update found');
           
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              // Check if we're in a Mobile PWA
-              const isMobilePWA = 
-                (window.matchMedia('(display-mode: standalone)').matches || 
-                 window.navigator.standalone) &&
-                /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-              
-              if (isMobilePWA) {
-                console.log('📱 Mobile PWA update available - showing notification');
-                if (window.showPWAUpdateNotification) {
-                  window.showPWAUpdateNotification();
-                }
-              } else {
-                console.log('💻 Desktop browser - no notification needed');
+              console.log('✅ New version ready - showing notification');
+              // Show notification for all environments
+              if (window.showPWAUpdateNotification) {
+                window.showPWAUpdateNotification();
               }
             }
           });
         });
+
       })
       .catch((error) => {
         console.log('❌ SW registration failed:', error);
       });
   });
+
+  // Listen for messages from service worker
+  navigator.serviceWorker.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'NEW_VERSION_AVAILABLE') {
+      console.log('📢 Service worker sent update notification');
+      if (window.showPWAUpdateNotification) {
+        window.showPWAUpdateNotification();
+      }
+    }
+  });
 }
+
+// Global function for updates
+window.checkForUpdates = () => {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.ready.then(registration => {
+      registration.update();
+    });
+  }
+};
 
 reportWebVitals();

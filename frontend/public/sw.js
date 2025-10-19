@@ -1,10 +1,10 @@
-// public/sw.js - Version that actually triggers updates
-const APP_VERSION = '2.2.0';
+// public/sw.js - Working update version
+const APP_VERSION = '2.3.0';
 const CACHE_NAME = `muslim-daily-${APP_VERSION}`;
 
 self.addEventListener('install', (event) => {
   console.log(`🔄 Installing SW v${APP_VERSION}...`);
-  self.skipWaiting(); // This is crucial for updates
+  self.skipWaiting(); // Activate immediately
 });
 
 self.addEventListener('activate', (event) => {
@@ -21,15 +21,18 @@ self.addEventListener('activate', (event) => {
         })
       );
     }).then(() => {
+      // Take control immediately
       return self.clients.claim();
     }).then(() => {
-      // Notify all clients about the new version
-      self.clients.matchAll().then((clients) => {
-        clients.forEach((client) => {
-          client.postMessage({
-            type: 'NEW_VERSION_AVAILABLE',
-            version: APP_VERSION
-          });
+      // Force notify all clients
+      return self.clients.matchAll();
+    }).then((clients) => {
+      clients.forEach((client) => {
+        console.log('📢 Notifying client about update');
+        client.postMessage({
+          type: 'NEW_VERSION_AVAILABLE',
+          version: APP_VERSION,
+          timestamp: Date.now()
         });
       });
     })
@@ -44,14 +47,4 @@ self.addEventListener('fetch', (event) => {
       return caches.match(event.request);
     })
   );
-});
-
-// Listen for messages to trigger notifications
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SEND_NOTIFICATION') {
-    self.registration.showNotification(
-      event.data.notification.title,
-      event.data.notification
-    );
-  }
 });
