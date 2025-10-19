@@ -1,4 +1,5 @@
-const CACHE_NAME = 'muslim-daily-v3.0.0';
+// Simple Service Worker
+const CACHE_NAME = 'muslim-daily-v1';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -6,8 +7,4 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
-});
-
-self.addEventListener('fetch', (event) => {
-  event.respondWith(fetch(event.request));
 });
