@@ -6,6 +6,29 @@ require('dotenv').config();
 
 const app = express();
 
+// ==================== CRITICAL RENDER FIXES ====================
+// Add these settings for Render deployment
+app.set('trust proxy', 1); // Trust Render's proxy
+
+// Health check with NO database dependency (for initial deployment)
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    message: 'Server is running',
+    timestamp: new Date().toISOString(),
+    version: '2.4.0'
+  });
+});
+
+// Simple test endpoint without DB
+app.get('/api/test', (req, res) => {
+  res.json({ 
+    message: 'Backend is working!',
+    timestamp: new Date().toISOString()
+  });
+});
+// ==================== END CRITICAL FIXES ====================
+
 // Middleware
 app.use(cors());
 app.use(express.json());
@@ -177,7 +200,7 @@ app.get('/', async (req, res) => {
 });
 
 // Health check (existing)
-app.get('/health', async (req, res) => {
+app.get('/api/health', async (req, res) => {
   try {
     const userCount = await User.countDocuments();
     
@@ -593,16 +616,18 @@ process.on('SIGINT', () => {
 // ==================== SERVER START ====================
 
 const PORT = process.env.PORT || 5000;
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`🕌 MuslimDaily server running on port ${PORT}`);
   console.log(`💰 COMPLETELY FREE - No costs, no subscriptions`);
   console.log(`🌍 API available at: http://localhost:${PORT}`);
   console.log(`🗄️  MongoDB Persistent Storage Active`);
   console.log(`🏥 Health monitoring endpoints ready for UptimeRobot`);
   console.log(`📋 Available health endpoints:`);
+  console.log(`   GET  /health (Simple - No DB dependency)`);
   console.log(`   GET  /api/health1`);
   console.log(`   GET  /api/health2`);
   console.log(`   GET  /api/health3`);
   console.log(`   GET  /api/warmup`);
   console.log(`   GET  /api/ping`);
+  console.log(`   GET  /api/test`);
 });
