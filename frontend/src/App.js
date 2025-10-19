@@ -530,38 +530,25 @@ function App() {
   };
 
   // FIXED PWA Update Detection - Immediate notifications
-  useEffect(() => {
-    // Make update function available globally
-    window.showPWAUpdateNotification = (registration) => {
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      
-      if (isMobile) {
-        console.log('📱 Showing update notification on mobile');
-        setUpdateAvailable(true);
-        if (registration && registration.waiting) {
-          setWaitingWorker(registration.waiting);
-        }
-      } else {
-        console.log('🖥️ Skipping update notification on desktop');
-      }
-    };
+useEffect(() => {
+  const handleUpdateAvailable = (event) => {
+    setUpdateAvailable(true);
+    setWaitingWorker(event.detail.waitingWorker);
+  };
 
-    // Listen for controller change (when new SW takes over)
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        console.log('🔄 Controller changed - new version activated');
-        window.location.reload();
-      });
-    }
-  }, []);
+  window.addEventListener('pwaUpdateAvailable', handleUpdateAvailable);
+
+  return () => {
+    window.removeEventListener('pwaUpdateAvailable', handleUpdateAvailable);
+  };
+}, []);
 
   const handleUpdate = () => {
-    if (waitingWorker) {
-      waitingWorker.postMessage({ type: 'SKIP_WAITING' });
-    }
-    setUpdateAvailable(false);
-    window.location.reload();
-  };
+  if (waitingWorker) {
+    waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+  }
+  setUpdateAvailable(false);
+};
 
   const handleCloseUpdateNotification = () => {
     setUpdateAvailable(false);
@@ -613,28 +600,22 @@ function App() {
 
                 {/* Auto-update notification */}
                 <Snackbar
-                  open={updateAvailable}
-                  autoHideDuration={null} // Don't auto-hide
-                  onClose={handleCloseUpdateNotification}
-                  anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-                >
-                  <Alert 
-                    severity="info" 
-                    variant="filled"
-                    action={
-                      <>
-                        <Button color="inherit" size="small" onClick={handleCloseUpdateNotification}>
-                          LATER
-                        </Button>
-                        <Button color="inherit" size="small" onClick={handleUpdate}>
-                          UPDATE
-                        </Button>
-                      </>
-                    }
-                  >
-                    🆕 New version available! Restart to update.
-                  </Alert>
-                </Snackbar>
+  open={updateAvailable}
+  autoHideDuration={null}
+  anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+>
+  <Alert 
+    severity="info" 
+    variant="filled"
+    action={
+      <Button color="inherit" size="small" onClick={handleUpdate}>
+        UPDATE NOW
+      </Button>
+    }
+  >
+    🆕 New version available! Tap UPDATE to refresh.
+  </Alert>
+</Snackbar>
               </Box>
             </Router>
           </NotificationProvider>
