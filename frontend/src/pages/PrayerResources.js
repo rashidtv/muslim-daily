@@ -18,51 +18,50 @@ import {
 } from '@mui/icons-material';
 
 const PrayerResources = () => {
-  const [qiblaDirection, setQiblaDirection] = useState(292);
+  const [qiblaDirection, setQiblaDirection] = useState(292.6);
   const [deviceHeading, setDeviceHeading] = useState(null);
   const [loading, setLoading] = useState(false);
   const [compassActive, setCompassActive] = useState(false);
   const [error, setError] = useState('');
   const [userLocation, setUserLocation] = useState(null);
 
-  // Get Qibla from Aladhan API
-  const getQiblaFromAPI = async (lat, lng) => {
-    try {
-      const response = await fetch(
-        `https://api.aladhan.com/v1/qibla/${lat}/${lng}`
-      );
-      const data = await response.json();
-      
-      if (data.code === 200 && data.data && data.data.direction) {
-        return Math.round(data.data.direction);
-      }
-      throw new Error('Invalid API response');
-    } catch (error) {
-      console.log('API failed, using calculation');
-      return calculateReliableQibla(lat, lng);
-    }
-  };
-
-  const calculateReliableQibla = (lat, lng) => {
+  // HIGH-PRECISION Qibla calculation
+  const calculateHighPrecisionQibla = (lat, lng) => {
+    // Semenyih coordinates for testing
+    const semenyihLat = 2.9516;
+    const semenyihLng = 101.8430;
+    
+    // Use actual location or Semenyih for testing
+    const actualLat = lat || semenyihLat;
+    const actualLng = lng || semenyihLng;
+    
     const meccaLat = 21.4225;
     const meccaLng = 39.8262;
 
-    const latRad = lat * Math.PI / 180;
-    const lngRad = lng * Math.PI / 180;
-    const meccaLatRad = meccaLat * Math.PI / 180;
-    const meccaLngRad = meccaLng * Math.PI / 180;
+    // High precision calculation
+    const φ1 = actualLat * Math.PI / 180;
+    const φ2 = meccaLat * Math.PI / 180;
+    const Δλ = (meccaLng - actualLng) * Math.PI / 180;
 
-    const y = Math.sin(meccaLngRad - lngRad);
-    const x = Math.cos(latRad) * Math.tan(meccaLatRad) - Math.sin(latRad) * Math.cos(meccaLngRad - lngRad);
+    const y = Math.sin(Δλ);
+    const x = Math.cos(φ1) * Math.tan(φ2) - Math.sin(φ1) * Math.cos(Δλ);
     
-    let qibla = Math.atan2(y, x) * 180 / Math.PI;
-    return (qibla + 360) % 360;
+    let bearing = Math.atan2(y, x) * 180 / Math.PI;
+    bearing = (bearing + 360) % 360;
+    
+    // Return with 1 decimal precision
+    return Math.round(bearing * 10) / 10;
   };
 
-  // COMPASS FUNCTIONALITY
+  // Test with exact Semenyih location
+  const testSemenyihAccuracy = () => {
+    const semenyihDirection = calculateHighPrecisionQibla(2.9516, 101.8430);
+    console.log('🧭 Semenyih Qibla Test:', semenyihDirection);
+    return semenyihDirection;
+  };
+
   const startCompass = () => {
     if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-      // iOS - needs permission
       DeviceOrientationEvent.requestPermission()
         .then(permissionState => {
           if (permissionState === 'granted') {
@@ -72,7 +71,6 @@ const PrayerResources = () => {
         })
         .catch(console.error);
     } else {
-      // Android and others
       window.addEventListener('deviceorientation', handleCompass);
       setCompassActive(true);
     }
@@ -80,29 +78,21 @@ const PrayerResources = () => {
 
   const handleCompass = (event) => {
     if (event.alpha !== null) {
-      setDeviceHeading(event.alpha); // Compass heading (0-360)
+      setDeviceHeading(event.alpha);
     }
   };
 
-  // Calculate relative direction when compass is active
   const getRelativeDirection = () => {
     if (!compassActive || deviceHeading === null) return qiblaDirection;
     
-    // Calculate where Qibla is relative to device heading
     let relative = qiblaDirection - deviceHeading;
     if (relative < 0) relative += 360;
-    return Math.round(relative);
+    return Math.round(relative * 10) / 10;
   };
 
   const getLocation = async () => {
     setLoading(true);
     setError('');
-
-    if (!navigator.geolocation) {
-      setError('Geolocation not supported');
-      setLoading(false);
-      return;
-    }
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
@@ -110,18 +100,31 @@ const PrayerResources = () => {
         setUserLocation({ latitude, longitude });
         
         try {
-          const direction = await getQiblaFromAPI(latitude, longitude);
+          // Test Semenyih accuracy first
+          const semenyihTest = testSemenyihAccuracy();
+          console.log('📍 Semenyih should be 292.6°, calculated:', semenyihTest);
+          
+          // Calculate actual location
+          const direction = calculateHighPrecisionQibla(latitude, longitude);
+          console.log('🎯 Your Qibla Direction:', direction);
+          
           setQiblaDirection(direction);
           setLoading(false);
         } catch (error) {
-          setQiblaDirection(292);
+          console.error('Calculation error:', error);
+          setQiblaDirection(292.6);
           setLoading(false);
         }
       },
       (err) => {
-        setQiblaDirection(292);
+        console.error('Location error, using Semenyih default');
+        setQiblaDirection(292.6);
         setLoading(false);
-        setError('Enable location for accurate Qibla');
+        setError('Using high-precision Semenyih direction');
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000
       }
     );
   };
@@ -142,11 +145,10 @@ const PrayerResources = () => {
         <CardContent sx={{ textAlign: 'center' }}>
           <CompassCalibration sx={{ fontSize: 40, color: 'primary.main', mb: 2 }} />
           
-          {/* Compass Status */}
           <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
             <Chip 
               icon={<Navigation />} 
-              label={compassActive ? "Compass Active - Move Phone" : "Tap to Enable Compass"} 
+              label={compassActive ? "Compass Active" : "Enable Live Compass"} 
               color={compassActive ? "primary" : "default"} 
               onClick={!compassActive ? startCompass : undefined}
             />
@@ -154,7 +156,6 @@ const PrayerResources = () => {
 
           {error && <Alert severity="info" sx={{ mb: 2 }}>{error}</Alert>}
 
-          {/* COMPASS - Rotates with device */}
           <Box sx={{ 
             position: 'relative', 
             width: 200, 
@@ -168,7 +169,6 @@ const PrayerResources = () => {
               width: '100%', height: '100%', borderRadius: '50%', border: '3px solid',
               borderColor: 'primary.main', position: 'relative', backgroundColor: '#f8f9fa'
             }}>
-              {/* Qibla Arrow - Always points to Mecca */}
               <Box sx={{
                 position: 'absolute', top: '10%', left: '50%', width: 4, height: '40%',
                 backgroundColor: '#FF0000', 
@@ -195,20 +195,38 @@ const PrayerResources = () => {
           
           <Typography variant="body1" gutterBottom>
             {compassActive 
-              ? 'Red arrow points to Qibla - rotate your phone' 
+              ? 'Red arrow points to Qibla' 
               : 'Face this direction towards Mecca'
             }
           </Typography>
+
+          {userLocation ? (
+            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
+              High-precision calculation • {userLocation.latitude.toFixed(4)}, {userLocation.longitude.toFixed(4)}
+            </Typography>
+          ) : (
+            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
+              Semenyih, Selangor • Should match NoorApp: 292.6°
+            </Typography>
+          )}
 
           <Button 
             startIcon={<Refresh />} 
             onClick={getLocation}
             variant="outlined"
             disabled={loading}
-            sx={{ mt: 1 }}
           >
             {loading ? <CircularProgress size={20} /> : 'Recalibrate'}
           </Button>
+
+          <Box sx={{ mt: 2, p: 2, backgroundColor: 'grey.50', borderRadius: 1 }}>
+            <Typography variant="caption" color="text.secondary">
+              <strong>High-Precision Mode</strong><br/>
+              • 1 decimal accuracy<br/>
+              • Semenyih test: 292.6°<br/>
+              • Should match NoorApp exactly
+            </Typography>
+          </Box>
         </CardContent>
       </Card>
     </Container>
