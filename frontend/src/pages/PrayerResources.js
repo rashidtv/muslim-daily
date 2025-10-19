@@ -93,11 +93,11 @@ const PrayerResources = () => {
           setLocationName(displayName);
         }
       } else {
-        setLocationName(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+        setLocationName(`Location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
       }
     } catch (error) {
       console.log('Error getting location name:', error);
-      setLocationName(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+      setLocationName(`Location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
     } finally {
       setGettingLocationName(false);
     }
@@ -316,7 +316,7 @@ const PrayerResources = () => {
             </Alert>
           )}
 
-          {/* Location Information - Now includes coordinates */}
+          {/* Location Information - ONLY place where location is displayed */}
           {userLocation && (
             <Box sx={{ mb: 3, p: 2, backgroundColor: 'grey.50', borderRadius: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
@@ -338,9 +338,11 @@ const PrayerResources = () => {
                   <Typography variant="body1" fontWeight="medium" gutterBottom>
                     {locationName || `${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)}`}
                   </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Coordinates: {userLocation.latitude.toFixed(6)}, {userLocation.longitude.toFixed(6)}
-                  </Typography>
+                  {locationName && (
+                    <Typography variant="caption" color="text.secondary">
+                      Coordinates: {userLocation.latitude.toFixed(6)}, {userLocation.longitude.toFixed(6)}
+                    </Typography>
+                  )}
                 </>
               )}
             </Box>
@@ -415,7 +417,7 @@ const PrayerResources = () => {
             </Box>
           </Box>
 
-          {/* Direction Display - Clean without coordinates */}
+          {/* Direction Display - CLEAN without any coordinates */}
           {qiblaDirection !== null && (
             <Box sx={{ mb: 3 }}>
               <Typography variant="h3" color="primary.main" gutterBottom fontWeight="bold">
