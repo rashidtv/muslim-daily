@@ -35,7 +35,8 @@ import {
   Schedule,
   TrendingUp,
   CalendarMonth,
-  LocationOn
+  LocationOn,
+  CompassCalibration
 } from '@mui/icons-material';
 import { usePWAInstall } from './hooks/usePWAInstall';
 import { PracticeProvider } from './context/PracticeContext';
@@ -49,7 +50,6 @@ import PrayerResources from './pages/PrayerResources';
 import Progress from './pages/Progress';
 import Settings from './pages/Settings';
 import Calendar from './pages/Calendar';
-import PrayerTimes from './pages/PrayerTimes';
 import AuthModal from './components/Auth/AuthModal';
 import ThemeToggle from './components/Accessibility/ThemeToggle';
 import AccessibilityMenu from './components/Accessibility/AccessibilityMenu';
@@ -149,8 +149,7 @@ const MobileNavigationDrawer = ({ open, onClose, onAuthAction }) => {
 
   const navigationItems = [
     { label: 'Home', icon: <HomeIcon />, path: '/' },
-    { label: 'Prayer Times', icon: <Schedule />, path: '/prayertimes' },
-    { label: 'Qibla Direction', icon: <LocationOn />, path: '/prayers' },
+    { label: 'Prayer Resources', icon: <CompassCalibration />, path: '/prayer-resources' },
     { label: 'My Calendar', icon: <CalendarMonth />, path: '/calendar' },
     { label: 'Progress', icon: <Analytics />, path: '/progress' },
     { label: 'Settings', icon: <SettingsIcon />, path: '/settings' },
@@ -300,8 +299,8 @@ const MobileBottomNav = () => {
 
   const navigationItems = [
     { label: 'Home', icon: <HomeIcon />, path: '/' },
-    { label: 'Prayers', icon: <Schedule />, path: '/prayertimes' },
-    { label: 'Qibla', icon: <LocationOn />, path: '/prayers' },
+    { label: 'Resources', icon: <CompassCalibration />, path: '/prayer-resources' },
+    { label: 'Calendar', icon: <CalendarMonth />, path: '/calendar' },
     { label: 'Progress', icon: <TrendingUp />, path: '/progress' },
   ];
 
@@ -352,13 +351,12 @@ const Header = ({ onAuthAction }) => {
   const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width: 900px)');
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const { user } = useAuth(); // Add this to check if user is logged in
+  const { user } = useAuth();
 
   // Desktop navigation items
   const navigationItems = [
     { label: 'Home', path: '/' },
-    { label: 'Prayer Times', path: '/prayertimes' },
-    { label: 'Qibla Direction', path: '/prayers' },
+    { label: 'Prayer Resources', path: '/prayer-resources' },
     { label: 'Calendar', path: '/calendar' },
     { label: 'Progress', path: '/progress' },
   ];
@@ -524,27 +522,44 @@ function App() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState('login');
   const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [waitingWorker, setWaitingWorker] = useState(null);
 
   const handleAuthAction = (mode) => {
     setAuthMode(mode);
     setAuthModalOpen(true);
   };
 
+  // FIXED PWA Update Detection - Immediate notifications
   useEffect(() => {
-    // Make update function available globally - with mobile check
-    window.showPWAUpdateNotification = () => {
+    // Make update function available globally
+    window.showPWAUpdateNotification = (registration) => {
       const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       
       if (isMobile) {
         console.log('📱 Showing update notification on mobile');
         setUpdateAvailable(true);
+        if (registration && registration.waiting) {
+          setWaitingWorker(registration.waiting);
+        }
       } else {
         console.log('🖥️ Skipping update notification on desktop');
       }
     };
+
+    // Listen for controller change (when new SW takes over)
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        console.log('🔄 Controller changed - new version activated');
+        window.location.reload();
+      });
+    }
   }, []);
 
   const handleUpdate = () => {
+    if (waitingWorker) {
+      waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+    }
+    setUpdateAvailable(false);
     window.location.reload();
   };
 
@@ -576,10 +591,8 @@ function App() {
                   <Routes>
                     <Route path="/" element={<Home onAuthAction={handleAuthAction} />} />
                     <Route path="/progress" element={<Progress />} />
-                    <Route path="/prayers" element={<PrayerResources />} />
-                    <Route path="/prayertimes" element={<PrayerTimes />} />
+                    <Route path="/prayer-resources" element={<PrayerResources />} />
                     <Route path="/calendar" element={<Calendar />} />
-                    <Route path="/mosques" element={<MosqueFinderComingSoon />} />
                     <Route path="/settings" element={<Settings />} />
                     <Route path="*" element={<Home onAuthAction={handleAuthAction} />} />
                   </Routes>
@@ -601,7 +614,7 @@ function App() {
                 {/* Auto-update notification */}
                 <Snackbar
                   open={updateAvailable}
-                  autoHideDuration={10000}
+                  autoHideDuration={null} // Don't auto-hide
                   onClose={handleCloseUpdateNotification}
                   anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
                 >
@@ -609,12 +622,17 @@ function App() {
                     severity="info" 
                     variant="filled"
                     action={
-                      <Button color="inherit" size="small" onClick={handleUpdate}>
-                        RELOAD
-                      </Button>
+                      <>
+                        <Button color="inherit" size="small" onClick={handleCloseUpdateNotification}>
+                          LATER
+                        </Button>
+                        <Button color="inherit" size="small" onClick={handleUpdate}>
+                          UPDATE
+                        </Button>
+                      </>
                     }
                   >
-                    🆕 New version available! Tap RELOAD to update.
+                    🆕 New version available! Restart to update.
                   </Alert>
                 </Snackbar>
               </Box>

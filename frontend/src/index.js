@@ -11,14 +11,14 @@ root.render(
   </React.StrictMode>
 );
 
-// Enhanced PWA Update Detection - Mobile Only
+// Enhanced PWA Update Detection - Mobile Only with instant notifications
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js?v=2.3.1')
+    navigator.serviceWorker.register('/sw.js?v=2.3.0')
       .then((registration) => {
         console.log('✅ SW registered');
 
-        // Check if this is a mobile device before showing notifications
+        // Check if this is a mobile device
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         
         if (!isMobile) {
@@ -28,42 +28,42 @@ if ('serviceWorker' in navigator) {
 
         console.log('📱 Mobile device - enabling update notifications');
 
-        // Listen for controller changes
+        // Check for updates every hour
+        setInterval(() => {
+          registration.update();
+        }, 60 * 60 * 1000);
+
+        // Track the waiting service worker
+        let newServiceWorker = null;
+
+        // Listen for the controlling service worker changing
         navigator.serviceWorker.addEventListener('controllerchange', () => {
-          console.log('🔄 New service worker activated on mobile');
-          if (window.showPWAUpdateNotification) {
-            window.showPWAUpdateNotification();
-          }
+          console.log('🔄 Controller changed - reloading page');
+          window.location.reload();
         });
 
-        // Check for waiting service worker
-        if (registration.waiting) {
-          console.log('📱 Update waiting on mobile - showing notification');
-          if (window.showPWAUpdateNotification) {
-            window.showPWAUpdateNotification();
-          }
-          return;
-        }
-
-        // Listen for new service worker installation
+        // Listen for updates found
         registration.addEventListener('updatefound', () => {
-          const newWorker = registration.installing;
-          console.log('🔄 New update found on mobile');
+          console.log('🔄 Update found');
+          newServiceWorker = registration.installing;
           
-          newWorker.addEventListener('statechange', () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              console.log('✅ New version ready on mobile - showing notification');
+          newServiceWorker.addEventListener('statechange', () => {
+            if (newServiceWorker.state === 'installed') {
+              console.log('✅ New version installed, notifying app');
               if (window.showPWAUpdateNotification) {
-                window.showPWAUpdateNotification();
+                window.showPWAUpdateNotification(registration);
               }
             }
           });
         });
 
-        // Check for updates periodically (every 6 hours)
-        setInterval(() => {
-          registration.update();
-        }, 6 * 60 * 60 * 1000);
+        // Check if there's already a waiting service worker
+        if (registration.waiting) {
+          console.log('📱 Update already waiting');
+          if (window.showPWAUpdateNotification) {
+            window.showPWAUpdateNotification(registration);
+          }
+        }
 
       })
       .catch((error) => {
@@ -71,24 +71,19 @@ if ('serviceWorker' in navigator) {
       });
   });
 
-  // Listen for messages from service worker
+  // Listen for messages to skip waiting
   navigator.serviceWorker.addEventListener('message', (event) => {
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    
-    if (event.data && event.data.type === 'NEW_VERSION_AVAILABLE' && isMobile) {
-      console.log('📢 Service worker sent mobile update notification');
-      if (window.showPWAUpdateNotification) {
-        window.showPWAUpdateNotification();
-      }
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+      navigator.serviceWorker.ready.then(registration => {
+        registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+      });
     }
   });
 }
 
-// Global function for updates - mobile only
-window.checkForUpdates = () => {
-  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-  
-  if ('serviceWorker' in navigator && isMobile) {
+// Global function for manual update checks
+window.checkForPWAUpdate = () => {
+  if ('serviceWorker' in navigator) {
     navigator.serviceWorker.ready.then(registration => {
       registration.update();
     });

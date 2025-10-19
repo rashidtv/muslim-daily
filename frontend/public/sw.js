@@ -1,10 +1,10 @@
-// public/sw.js - Fixed version for mobile-only notifications
+// public/sw.js - Fixed version for instant PWA updates
 const APP_VERSION = '2.3.0';
 const CACHE_NAME = `muslim-daily-${APP_VERSION}`;
 
 self.addEventListener('install', (event) => {
   console.log(`🔄 Installing SW v${APP_VERSION}...`);
-  self.skipWaiting();
+  self.skipWaiting(); // Activate immediately
 });
 
 self.addEventListener('activate', (event) => {
@@ -20,7 +20,7 @@ self.addEventListener('activate', (event) => {
           }
         })
       );
-    }).then(() => self.clients.claim())
+    }).then(() => self.clients.claim()) // Take control immediately
   );
 });
 
@@ -32,4 +32,11 @@ self.addEventListener('fetch', (event) => {
       return caches.match(event.request);
     })
   );
+});
+
+// Listen for skip waiting message
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
