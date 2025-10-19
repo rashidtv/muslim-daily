@@ -539,31 +539,29 @@ function App() {
     setAuthModalOpen(true);
   };
 
-  // Auto-update notification effect
-  useEffect(() => {
-    // Listen for service worker messages about updates
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.addEventListener('message', (event) => {
-        if (event.data && event.data.type === 'NEW_VERSION_AVAILABLE') {
-          console.log('🔄 Update detected in App.js');
-          setUpdateAvailable(true);
-        }
-      });
-    }
-
-    // Make update notification function available globally for index.js
-    window.showPWAUpdateNotification = () => {
-      console.log('🔄 Global update function called');
-      setUpdateAvailable(true);
-    };
-
-    // Cleanup
-    return () => {
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.removeEventListener('message', () => {});
+// In your App.js, update the useEffect for updates:
+useEffect(() => {
+  // Listen for service worker messages about updates
+  if ('serviceWorker' in navigator) {
+    const handleMessage = (event) => {
+      if (event.data && event.data.type === 'NEW_VERSION_AVAILABLE') {
+        console.log('🔄 Update detected in App.js');
+        setUpdateAvailable(true);
       }
     };
-  }, []);
+
+    navigator.serviceWorker.addEventListener('message', handleMessage);
+
+    // Also check for updates on app start
+    navigator.serviceWorker.ready.then(registration => {
+      registration.update();
+    });
+
+    return () => {
+      navigator.serviceWorker.removeEventListener('message', handleMessage);
+    };
+  }
+}, []);
 
   const handleUpdate = () => {
     console.log('🔄 User triggered update');

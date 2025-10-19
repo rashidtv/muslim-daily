@@ -1,36 +1,46 @@
-// public/sw.js - Auto-update version (your working version)
-const APP_VERSION = '1.6.0';
+// public/sw.js - Force update version
+const APP_VERSION = '1.9.0';
 const CACHE_NAME = `muslim-daily-${APP_VERSION}`;
 
+// Only cache essential files
 const urlsToCache = [
   '/',
   '/static/js/bundle.js',
-  '/manifest.json',
-  '/icons/icon-192x192.png',
-  '/icons/icon-512x512.png'
+  '/manifest.json'
 ];
 
 self.addEventListener('install', (event) => {
   console.log(`🔄 Installing SW v${APP_VERSION}...`);
-  
   self.skipWaiting(); // Activate immediately
   
   event.waitUntil(
     caches.keys().then(cacheNames => {
-      // Delete all old caches
+      // Delete ALL old caches
       return Promise.all(
         cacheNames.map(cacheName => {
-          if (cacheName !== CACHE_NAME) {
-            console.log('🗑️ Deleting old cache:', cacheName);
-            return caches.delete(cacheName);
-          }
+          console.log('🗑️ Deleting old cache:', cacheName);
+          return caches.delete(cacheName);
         })
       );
     }).then(() => {
-      // Cache new resources
       return caches.open(CACHE_NAME).then(cache => {
-        console.log('📦 Caching new resources...');
-        return cache.addAll(urlsToCache);
+        console.log('📦 Caching essential resources...');
+        // Use individual cache puts to avoid addAll failures
+        return Promise.allSettled(
+          urlsToCache.map(url => {
+            return fetch(url)
+              .then(response => {
+                if (response.ok) {
+                  return cache.put(url, response);
+                }
+                throw new Error(`HTTP ${response.status}`);
+              })
+              .catch(err => {
+                console.warn(`⚠️ Failed to cache ${url}:`, err.message);
+                return Promise.resolve();
+              });
+          })
+        );
       });
     })
   );
@@ -43,23 +53,24 @@ self.addEventListener('activate', (event) => {
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
-          if (!cacheName.startsWith('muslim-daily-') || cacheName !== CACHE_NAME) {
+          if (cacheName !== CACHE_NAME) {
             console.log('🗑️ Removing old cache:', cacheName);
             return caches.delete(cacheName);
           }
         })
       );
     }).then(() => {
-      // Take control of all clients immediately
+      // Take control immediately
       return self.clients.claim();
     }).then(() => {
-      // Notify all clients about the new version
-      self.clients.matchAll().then(clients => {
-        clients.forEach(client => {
-          client.postMessage({
-            type: 'NEW_VERSION_AVAILABLE',
-            version: APP_VERSION
-          });
+      // Force notify all clients about update
+      return self.clients.matchAll();
+    }).then((clients) => {
+      clients.forEach(client => {
+        client.postMessage({
+          type: 'NEW_VERSION_AVAILABLE',
+          version: APP_VERSION,
+          forceUpdate: true
         });
       });
     })
@@ -67,38 +78,28 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Skip non-GET requests and browser extensions
-  if (event.request.method !== 'GET' || 
-      event.request.url.startsWith('chrome-extension://') ||
-      event.request.url.includes('sockjs-node')) {
+  // Skip non-GET requests
+  if (event.request.method !== 'GET') return;
+
+  // For navigation requests, always go to network first
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        return caches.match('/');
+      })
+    );
     return;
   }
 
+  // For assets, try network first, then cache
   event.respondWith(
-    caches.match(event.request).then(response => {
-      // Return cached version or fetch from network
-      if (response) {
-        return response;
-      }
-
-      return fetch(event.request).then(response => {
-        // Cache new requests
-        if (response.status === 200) {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then(cache => {
-            cache.put(event.request, responseClone);
-          });
-        }
-        return response;
-      }).catch(() => {
-        console.log('❌ Network failed for:', event.request.url);
-        // You could return a custom offline page here
-      });
+    fetch(event.request).catch(() => {
+      return caches.match(event.request);
     })
   );
 });
 
-// Push notifications (keep your existing code)
+// Keep your existing push notification code...
 self.addEventListener('push', (event) => {
   if (!event.data) return;
 
@@ -123,7 +124,6 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-
   event.waitUntil(
     clients.matchAll({ type: 'window' }).then((windowClients) => {
       for (let client of windowClients) {
