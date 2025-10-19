@@ -16,11 +16,37 @@ export const NotificationProvider = ({ children }) => {
   const [prayerTimes, setPrayerTimes] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [serviceWorkerReady, setServiceWorkerReady] = useState(false);
 
   // Auto-initialize notifications on component mount
   useEffect(() => {
     initializeAutoNotifications();
+    registerServiceWorker();
   }, []);
+
+  const registerServiceWorker = async () => {
+    if ('serviceWorker' in navigator) {
+      try {
+        const registration = await navigator.serviceWorker.register('/sw.js');
+        console.log('✅ Service Worker registered:', registration);
+        
+        // Wait for service worker to be ready
+        if (registration.installing) {
+          registration.installing.addEventListener('statechange', (event) => {
+            if (event.target.state === 'activated') {
+              setServiceWorkerReady(true);
+              console.log('✅ Service Worker activated and ready');
+            }
+          });
+        } else if (registration.active) {
+          setServiceWorkerReady(true);
+          console.log('✅ Service Worker already active');
+        }
+      } catch (error) {
+        console.error('❌ Service Worker registration failed:', error);
+      }
+    }
+  };
 
   const initializeAutoNotifications = async () => {
     setLoading(true);
@@ -71,16 +97,15 @@ export const NotificationProvider = ({ children }) => {
         },
         (error) => {
           console.log('📍 Location error, using default:', error);
-          // Use default location if geolocation fails
           resolve({
-            latitude: 2.9516, // Semenyih default
+            latitude: 2.9516,
             longitude: 101.8430
           });
         },
         {
           enableHighAccuracy: false,
           timeout: 10000,
-          maximumAge: 600000 // 10 minutes
+          maximumAge: 600000
         }
       );
     });
@@ -120,17 +145,6 @@ export const NotificationProvider = ({ children }) => {
       
       if (permission === 'granted') {
         console.log('✅ Notification permission granted automatically');
-        
-        // Register service worker for PWA notifications
-        if ('serviceWorker' in navigator) {
-          try {
-            await navigator.serviceWorker.register('/sw.js');
-            console.log('✅ Service Worker registered for notifications');
-          } catch (error) {
-            console.log('ℹ️ Service Worker registration failed, using browser notifications');
-          }
-        }
-        
         return true;
       } else {
         console.log('❌ Notification permission not granted automatically');
@@ -153,20 +167,20 @@ export const NotificationProvider = ({ children }) => {
 
     let scheduledCount = 0;
 
-    // TEST: Send immediate test notifications
-    console.log('🧪 Scheduling test notifications...');
+    // TEST: Send immediate test notifications for PWA
+    console.log('🧪 Scheduling test notifications for PWA...');
     
-    // Test notification in 10 seconds
+    // Test notification in 5 seconds
     setTimeout(() => {
-      sendPrayerNotification('Fajr');
+      sendPrayerNotification('Fajr Test');
       console.log('🧪 Test Fajr notification sent');
-    }, 10000);
+    }, 5000);
 
-    // Test notification in 20 seconds  
+    // Test notification in 15 seconds  
     setTimeout(() => {
-      sendPrayerNotification('Dhuhr');
+      sendPrayerNotification('Dhuhr Test');
       console.log('🧪 Test Dhuhr notification sent');
-    }, 20000);
+    }, 15000);
 
     for (const prayer of prayers) {
       if (prayer.time) {
@@ -192,7 +206,7 @@ export const NotificationProvider = ({ children }) => {
       if (prayerTime > now) {
         const timeUntilPrayer = prayerTime.getTime() - now.getTime();
         
-        if (timeUntilPrayer > 0 && timeUntilPrayer < 24 * 60 * 60 * 1000) { // Only schedule if within 24 hours
+        if (timeUntilPrayer > 0 && timeUntilPrayer < 24 * 60 * 60 * 1000) {
           setTimeout(() => {
             sendPrayerNotification(prayerName);
           }, timeUntilPrayer);
@@ -237,9 +251,7 @@ export const NotificationProvider = ({ children }) => {
 
     const options = {
       body: `It's time for ${prayerName} prayer. May your prayers be accepted. 🌙`,
-      icon: '/icons/icon-192x192.png',
-      badge: '/icons/icon-72x72.png',
-      tag: `prayer-${prayerName}`,
+      tag: `prayer-${prayerName}-${Date.now()}`,
       requireInteraction: true,
       vibrate: [200, 100, 200],
       actions: [
@@ -255,22 +267,27 @@ export const NotificationProvider = ({ children }) => {
     };
 
     try {
-      // Try service worker notification first (for PWA)
-      if ('serviceWorker' in navigator) {
+      // Use service worker for PWA, fallback to browser notifications
+      if ('serviceWorker' in navigator && serviceWorkerReady) {
         navigator.serviceWorker.ready.then(registration => {
-          registration.showNotification(`${prayerName} Prayer Time`, options);
+          registration.showNotification(`${prayerName} Prayer Time`, options)
+            .then(() => console.log(`📢 PWA Notification sent: ${prayerName}`))
+            .catch(error => {
+              console.error('PWA Notification failed, falling back to browser:', error);
+              // Fallback to browser notifications
+              new Notification(`${prayerName} Prayer Time`, options);
+            });
         });
       } else {
         // Fallback to browser notifications
         const notification = new Notification(`${prayerName} Prayer Time`, options);
-        
         notification.onclick = () => {
           window.focus();
           notification.close();
         };
+        console.log(`📢 Browser Notification sent: ${prayerName}`);
       }
       
-      console.log(`📢 Prayer notification sent: ${prayerName}`);
       return true;
     } catch (error) {
       console.error('Error sending notification:', error);
@@ -301,6 +318,7 @@ export const NotificationProvider = ({ children }) => {
     prayerTimes,
     userLocation,
     loading,
+    serviceWorkerReady,
     refreshNotifications,
     enableAutoNotifications
   };

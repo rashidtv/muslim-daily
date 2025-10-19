@@ -42,7 +42,7 @@ const PrayerResources = () => {
   const [gettingLocationName, setGettingLocationName] = useState(false);
 
   // Get notification status
-  const { notificationsEnabled, loading: notificationsLoading } = useNotification();
+  const { notificationsEnabled, loading: notificationsLoading, serviceWorkerReady } = useNotification();
 
   const checkPWA = () => {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
@@ -303,6 +303,15 @@ const PrayerResources = () => {
             </Alert>
           )}
 
+          {/* Service Worker Status */}
+          {serviceWorkerReady && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              <Typography variant="body2">
+                ✅ PWA Mode Active - Notifications will work even when app is closed
+              </Typography>
+            </Alert>
+          )}
+
           {/* Prayer Notification Status */}
           {notificationsEnabled && (
             <Alert 
@@ -314,7 +323,7 @@ const PrayerResources = () => {
                 Prayer Time Notifications Enabled!
               </Typography>
               <Typography variant="body2">
-                You'll receive automatic reminders for all 5 daily prayers. Test notifications will appear in 10-20 seconds.
+                You'll receive automatic reminders for all 5 daily prayers. Test notifications will appear in 5-15 seconds.
               </Typography>
             </Alert>
           )}

@@ -1,8 +1,21 @@
-const CACHE_NAME = 'muslim-daily-v3.0.0';
+const CACHE_NAME = 'muslim-daily-v3.1.0';
+const urlsToCache = [
+  '/',
+  '/static/js/bundle.js',
+  '/static/css/main.css',
+  '/manifest.json'
+];
 
 self.addEventListener('install', (event) => {
   console.log('🔄 Service Worker installing...');
-  self.skipWaiting(); // Activate immediately
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => {
+        console.log('📦 Opened cache');
+        return cache.addAll(urlsToCache);
+      })
+  );
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
@@ -17,30 +30,43 @@ self.addEventListener('activate', (event) => {
           }
         })
       );
-    }).then(() => self.clients.claim()) // Take control immediately
+    }).then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', (event) => {
   event.respondWith(
-    caches.match(event.request).then(response => {
-      return response || fetch(event.request);
-    })
+    caches.match(event.request)
+      .then((response) => {
+        if (response) {
+          return response;
+        }
+        return fetch(event.request);
+      })
   );
 });
 
-// Handle prayer time notifications
+// Enhanced push event handler for PWA
 self.addEventListener('push', (event) => {
-  if (!event.data) return;
+  console.log('📢 Push event received:', event);
+  
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (error) {
+    console.log('Push data parsing error:', error);
+    data = {
+      title: 'Prayer Time',
+      body: 'Time for prayer',
+      tag: 'prayer-notification'
+    };
+  }
 
-  const data = event.data.json();
   const options = {
-    body: data.body || 'Prayer time notification',
-    icon: '/icons/icon-192x192.png',
-    badge: '/icons/icon-72x72.png',
+    body: data.body || 'It\'s time for prayer. May your prayers be accepted. 🌙',
     tag: data.tag || 'prayer-notification',
     requireInteraction: true,
-    vibrate: [200, 100, 200],
+    vibrate: [200, 100, 200, 100, 200],
     actions: [
       {
         action: 'snooze',
@@ -50,42 +76,47 @@ self.addEventListener('push', (event) => {
         action: 'dismiss',
         title: '❌ Dismiss'
       }
-    ]
+    ],
+    data: {
+      url: '/'
+    }
   };
 
   event.waitUntil(
     self.registration.showNotification(
       data.title || 'Prayer Time',
       options
-    )
+    ).then(() => {
+      console.log('✅ Notification shown successfully');
+    }).catch(error => {
+      console.error('❌ Notification error:', error);
+    })
   );
 });
 
 self.addEventListener('notificationclick', (event) => {
+  console.log('🔔 Notification clicked:', event.action);
   event.notification.close();
 
   if (event.action === 'snooze') {
-    // Reschedule notification after 5 minutes
     event.waitUntil(
-      new Promise((resolve) => {
-        setTimeout(() => {
-          self.registration.showNotification(
-            event.notification.title,
-            {
-              ...event.notification,
-              body: '⏰ Reminder: ' + event.notification.body
-            }
-          );
-          resolve();
-        }, 5 * 60 * 1000); // 5 minutes
-      })
+      self.registration.showNotification(
+        event.notification.title,
+        {
+          ...event.notification,
+          body: '⏰ Reminder: ' + event.notification.body,
+          tag: 'snoozed-' + Date.now()
+        }
+      )
     );
   } else if (event.action === 'dismiss') {
-    // Notification dismissed, do nothing
+    console.log('Notification dismissed');
   } else {
-    // Default click behavior - open app
     event.waitUntil(
-      clients.matchAll({ type: 'window' }).then((clientList) => {
+      clients.matchAll({ 
+        type: 'window',
+        includeUncontrolled: true
+      }).then((clientList) => {
         for (const client of clientList) {
           if (client.url.includes(self.location.origin) && 'focus' in client) {
             return client.focus();
@@ -99,7 +130,6 @@ self.addEventListener('notificationclick', (event) => {
   }
 });
 
-// Handle update messages
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
