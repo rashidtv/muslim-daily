@@ -24,7 +24,6 @@ const PrayerResources = () => {
   const [compassActive, setCompassActive] = useState(false);
   const [error, setError] = useState('');
   const [userLocation, setUserLocation] = useState(null);
-  const compassRef = useRef(null);
 
   // High-precision Qibla calculation using reliable formula
   const calculateQiblaDirection = (lat, lng) => {
@@ -67,10 +66,8 @@ const PrayerResources = () => {
 
   const handleCompass = (event) => {
     if (event.alpha !== null) {
-      // Use alpha for compass heading (0-360 degrees)
       let heading = event.alpha;
       
-      // iOS sometimes provides absolute orientation
       if (typeof event.webkitCompassHeading !== 'undefined') {
         heading = event.webkitCompassHeading;
       }
@@ -135,11 +132,9 @@ const PrayerResources = () => {
     );
   };
 
-  // Calculate the angle for the Qibla arrow
   const getQiblaAngle = () => {
     if (!qiblaDirection || !compassActive) return qiblaDirection || 0;
     
-    // When compass is active, arrow shows relative direction to Qibla
     const relativeDirection = (qiblaDirection - deviceHeading + 360) % 360;
     return relativeDirection;
   };
@@ -254,22 +249,22 @@ const PrayerResources = () => {
                 />
               ))}
 
-              {/* Qibla Arrow - HEAD points to Mecca, TAIL at center */}
+              {/* Qibla Arrow - Perfectly centered with tail at center */}
               <Box sx={{
                 position: 'absolute',
                 top: '50%',
                 left: '50%',
                 width: 4,
-                height: '45%',
+                height: '40%', // Only half the radius since it extends from center
                 backgroundColor: '#1976d2',
                 transform: `translate(-50%, -50%) rotate(${currentAngle}deg)`,
-                transformOrigin: 'center bottom', // Tail at center, head pointing outwards
+                transformOrigin: 'center center', // Rotate from exact center
                 zIndex: 2,
                 borderRadius: '2px',
                 '&::after': {
                   content: '""',
                   position: 'absolute',
-                  top: 0, // Arrowhead at the top (away from center)
+                  top: '-12px', // Arrowhead at the top end
                   left: '50%',
                   transform: 'translateX(-50%)',
                   width: 0,
@@ -285,37 +280,31 @@ const PrayerResources = () => {
                 position: 'absolute', 
                 top: '50%', 
                 left: '50%', 
-                width: 24, 
-                height: 24,
+                width: 20, 
+                height: 20,
                 backgroundColor: '#d32f2f', 
                 borderRadius: '50%', 
                 transform: 'translate(-50%, -50%)',
                 border: '3px solid white',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                zIndex: 3,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                '&::after': {
-                  content: '""',
-                  width: 8,
-                  height: 8,
-                  backgroundColor: 'white',
-                  borderRadius: '50%'
-                }
+                zIndex: 3
               }} />
 
-              {/* North Pointer (small indicator) */}
+              {/* Alternative Arrow Design - More precise */}
               <Box sx={{
                 position: 'absolute',
-                top: '10%',
+                top: '50%',
                 left: '50%',
                 width: 3,
-                height: '15%',
-                backgroundColor: '#d32f2f',
-                transform: 'translateX(-50%)',
+                height: '45%',
+                backgroundColor: 'transparent',
+                borderLeft: '2px solid transparent',
+                borderRight: '2px solid transparent',
+                borderBottom: '140px solid #1976d2', // Using border to create perfect triangle
+                transform: `translate(-50%, -50%) rotate(${currentAngle}deg)`,
+                transformOrigin: 'center 70%', // Tail at center, head pointing outwards
                 zIndex: 1,
-                borderRadius: '2px 2px 0 0'
+                filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.3))'
               }} />
             </Box>
           </Box>
