@@ -49,6 +49,7 @@ import PrayerResources from './pages/PrayerResources';
 import Progress from './pages/Progress';
 import Settings from './pages/Settings';
 import Calendar from './pages/Calendar';
+import PrayerTimes from './pages/PrayerTimes';
 import AuthModal from './components/Auth/AuthModal';
 import ThemeToggle from './components/Accessibility/ThemeToggle';
 import AccessibilityMenu from './components/Accessibility/AccessibilityMenu';
@@ -148,10 +149,10 @@ const MobileNavigationDrawer = ({ open, onClose, onAuthAction }) => {
 
   const navigationItems = [
     { label: 'Home', icon: <HomeIcon />, path: '/' },
-    { label: 'Prayer Times', icon: <Schedule />, path: '/prayers' },
+    { label: 'Prayer Times', icon: <Schedule />, path: '/prayertimes' },
+    { label: 'Qibla Direction', icon: <LocationOn />, path: '/prayers' },
     { label: 'My Calendar', icon: <CalendarMonth />, path: '/calendar' },
     { label: 'Progress', icon: <Analytics />, path: '/progress' },
-    { label: 'Mosque Finder', icon: <LocationOn />, path: '/mosques' },
     { label: 'Settings', icon: <SettingsIcon />, path: '/settings' },
   ];
 
@@ -299,8 +300,8 @@ const MobileBottomNav = () => {
 
   const navigationItems = [
     { label: 'Home', icon: <HomeIcon />, path: '/' },
-    { label: 'Prayers', icon: <Schedule />, path: '/prayers' },
-    { label: 'Calendar', icon: <CalendarMonth />, path: '/calendar' },
+    { label: 'Prayers', icon: <Schedule />, path: '/prayertimes' },
+    { label: 'Qibla', icon: <LocationOn />, path: '/prayers' },
     { label: 'Progress', icon: <TrendingUp />, path: '/progress' },
   ];
 
@@ -356,7 +357,8 @@ const Header = ({ onAuthAction }) => {
   // Desktop navigation items
   const navigationItems = [
     { label: 'Home', path: '/' },
-    { label: 'Prayer Times', path: '/prayers' },
+    { label: 'Prayer Times', path: '/prayertimes' },
+    { label: 'Qibla Direction', path: '/prayers' },
     { label: 'Calendar', path: '/calendar' },
     { label: 'Progress', path: '/progress' },
   ];
@@ -506,17 +508,6 @@ const PWAInstallPrompt = () => {
 };
 
 // Simple Coming Soon Components
-const PrayerTimesComingSoon = () => (
-  <Container maxWidth="lg" sx={{ py: 3, textAlign: 'center' }}>
-    <Typography variant="h4" fontWeight="700" gutterBottom>
-      Prayer Times
-    </Typography>
-    <Typography variant="h6" color="text.secondary">
-      Coming Soon
-    </Typography>
-  </Container>
-);
-
 const MosqueFinderComingSoon = () => (
   <Container maxWidth="lg" sx={{ py: 3, textAlign: 'center' }}>
     <Typography variant="h4" fontWeight="700" gutterBottom>
@@ -539,17 +530,23 @@ function App() {
     setAuthModalOpen(true);
   };
 
-// In your App.js, update the useEffect for updates:
-useEffect(() => {
-  // Make update function available globally
-  window.showPWAUpdateNotification = () => {
-    setUpdateAvailable(true);
-  };
-}, []);
+  useEffect(() => {
+    // Make update function available globally - with mobile check
+    window.showPWAUpdateNotification = () => {
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      if (isMobile) {
+        console.log('📱 Showing update notification on mobile');
+        setUpdateAvailable(true);
+      } else {
+        console.log('🖥️ Skipping update notification on desktop');
+      }
+    };
+  }, []);
 
   const handleUpdate = () => {
-  window.location.reload();
-};
+    window.location.reload();
+  };
 
   const handleCloseUpdateNotification = () => {
     setUpdateAvailable(false);
@@ -580,6 +577,7 @@ useEffect(() => {
                     <Route path="/" element={<Home onAuthAction={handleAuthAction} />} />
                     <Route path="/progress" element={<Progress />} />
                     <Route path="/prayers" element={<PrayerResources />} />
+                    <Route path="/prayertimes" element={<PrayerTimes />} />
                     <Route path="/calendar" element={<Calendar />} />
                     <Route path="/mosques" element={<MosqueFinderComingSoon />} />
                     <Route path="/settings" element={<Settings />} />
@@ -602,23 +600,23 @@ useEffect(() => {
 
                 {/* Auto-update notification */}
                 <Snackbar
-  open={updateAvailable}
-  autoHideDuration={10000}
-  onClose={() => setUpdateAvailable(false)}
-  anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
->
-  <Alert 
-    severity="info" 
-    variant="filled"
-    action={
-      <Button color="inherit" size="small" onClick={handleUpdate}>
-        RELOAD
-      </Button>
-    }
-  >
-    🆕 New version available! Tap RELOAD to update.
-  </Alert>
-</Snackbar>
+                  open={updateAvailable}
+                  autoHideDuration={10000}
+                  onClose={handleCloseUpdateNotification}
+                  anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                >
+                  <Alert 
+                    severity="info" 
+                    variant="filled"
+                    action={
+                      <Button color="inherit" size="small" onClick={handleUpdate}>
+                        RELOAD
+                      </Button>
+                    }
+                  >
+                    🆕 New version available! Tap RELOAD to update.
+                  </Alert>
+                </Snackbar>
               </Box>
             </Router>
           </NotificationProvider>

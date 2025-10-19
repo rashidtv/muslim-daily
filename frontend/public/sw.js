@@ -1,10 +1,10 @@
-// public/sw.js - Working update version
+// public/sw.js - Fixed version for mobile-only notifications
 const APP_VERSION = '2.3.0';
 const CACHE_NAME = `muslim-daily-${APP_VERSION}`;
 
 self.addEventListener('install', (event) => {
   console.log(`🔄 Installing SW v${APP_VERSION}...`);
-  self.skipWaiting(); // Activate immediately
+  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
@@ -20,22 +20,7 @@ self.addEventListener('activate', (event) => {
           }
         })
       );
-    }).then(() => {
-      // Take control immediately
-      return self.clients.claim();
-    }).then(() => {
-      // Force notify all clients
-      return self.clients.matchAll();
-    }).then((clients) => {
-      clients.forEach((client) => {
-        console.log('📢 Notifying client about update');
-        client.postMessage({
-          type: 'NEW_VERSION_AVAILABLE',
-          version: APP_VERSION,
-          timestamp: Date.now()
-        });
-      });
-    })
+    }).then(() => self.clients.claim())
   );
 });
 

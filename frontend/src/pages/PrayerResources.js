@@ -48,7 +48,7 @@ const PrayerResources = () => {
     setError('');
 
     if (!navigator.geolocation) {
-      setError('Geolocation not supported');
+      setError('Geolocation not supported by your browser');
       setLoading(false);
       return;
     }
@@ -58,17 +58,38 @@ const PrayerResources = () => {
         const { latitude, longitude } = position.coords;
         setUserLocation({ latitude, longitude });
         
-        // Calculate Qibla
-        const direction = calculateQiblaDirection(latitude, longitude);
-        console.log('📍 Location:', latitude, longitude);
-        console.log('🧭 Qibla Direction:', direction);
-        
-        setQiblaDirection(direction);
-        setLoading(false);
+        try {
+          const direction = calculateQiblaDirection(latitude, longitude);
+          console.log('📍 Location:', latitude, longitude);
+          console.log('🧭 Qibla Direction:', direction);
+          
+          setQiblaDirection(direction);
+          setLoading(false);
+        } catch (calcError) {
+          console.error('Calculation error:', calcError);
+          setError('Error calculating Qibla direction');
+          setLoading(false);
+        }
       },
       (err) => {
         console.error('Location error:', err);
-        setError('Could not get your location. Please enable location services.');
+        let errorMessage = 'Could not get your location. ';
+        
+        switch (err.code) {
+          case err.PERMISSION_DENIED:
+            errorMessage += 'Please enable location permissions in your browser settings.';
+            break;
+          case err.POSITION_UNAVAILABLE:
+            errorMessage += 'Location information is unavailable.';
+            break;
+          case err.TIMEOUT:
+            errorMessage += 'Location request timed out. Please try again.';
+            break;
+          default:
+            errorMessage += 'Please try again.';
+        }
+        
+        setError(errorMessage);
         setLoading(false);
       },
       {
@@ -135,21 +156,14 @@ const PrayerResources = () => {
     </Box>
   );
 
-  // Test with known locations
-  const testLocations = [
-    { name: 'Kuala Lumpur', lat: 3.1390, lng: 101.6869, expected: 292 },
-    { name: 'Penang', lat: 5.4164, lng: 100.3327, expected: 293 },
-    { name: 'Johor Bahru', lat: 1.4927, lng: 103.7414, expected: 291 }
-  ];
-
   return (
     <Container maxWidth="md" sx={{ py: 3, pb: { xs: 10, md: 3 } }}>
       <Box sx={{ mb: 4, textAlign: 'center' }}>
         <Typography variant="h4" fontWeight="700" gutterBottom>
-          Prayer Resources
+          Qibla Direction
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Qibla direction and mosque finder
+          Find the direction to Mecca for prayer
         </Typography>
       </Box>
 
@@ -157,7 +171,7 @@ const PrayerResources = () => {
         <CardContent sx={{ textAlign: 'center' }}>
           <CompassCalibration sx={{ fontSize: 40, color: 'primary.main', mb: 2 }} />
           <Typography variant="h5" gutterBottom>
-            Qibla Direction
+            Qibla Compass
           </Typography>
           
           {error && (
