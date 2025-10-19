@@ -310,13 +310,20 @@ const PrayerResources = () => {
               sx={{ mb: 2 }}
               icon={<NotificationsActive />}
             >
-              Prayer time notifications are enabled automatically! You'll receive reminders for all 5 daily prayers.
+              <Typography variant="body1" fontWeight="600">
+                Prayer Time Notifications Enabled!
+              </Typography>
+              <Typography variant="body2">
+                You'll receive automatic reminders for all 5 daily prayers. Test notifications will appear in 10-20 seconds.
+              </Typography>
             </Alert>
           )}
 
           {!notificationsEnabled && !notificationsLoading && (
             <Alert severity="info" sx={{ mb: 2 }}>
-              🔔 Prayer time notifications will be enabled automatically...
+              <Typography variant="body2">
+                🔔 Prayer time notifications will be enabled automatically...
+              </Typography>
             </Alert>
           )}
 
@@ -324,7 +331,9 @@ const PrayerResources = () => {
             <Alert severity="info" sx={{ mb: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center' }}>
                 <CircularProgress size={16} sx={{ mr: 1 }} />
-                Setting up prayer time notifications...
+                <Typography variant="body2">
+                  Setting up automatic prayer time notifications...
+                </Typography>
               </Box>
             </Alert>
           )}
@@ -347,7 +356,7 @@ const PrayerResources = () => {
             </Alert>
           )}
 
-          {/* Location Information - ONLY place where location is displayed */}
+          {/* Location Information */}
           {userLocation && (
             <Box sx={{ mb: 3, p: 2, backgroundColor: 'grey.50', borderRadius: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
@@ -448,7 +457,7 @@ const PrayerResources = () => {
             </Box>
           </Box>
 
-          {/* Direction Display - CLEAN without any coordinates */}
+          {/* Direction Display */}
           {qiblaDirection !== null && (
             <Box sx={{ mb: 3 }}>
               <Typography variant="h3" color="primary.main" gutterBottom fontWeight="bold">

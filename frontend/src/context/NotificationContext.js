@@ -153,6 +153,21 @@ export const NotificationProvider = ({ children }) => {
 
     let scheduledCount = 0;
 
+    // TEST: Send immediate test notifications
+    console.log('🧪 Scheduling test notifications...');
+    
+    // Test notification in 10 seconds
+    setTimeout(() => {
+      sendPrayerNotification('Fajr');
+      console.log('🧪 Test Fajr notification sent');
+    }, 10000);
+
+    // Test notification in 20 seconds  
+    setTimeout(() => {
+      sendPrayerNotification('Dhuhr');
+      console.log('🧪 Test Dhuhr notification sent');
+    }, 20000);
+
     for (const prayer of prayers) {
       if (prayer.time) {
         const scheduled = await schedulePrayerTimeNotification(prayer.name, prayer.time);
@@ -160,7 +175,7 @@ export const NotificationProvider = ({ children }) => {
       }
     }
 
-    console.log(`📅 Scheduled ${scheduledCount} prayer notifications`);
+    console.log(`📅 Scheduled ${scheduledCount} real prayer notifications`);
     return scheduledCount > 0;
   };
 
@@ -206,6 +221,12 @@ export const NotificationProvider = ({ children }) => {
     
     const date = new Date();
     date.setHours(hours, minutes, 0, 0);
+    
+    // If the time has already passed today, schedule for tomorrow
+    if (date < new Date()) {
+      date.setDate(date.getDate() + 1);
+    }
+    
     return date;
   };
 
@@ -235,8 +256,10 @@ export const NotificationProvider = ({ children }) => {
 
     try {
       // Try service worker notification first (for PWA)
-      if ('serviceWorker' in navigator && self.registration) {
-        self.registration.showNotification(`${prayerName} Prayer Time`, options);
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(registration => {
+          registration.showNotification(`${prayerName} Prayer Time`, options);
+        });
       } else {
         // Fallback to browser notifications
         const notification = new Notification(`${prayerName} Prayer Time`, options);
