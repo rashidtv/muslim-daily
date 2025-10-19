@@ -521,38 +521,13 @@ const MosqueFinderComingSoon = () => (
 function App() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState('login');
-  const [updateAvailable, setUpdateAvailable] = useState(false);
-  const [waitingWorker, setWaitingWorker] = useState(null);
+
 
   const handleAuthAction = (mode) => {
     setAuthMode(mode);
     setAuthModalOpen(true);
   };
 
-  // FIXED PWA Update Detection - Immediate notifications
-const [showUpdateNotification, setShowUpdateNotification] = useState(false);
-
-// Add this useEffect:
-useEffect(() => {
-  const handleShowUpdate = () => {
-    console.log('Showing update notification');
-    setShowUpdateNotification(true);
-  };
-
-  window.addEventListener('showUpdateNotification', handleShowUpdate);
-
-  return () => {
-    window.removeEventListener('showUpdateNotification', handleShowUpdate);
-  };
-}, []);
-
-  const handleUpdate = () => {
-  window.location.reload();
-};
-
-  const handleCloseUpdateNotification = () => {
-    setUpdateAvailable(false);
-  };
 
   return (
     <ThemeProvider>
@@ -599,24 +574,7 @@ useEffect(() => {
                 />
 
                 {/* Auto-update notification */}
-                <Snackbar
-  open={showUpdateNotification}
-  autoHideDuration={60000} // 60 seconds
-  onClose={() => setShowUpdateNotification(false)}
-  anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
->
-  <Alert 
-    severity="info" 
-    variant="filled"
-    action={
-      <Button color="inherit" size="small" onClick={handleUpdate}>
-        UPDATE
-      </Button>
-    }
-  >
-    🆕 New version available! Tap UPDATE to refresh.
-  </Alert>
-</Snackbar>
+               
               </Box>
             </Router>
           </NotificationProvider>
