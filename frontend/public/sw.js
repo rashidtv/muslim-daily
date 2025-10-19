@@ -1,13 +1,13 @@
-// public/sw.js - Fixed version
-const APP_VERSION = '1.7.0';
+// public/sw.js - Auto-update version (your working version)
+const APP_VERSION = '1.6.0';
 const CACHE_NAME = `muslim-daily-${APP_VERSION}`;
 
-// Only cache essential files that definitely exist
 const urlsToCache = [
   '/',
   '/static/js/bundle.js',
-  '/manifest.json'
-  // Removed icons to avoid 404 errors
+  '/manifest.json',
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png'
 ];
 
 self.addEventListener('install', (event) => {
@@ -17,7 +17,7 @@ self.addEventListener('install', (event) => {
   
   event.waitUntil(
     caches.keys().then(cacheNames => {
-      // Delete all old caches first
+      // Delete all old caches
       return Promise.all(
         cacheNames.map(cacheName => {
           if (cacheName !== CACHE_NAME) {
@@ -27,32 +27,11 @@ self.addEventListener('install', (event) => {
         })
       );
     }).then(() => {
+      // Cache new resources
       return caches.open(CACHE_NAME).then(cache => {
-        console.log('📦 Caching essential resources...');
-        
-        // Cache each file individually with error handling
-        const cachePromises = urlsToCache.map(url => {
-          return fetch(url, { credentials: 'same-origin' })
-            .then(response => {
-              if (response.ok) {
-                return cache.put(url, response);
-              }
-              throw new Error(`Bad response: ${response.status}`);
-            })
-            .catch(error => {
-              console.warn(`⚠️ Could not cache ${url}:`, error.message);
-              // Don't fail the entire installation
-              return Promise.resolve();
-            });
-        });
-        
-        return Promise.all(cachePromises);
+        console.log('📦 Caching new resources...');
+        return cache.addAll(urlsToCache);
       });
-    }).then(() => {
-      console.log('✅ Service Worker installed successfully');
-    }).catch(error => {
-      console.log('❌ Service Worker installation failed:', error);
-      // Don't fail - continue anyway
     })
   );
 });
@@ -74,7 +53,15 @@ self.addEventListener('activate', (event) => {
       // Take control of all clients immediately
       return self.clients.claim();
     }).then(() => {
-      console.log('✅ Service Worker activated');
+      // Notify all clients about the new version
+      self.clients.matchAll().then(clients => {
+        clients.forEach(client => {
+          client.postMessage({
+            type: 'NEW_VERSION_AVAILABLE',
+            version: APP_VERSION
+          });
+        });
+      });
     })
   );
 });
@@ -88,22 +75,30 @@ self.addEventListener('fetch', (event) => {
   }
 
   event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        // Return cached version or fetch from network
-        if (response) {
-          return response;
-        }
+    caches.match(event.request).then(response => {
+      // Return cached version or fetch from network
+      if (response) {
+        return response;
+      }
 
-        return fetch(event.request).catch(() => {
-          // If network fails, just let it fail naturally
-          console.log('❌ Network failed for:', event.request.url);
-        });
-      })
+      return fetch(event.request).then(response => {
+        // Cache new requests
+        if (response.status === 200) {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then(cache => {
+            cache.put(event.request, responseClone);
+          });
+        }
+        return response;
+      }).catch(() => {
+        console.log('❌ Network failed for:', event.request.url);
+        // You could return a custom offline page here
+      });
+    })
   );
 });
 
-// Push notifications
+// Push notifications (keep your existing code)
 self.addEventListener('push', (event) => {
   if (!event.data) return;
 
