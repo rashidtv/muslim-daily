@@ -16,44 +16,68 @@ import {
 } from '@mui/icons-material';
 
 const PrayerResources = () => {
-  const [qiblaDirection, setQiblaDirection] = useState(292); // Default for Malaysia
-  const [loading, setLoading] = useState(false);
+  const [qiblaDirection, setQiblaDirection] = useState(292);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [userLocation, setUserLocation] = useState(null);
 
-  // Simple function to get location - NO CALCULATIONS
-  const getUserLocation = () => {
+  // Get Qibla direction from Aladhan API
+  const getQiblaFromAPI = async (latitude, longitude) => {
+    try {
+      const response = await fetch(
+        `https://api.aladhan.com/v1/qibla/${latitude}/${longitude}`
+      );
+      const data = await response.json();
+      
+      if (data.code === 200 && data.data) {
+        return Math.round(data.data.direction);
+      }
+      return 292; // Fallback for Malaysia
+    } catch (error) {
+      console.log('API failed, using default:', error);
+      return 292; // Fallback for Malaysia
+    }
+  };
+
+  const getUserLocation = async () => {
     setLoading(true);
     setError('');
 
     if (!navigator.geolocation) {
-      setError('Geolocation not supported by your browser');
+      setError('Geolocation not supported. Using default Qibla direction.');
+      setQiblaDirection(292);
       setLoading(false);
       return;
     }
 
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
         const { latitude, longitude } = position.coords;
         setUserLocation({ latitude, longitude });
         
-        // For Malaysia, Qibla is consistently 292-295° Northwest
-        // We'll use 292° as it's the most common
-        setQiblaDirection(292);
-        setLoading(false);
-        console.log('📍 Location detected, Qibla set to 292°');
+        try {
+          // Get accurate Qibla direction from API
+          const direction = await getQiblaFromAPI(latitude, longitude);
+          console.log('🧭 Accurate Qibla Direction:', direction);
+          
+          setQiblaDirection(direction);
+          setLoading(false);
+        } catch (error) {
+          console.error('Qibla API error:', error);
+          setQiblaDirection(292);
+          setLoading(false);
+          setError('Using default Qibla direction for Malaysia');
+        }
       },
       (err) => {
-        console.log('Location not available, using default Qibla direction');
-        // Still show Qibla direction (292° for Malaysia)
+        console.log('Location not available, using default');
         setQiblaDirection(292);
         setLoading(false);
-        setError('Using default Qibla direction for Malaysia (292° Northwest)');
+        setError('Location access needed for accurate Qibla direction');
       },
       {
-        enableHighAccuracy: false, // Simpler request
-        timeout: 5000,
-        maximumAge: 300000
+        enableHighAccuracy: true,
+        timeout: 10000
       }
     );
   };
@@ -75,7 +99,7 @@ const PrayerResources = () => {
           backgroundColor: '#f8f9fa'
         }}
       >
-        {/* Qibla Arrow - Fixed at 292° */}
+        {/* Qibla Arrow */}
         <Box
           sx={{
             position: 'absolute',
@@ -84,7 +108,7 @@ const PrayerResources = () => {
             width: 6,
             height: '40%',
             backgroundColor: '#FF0000',
-            transform: `translateX(-50%) rotate(292deg)`,
+            transform: `translateX(-50%) rotate(${direction}deg)`,
             transformOrigin: 'bottom center',
             '&::after': {
               content: '""',
@@ -132,16 +156,13 @@ const PrayerResources = () => {
           Qibla Direction
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Direction to Mecca for Prayer
+          Accurate direction using Islamic API
         </Typography>
       </Box>
 
       <Card sx={{ mb: 3 }}>
         <CardContent sx={{ textAlign: 'center' }}>
           <CompassCalibration sx={{ fontSize: 40, color: 'primary.main', mb: 2 }} />
-          <Typography variant="h5" gutterBottom>
-            Qibla Direction
-          </Typography>
           
           {error && (
             <Alert severity="info" sx={{ mb: 2 }}>
@@ -153,7 +174,7 @@ const PrayerResources = () => {
             <Box sx={{ py: 4 }}>
               <CircularProgress size={40} />
               <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                Detecting your location...
+                Getting accurate Qibla direction...
               </Typography>
             </Box>
           ) : (
@@ -161,20 +182,16 @@ const PrayerResources = () => {
               <Compass direction={qiblaDirection} />
               
               <Typography variant="h4" color="primary.main" gutterBottom>
-                292°
+                {qiblaDirection}°
               </Typography>
               
               <Typography variant="body1" gutterBottom>
-                Face Northwest towards Mecca
+                Face this direction for prayer towards Mecca
               </Typography>
 
-              {userLocation ? (
+              {userLocation && (
                 <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
-                  Based on your location in Malaysia
-                </Typography>
-              ) : (
-                <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
-                  Default direction for Malaysia
+                  Accurate direction based on your location
                 </Typography>
               )}
 
@@ -184,12 +201,12 @@ const PrayerResources = () => {
                 variant="outlined"
                 sx={{ mt: 1 }}
               >
-                Refresh Location
+                Recalibrate
               </Button>
 
               <Box sx={{ mt: 2, p: 2, backgroundColor: 'grey.50', borderRadius: 1 }}>
                 <Typography variant="caption" color="text.secondary">
-                  <strong>Note:</strong> For Malaysia and Southeast Asia, Qibla direction is consistently Northwest (292°)
+                  <strong>Powered by Aladhan API</strong> - Using accurate Islamic calculations
                 </Typography>
               </Box>
             </>
