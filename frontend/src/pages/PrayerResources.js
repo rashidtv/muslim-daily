@@ -254,59 +254,68 @@ const PrayerResources = () => {
                 />
               ))}
 
-              {/* Qibla Arrow - Centered and properly positioned */}
+              {/* Qibla Arrow - HEAD points to Mecca, TAIL at center */}
               <Box sx={{
                 position: 'absolute',
                 top: '50%',
                 left: '50%',
-                width: 3,
-                height: '40%',
-                backgroundColor: '#d32f2f',
-                transform: `translate(-50%, -100%) rotate(${currentAngle}deg)`,
-                transformOrigin: 'bottom center',
+                width: 4,
+                height: '45%',
+                backgroundColor: '#1976d2',
+                transform: `translate(-50%, -50%) rotate(${currentAngle}deg)`,
+                transformOrigin: 'center bottom', // Tail at center, head pointing outwards
                 zIndex: 2,
                 borderRadius: '2px',
-                '&::before': {
+                '&::after': {
                   content: '""',
                   position: 'absolute',
-                  bottom: 0,
+                  top: 0, // Arrowhead at the top (away from center)
                   left: '50%',
                   transform: 'translateX(-50%)',
                   width: 0,
                   height: 0,
                   borderLeft: '8px solid transparent',
                   borderRight: '8px solid transparent',
-                  borderTop: '12px solid #d32f2f'
+                  borderBottom: '12px solid #1976d2'
                 }
               }} />
 
-              {/* Center Pin */}
+              {/* Center Pin - Arrow tail attaches here */}
               <Box sx={{
                 position: 'absolute', 
                 top: '50%', 
                 left: '50%', 
-                width: 20, 
-                height: 20,
-                backgroundColor: 'primary.main', 
+                width: 24, 
+                height: 24,
+                backgroundColor: '#d32f2f', 
                 borderRadius: '50%', 
                 transform: 'translate(-50%, -50%)',
                 border: '3px solid white',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                zIndex: 3
+                zIndex: 3,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                '&::after': {
+                  content: '""',
+                  width: 8,
+                  height: 8,
+                  backgroundColor: 'white',
+                  borderRadius: '50%'
+                }
               }} />
 
-              {/* Compass Needle (North indicator) */}
+              {/* North Pointer (small indicator) */}
               <Box sx={{
                 position: 'absolute',
-                top: '50%',
+                top: '10%',
                 left: '50%',
-                width: 2,
-                height: '35%',
+                width: 3,
+                height: '15%',
                 backgroundColor: '#d32f2f',
-                transform: `translate(-50%, -100%) rotate(0deg)`,
-                transformOrigin: 'bottom center',
+                transform: 'translateX(-50%)',
                 zIndex: 1,
-                opacity: 0.7
+                borderRadius: '2px 2px 0 0'
               }} />
             </Box>
           </Box>
@@ -320,8 +329,8 @@ const PrayerResources = () => {
               
               <Typography variant="h6" gutterBottom color="text.primary">
                 {compassActive 
-                  ? `Point ${currentAngle.toFixed(0)}° to your right` 
-                  : `Face ${qiblaDirection}° from North`
+                  ? `Rotate until arrow points straight up` 
+                  : `Face ${qiblaDirection}° from North towards Mecca`
                 }
               </Typography>
             </Box>
@@ -349,7 +358,10 @@ const PrayerResources = () => {
 
           {/* Help Text */}
           <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 3 }}>
-            Hold your device flat and rotate until the red arrow points straight up
+            {compassActive 
+              ? 'Hold device flat and rotate until blue arrow points up → that\'s Mecca direction' 
+              : 'Enable compass for live direction guidance'
+            }
           </Typography>
         </CardContent>
       </Card>
