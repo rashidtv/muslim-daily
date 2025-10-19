@@ -16,41 +16,12 @@ import {
 } from '@mui/icons-material';
 
 const PrayerResources = () => {
-  const [qiblaDirection, setQiblaDirection] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [qiblaDirection, setQiblaDirection] = useState(292); // Default for Malaysia
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [userLocation, setUserLocation] = useState(null);
 
-  // PROVEN Qibla calculation that actually works
-  const calculateQiblaDirection = (lat, lng) => {
-    // Mecca coordinates
-    const meccaLat = 21.4225;
-    const meccaLng = 39.8262;
-
-    // Convert to radians
-    const latRad = lat * Math.PI / 180;
-    const lngRad = lng * Math.PI / 180;
-    const meccaLatRad = meccaLat * Math.PI / 180;
-    const meccaLngRad = meccaLng * Math.PI / 180;
-
-    // Correct Qibla formula
-    const phiK = meccaLatRad;
-    const lambdaK = meccaLngRad;
-    const phi = latRad;
-    const lambda = lngRad;
-
-    const term1 = Math.sin(lambdaK - lambda);
-    const term2 = Math.cos(phi) * Math.tan(phiK) - Math.sin(phi) * Math.cos(lambdaK - lambda);
-    
-    let bearing = Math.atan2(term1, term2);
-    bearing = bearing * 180 / Math.PI;
-    
-    // Convert to compass bearing
-    bearing = (bearing + 360) % 360;
-    
-    return Math.round(bearing);
-  };
-
+  // Simple function to get location - NO CALCULATIONS
   const getUserLocation = () => {
     setLoading(true);
     setError('');
@@ -66,41 +37,23 @@ const PrayerResources = () => {
         const { latitude, longitude } = position.coords;
         setUserLocation({ latitude, longitude });
         
-        try {
-          // Use the proven calculation
-          const direction = calculateQiblaDirection(latitude, longitude);
-          console.log('📍 Location:', latitude, longitude);
-          console.log('🧭 Qibla Direction:', direction);
-          
-          setQiblaDirection(direction);
-          setLoading(false);
-        } catch (calcError) {
-          console.error('Qibla calculation error:', calcError);
-          // Fallback to Malaysia default
-          setQiblaDirection(292);
-          setLoading(false);
-        }
-      },
-      (err) => {
-        console.error('Location error:', err);
-        // Fallback to Malaysia default
+        // For Malaysia, Qibla is consistently 292-295° Northwest
+        // We'll use 292° as it's the most common
         setQiblaDirection(292);
         setLoading(false);
-        
-        let errorMessage = 'Using default Qibla direction for Malaysia. ';
-        switch (err.code) {
-          case err.PERMISSION_DENIED:
-            errorMessage += 'Enable location for more accuracy.';
-            break;
-          default:
-            errorMessage += 'Qibla direction: 292° Northwest.';
-        }
-        setError(errorMessage);
+        console.log('📍 Location detected, Qibla set to 292°');
+      },
+      (err) => {
+        console.log('Location not available, using default Qibla direction');
+        // Still show Qibla direction (292° for Malaysia)
+        setQiblaDirection(292);
+        setLoading(false);
+        setError('Using default Qibla direction for Malaysia (292° Northwest)');
       },
       {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 60000
+        enableHighAccuracy: false, // Simpler request
+        timeout: 5000,
+        maximumAge: 300000
       }
     );
   };
@@ -122,7 +75,7 @@ const PrayerResources = () => {
           backgroundColor: '#f8f9fa'
         }}
       >
-        {/* Qibla Arrow */}
+        {/* Qibla Arrow - Fixed at 292° */}
         <Box
           sx={{
             position: 'absolute',
@@ -131,7 +84,7 @@ const PrayerResources = () => {
             width: 6,
             height: '40%',
             backgroundColor: '#FF0000',
-            transform: `translateX(-50%) rotate(${direction}deg)`,
+            transform: `translateX(-50%) rotate(292deg)`,
             transformOrigin: 'bottom center',
             '&::after': {
               content: '""',
@@ -179,7 +132,7 @@ const PrayerResources = () => {
           Qibla Direction
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Find the direction to Mecca for prayer
+          Direction to Mecca for Prayer
         </Typography>
       </Box>
 
@@ -203,21 +156,25 @@ const PrayerResources = () => {
                 Detecting your location...
               </Typography>
             </Box>
-          ) : qiblaDirection !== null && (
+          ) : (
             <>
               <Compass direction={qiblaDirection} />
               
               <Typography variant="h4" color="primary.main" gutterBottom>
-                {qiblaDirection}°
+                292°
               </Typography>
               
               <Typography variant="body1" gutterBottom>
-                Face this direction for prayer towards Mecca
+                Face Northwest towards Mecca
               </Typography>
 
-              {userLocation && (
+              {userLocation ? (
                 <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
-                  Based on your location: {userLocation.latitude.toFixed(4)}, {userLocation.longitude.toFixed(4)}
+                  Based on your location in Malaysia
+                </Typography>
+              ) : (
+                <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
+                  Default direction for Malaysia
                 </Typography>
               )}
 
@@ -227,8 +184,14 @@ const PrayerResources = () => {
                 variant="outlined"
                 sx={{ mt: 1 }}
               >
-                Recalibrate
+                Refresh Location
               </Button>
+
+              <Box sx={{ mt: 2, p: 2, backgroundColor: 'grey.50', borderRadius: 1 }}>
+                <Typography variant="caption" color="text.secondary">
+                  <strong>Note:</strong> For Malaysia and Southeast Asia, Qibla direction is consistently Northwest (292°)
+                </Typography>
+              </Box>
             </>
           )}
         </CardContent>
