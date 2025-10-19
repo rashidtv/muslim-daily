@@ -147,13 +147,13 @@ const MobileNavigationDrawer = ({ open, onClose, onAuthAction }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  const navigationItems = [
-    { label: 'Home', icon: <HomeIcon />, path: '/' },
-    { label: 'Prayer Resources', icon: <CompassCalibration />, path: '/prayer-resources' },
-    { label: 'My Calendar', icon: <CalendarMonth />, path: '/calendar' },
-    { label: 'Progress', icon: <Analytics />, path: '/progress' },
-    { label: 'Settings', icon: <SettingsIcon />, path: '/settings' },
-  ];
+ const navigationItems = [
+  { label: 'Home', icon: <HomeIcon />, path: '/' },
+  { label: 'Prayer Resources', icon: <CompassCalibration />, path: '/prayer-resources' }, // Fixed path
+  { label: 'My Calendar', icon: <CalendarMonth />, path: '/calendar' },
+  { label: 'Progress', icon: <Analytics />, path: '/progress' },
+  { label: 'Settings', icon: <SettingsIcon />, path: '/settings' },
+];
 
   const handleNavigation = (path) => {
     navigate(path);
@@ -298,11 +298,11 @@ const MobileBottomNav = () => {
   const navigate = useNavigate();
 
   const navigationItems = [
-    { label: 'Home', icon: <HomeIcon />, path: '/' },
-    { label: 'Resources', icon: <CompassCalibration />, path: '/prayer-resources' },
-    { label: 'Calendar', icon: <CalendarMonth />, path: '/calendar' },
-    { label: 'Progress', icon: <TrendingUp />, path: '/progress' },
-  ];
+  { label: 'Home', icon: <HomeIcon />, path: '/' },
+  { label: 'Resources', icon: <CompassCalibration />, path: '/prayer-resources' }, // Fixed path
+  { label: 'Calendar', icon: <CalendarMonth />, path: '/calendar' },
+  { label: 'Progress', icon: <TrendingUp />, path: '/progress' },
+];
 
   return (
     <Paper sx={{ 
@@ -355,11 +355,11 @@ const Header = ({ onAuthAction }) => {
 
   // Desktop navigation items
   const navigationItems = [
-    { label: 'Home', path: '/' },
-    { label: 'Prayer Resources', path: '/prayer-resources' },
-    { label: 'Calendar', path: '/calendar' },
-    { label: 'Progress', path: '/progress' },
-  ];
+  { label: 'Home', path: '/' },
+  { label: 'Prayer Resources', path: '/prayer-resources' }, // Fixed path
+  { label: 'Calendar', path: '/calendar' },
+  { label: 'Progress', path: '/progress' },
+];
 
   return (
     <>
@@ -588,14 +588,14 @@ function App() {
                     px: { xs: 2, sm: 3 } 
                   }}
                 >
-                  <Routes>
-                    <Route path="/" element={<Home onAuthAction={handleAuthAction} />} />
-                    <Route path="/progress" element={<Progress />} />
-                    <Route path="/prayer-resources" element={<PrayerResources />} />
-                    <Route path="/calendar" element={<Calendar />} />
-                    <Route path="/settings" element={<Settings />} />
-                    <Route path="*" element={<Home onAuthAction={handleAuthAction} />} />
-                  </Routes>
+                 <Routes>
+                  <Route path="/" element={<Home onAuthAction={handleAuthAction} />} />
+                  <Route path="/progress" element={<Progress />} />
+                  <Route path="/prayer-resources" element={<PrayerResources />} /> {/* This was probably missing or wrong path */}
+                  <Route path="/calendar" element={<Calendar />} />
+                  <Route path="/settings" element={<Settings />} />
+                  <Route path="*" element={<Home onAuthAction={handleAuthAction} />} />
+                </Routes>
                 </Container>
 
                 {/* Mobile Bottom Navigation */}

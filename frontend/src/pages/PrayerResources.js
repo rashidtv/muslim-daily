@@ -12,8 +12,7 @@ import {
 import {
   CompassCalibration,
   Mosque,
-  Refresh,
-  MyLocation
+  Refresh
 } from '@mui/icons-material';
 
 const PrayerResources = () => {
@@ -22,9 +21,9 @@ const PrayerResources = () => {
   const [error, setError] = useState('');
   const [userLocation, setUserLocation] = useState(null);
 
-  // SIMPLE & ACCURATE Qibla calculation
+  // Accurate Qibla calculation
   const calculateQiblaDirection = (lat, lng) => {
-    // Mecca coordinates (Kaaba)
+    // Mecca coordinates
     const meccaLat = 21.4225;
     const meccaLng = 39.8262;
 
@@ -34,14 +33,14 @@ const PrayerResources = () => {
     const meccaLatRad = meccaLat * Math.PI / 180;
     const meccaLngRad = meccaLng * Math.PI / 180;
 
-    // Simple bearing calculation
+    // Calculate Qibla direction
     const y = Math.sin(meccaLngRad - lngRad);
     const x = Math.cos(latRad) * Math.tan(meccaLatRad) - Math.sin(latRad) * Math.cos(meccaLngRad - lngRad);
     
-    let bearing = Math.atan2(y, x) * 180 / Math.PI;
-    bearing = (bearing + 360) % 360;
+    let qibla = Math.atan2(y, x) * 180 / Math.PI;
+    qibla = (qibla + 360) % 360;
     
-    return Math.round(bearing);
+    return Math.round(qibla);
   };
 
   const getUserLocation = () => {
@@ -59,32 +58,17 @@ const PrayerResources = () => {
         const { latitude, longitude } = position.coords;
         setUserLocation({ latitude, longitude });
         
+        // Calculate Qibla
         const direction = calculateQiblaDirection(latitude, longitude);
-        setQiblaDirection(direction);
-        setLoading(false);
-        
         console.log('📍 Location:', latitude, longitude);
         console.log('🧭 Qibla Direction:', direction);
+        
+        setQiblaDirection(direction);
+        setLoading(false);
       },
       (err) => {
         console.error('Location error:', err);
-        let errorMessage = 'Could not get your location. ';
-        
-        switch (err.code) {
-          case err.PERMISSION_DENIED:
-            errorMessage += 'Please enable location permissions in your browser settings.';
-            break;
-          case err.POSITION_UNAVAILABLE:
-            errorMessage += 'Location information is unavailable.';
-            break;
-          case err.TIMEOUT:
-            errorMessage += 'Location request timed out. Please try again.';
-            break;
-          default:
-            errorMessage += 'Please try again.';
-        }
-        
-        setError(errorMessage);
+        setError('Could not get your location. Please enable location services.');
         setLoading(false);
       },
       {
@@ -112,7 +96,7 @@ const PrayerResources = () => {
           backgroundColor: '#f8f9fa'
         }}
       >
-        {/* Qibla Arrow - FIXED: Points TOWARD Mecca */}
+        {/* Qibla Indicator - Fixed direction */}
         <Box
           sx={{
             position: 'absolute',
@@ -123,19 +107,7 @@ const PrayerResources = () => {
             backgroundColor: '#FF0000',
             transform: `translate(-50%, -100%) rotate(${direction}deg)`,
             transformOrigin: 'bottom center',
-            boxShadow: '0 0 10px rgba(255, 0, 0, 0.7)',
-            '&::after': {
-              content: '""',
-              position: 'absolute',
-              bottom: '-5px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              width: 0,
-              height: 0,
-              borderLeft: '6px solid transparent',
-              borderRight: '6px solid transparent',
-              borderTop: '10px solid #FF0000'
-            }
+            boxShadow: '0 0 10px rgba(255, 0, 0, 0.7)'
           }}
         />
         
