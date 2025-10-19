@@ -621,35 +621,35 @@ function App() {
 
                 {/* Auto-update notification */}
                 <Snackbar
-                  open={updateAvailable}
-                  autoHideDuration={8000}
-                  onClose={handleCloseUpdateNotification}
-                  anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-                  sx={{ 
-                    bottom: { xs: 70, md: 24 } // Adjust for mobile bottom nav
-                  }}
-                >
-                  <Alert 
-                    severity="info" 
-                    variant="filled"
-                    action={
-                      <Button 
-                        color="inherit" 
-                        size="small" 
-                        onClick={handleUpdate}
-                        sx={{ fontWeight: 'bold' }}
-                      >
-                        UPDATE
-                      </Button>
-                    }
-                    sx={{ 
-                      width: '100%',
-                      alignItems: 'center'
-                    }}
-                  >
-                    🎉 New version available!
-                  </Alert>
-                </Snackbar>
+  open={updateAvailable}
+  autoHideDuration={10000} // Show for 10 seconds
+  onClose={() => setUpdateAvailable(false)}
+  anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+  sx={{ 
+    bottom: { xs: 70, md: 24 } // Adjust for mobile bottom nav
+  }}
+>
+  <Alert 
+    severity="info" 
+    variant="filled"
+    action={
+      <Button 
+        color="inherit" 
+        size="small" 
+        onClick={handleUpdate}
+        sx={{ fontWeight: 'bold' }}
+      >
+        RELOAD
+      </Button>
+    }
+    sx={{ 
+      width: '100%',
+      alignItems: 'center'
+    }}
+  >
+    🆕 New version available! Tap RELOAD to update.
+  </Alert>
+</Snackbar>
               </Box>
             </Router>
           </NotificationProvider>

@@ -22,8 +22,32 @@ const PrayerResources = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [userLocation, setUserLocation] = useState(null);
+  const [compassHeading, setCompassHeading] = useState(0);
 
-  // Get user location for accurate Qibla calculation
+  // Correct Qibla calculation function
+  const calculateQiblaDirection = (lat, lng) => {
+    // Mecca coordinates
+    const meccaLat = 21.4225;
+    const meccaLng = 39.8262;
+
+    // Convert to radians
+    const latRad = (lat * Math.PI) / 180;
+    const lngRad = (lng * Math.PI) / 180;
+    const meccaLatRad = (meccaLat * Math.PI) / 180;
+    const meccaLngRad = (meccaLng * Math.PI) / 180;
+
+    // Calculate the direction
+    const y = Math.sin(meccaLngRad - lngRad);
+    const x = Math.cos(latRad) * Math.tan(meccaLatRad) - Math.sin(latRad) * Math.cos(meccaLngRad - lngRad);
+    
+    let qibla = Math.atan2(y, x);
+    qibla = (qibla * 180) / Math.PI;
+    qibla = (qibla + 360) % 360;
+
+    return Math.round(qibla);
+  };
+
+  // Get user location
   const getUserLocation = () => {
     setLoading(true);
     setError('');
@@ -38,71 +62,53 @@ const PrayerResources = () => {
       (position) => {
         const { latitude, longitude } = position.coords;
         setUserLocation({ latitude, longitude });
-        calculateQiblaDirection(latitude, longitude);
+        
+        // Calculate Qibla direction
+        const direction = calculateQiblaDirection(latitude, longitude);
+        setQiblaDirection(direction);
+        setLoading(false);
       },
       (error) => {
         setError('Unable to retrieve your location. Please enable location services.');
         setLoading(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000
       }
     );
   };
 
-  // Calculate Qibla direction based on user location
-  const calculateQiblaDirection = (lat, lng) => {
-    // Mecca coordinates
-    const meccaLat = 21.4225;
-    const meccaLng = 39.8262;
-
-    // Convert degrees to radians
-    const latRad = lat * (Math.PI / 180);
-    const lngRad = lng * (Math.PI / 180);
-    const meccaLatRad = meccaLat * (Math.PI / 180);
-    const meccaLngRad = meccaLng * (Math.PI / 180);
-
-    // Calculate Qibla direction
-    const y = Math.sin(meccaLngRad - lngRad);
-    const x = Math.cos(latRad) * Math.tan(meccaLatRad) - Math.sin(latRad) * Math.cos(meccaLngRad - lngRad);
-    let qibla = Math.atan2(y, x) * (180 / Math.PI);
-
-    // Convert to compass bearing (0° = North, 90° = East, etc.)
-    qibla = (qibla + 360) % 360;
-    
-    setQiblaDirection(Math.round(qibla));
-    setLoading(false);
-  };
-
-  // Real compass orientation
+  // Handle device compass
   useEffect(() => {
-    if (!qiblaDirection) return;
-
-    const handleDeviceOrientation = (event) => {
-      if (event.alpha !== null) {
-        const compass = event.alpha; // 0-360 degrees
-        // Adjust Qibla direction based on device orientation
-        const adjustedDirection = (qiblaDirection - compass + 360) % 360;
-        setQiblaDirection(adjustedDirection);
-      }
-    };
-
-    if (window.DeviceOrientationEvent) {
-      window.addEventListener('deviceorientation', handleDeviceOrientation);
+    if (!window.DeviceOrientationEvent) {
+      console.log('Device orientation not supported');
+      return;
     }
 
-    return () => {
-      if (window.DeviceOrientationEvent) {
-        window.removeEventListener('deviceorientation', handleDeviceOrientation);
+    const handleOrientation = (event) => {
+      if (event.alpha !== null) {
+        // alpha: compass direction the device is facing (0-360)
+        setCompassHeading(event.alpha);
       }
     };
-  }, [qiblaDirection]);
 
+    window.addEventListener('deviceorientation', handleOrientation, true);
+
+    return () => {
+      window.removeEventListener('deviceorientation', handleOrientation);
+    };
+  }, []);
+
+  // Auto-detect location on component mount
   useEffect(() => {
-    // Auto-detect location on component mount
     getUserLocation();
   }, []);
 
-  const Compass = ({ direction }) => (
+  const Compass = ({ direction, heading }) => (
     <Box sx={{ position: 'relative', width: 200, height: 200, margin: '0 auto', mb: 3 }}>
-      {/* Compass Circle */}
+      {/* Compass Base */}
       <Box
         sx={{
           width: '100%',
@@ -111,25 +117,28 @@ const PrayerResources = () => {
           border: '3px solid',
           borderColor: 'primary.main',
           position: 'relative',
-          background: 'conic-gradient(from 0deg, #0D9488, #F59E0B, #0D9488)'
+          backgroundColor: 'background.paper',
+          transform: `rotate(${-heading}deg)`, // Rotate compass base against device rotation
+          transition: 'transform 0.1s ease'
         }}
       >
-        {/* Qibla Indicator */}
+        {/* Qibla Indicator - fixed position relative to Mecca */}
         <Box
           sx={{
             position: 'absolute',
-            top: '10%',
+            top: '50%',
             left: '50%',
-            width: 4,
-            height: '40%',
+            width: 2,
+            height: '45%',
             backgroundColor: '#FF0000',
-            transform: `translateX(-50%) rotate(${direction}deg)`,
+            transform: `translate(-50%, -100%) rotate(${direction}deg)`,
             transformOrigin: 'bottom center',
-            borderRadius: 2,
-            boxShadow: '0 0 10px rgba(255, 0, 0, 0.5)'
+            borderRadius: 1,
+            boxShadow: '0 0 10px rgba(255, 0, 0, 0.7)',
+            zIndex: 2
           }}
         />
-        
+
         {/* Center dot */}
         <Box
           sx={{
@@ -138,36 +147,42 @@ const PrayerResources = () => {
             left: '50%',
             width: 12,
             height: 12,
-            backgroundColor: 'white',
+            backgroundColor: 'primary.main',
             borderRadius: '50%',
             transform: 'translate(-50%, -50%)',
-            border: '2px solid',
-            borderColor: 'primary.main',
-            zIndex: 2
+            border: '2px solid white',
+            zIndex: 3
           }}
         />
 
         {/* Direction markers */}
-        {['N', 'E', 'S', 'W'].map((dir, index) => (
-          <Typography
-            key={dir}
-            variant="caption"
-            fontWeight="bold"
-            sx={{
-              position: 'absolute',
-              top: index === 0 ? '5%' : index === 2 ? '85%' : '50%',
-              left: index === 1 ? '85%' : index === 3 ? '5%' : '50%',
-              transform: 'translate(-50%, -50%)',
-              color: 'white',
-              textShadow: '1px 1px 2px rgba(0,0,0,0.5)'
-            }}
-          >
-            {dir}
-          </Typography>
-        ))}
+        {[0, 90, 180, 270].map((angle, index) => {
+          const labels = ['N', 'E', 'S', 'W'];
+          return (
+            <Typography
+              key={angle}
+              variant="caption"
+              fontWeight="bold"
+              sx={{
+                position: 'absolute',
+                top: angle === 0 ? '5%' : angle === 180 ? '85%' : '50%',
+                left: angle === 90 ? '85%' : angle === 270 ? '5%' : '50%',
+                transform: 'translate(-50%, -50%)',
+                color: 'text.primary'
+              }}
+            >
+              {labels[index]}
+            </Typography>
+          );
+        })}
       </Box>
     </Box>
   );
+
+  // Calculate the relative Qibla direction considering device orientation
+  const relativeQiblaDirection = qiblaDirection !== null 
+    ? (qiblaDirection - compassHeading + 360) % 360
+    : 0;
 
   return (
     <Container maxWidth="md" sx={{ py: 3, pb: { xs: 10, md: 3 } }}>
@@ -201,34 +216,32 @@ const PrayerResources = () => {
                 <Box sx={{ py: 4 }}>
                   <CircularProgress size={40} />
                   <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                    Detecting your location...
+                    Detecting your location and calibrating compass...
                   </Typography>
                 </Box>
               ) : qiblaDirection !== null ? (
                 <>
-                  <Compass direction={qiblaDirection} />
+                  <Compass direction={relativeQiblaDirection} heading={compassHeading} />
                   
                   <Typography variant="h4" color="primary.main" gutterBottom>
-                    {qiblaDirection}°
+                    {Math.round(relativeQiblaDirection)}°
                   </Typography>
                   
                   <Typography variant="body1" gutterBottom>
                     Face this direction for prayer towards Mecca
                   </Typography>
 
-                  {userLocation && (
-                    <Typography variant="caption" color="text.secondary" display="block">
-                      Based on your location: {userLocation.latitude.toFixed(4)}, {userLocation.longitude.toFixed(4)}
-                    </Typography>
-                  )}
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    📱 Point your device forward and rotate to align the red line
+                  </Typography>
 
                   <Button 
                     startIcon={<Refresh />}
                     onClick={getUserLocation}
                     variant="outlined"
-                    sx={{ mt: 2 }}
+                    sx={{ mt: 1 }}
                   >
-                    Recalibrate
+                    Recalibrate Location
                   </Button>
                 </>
               ) : (
