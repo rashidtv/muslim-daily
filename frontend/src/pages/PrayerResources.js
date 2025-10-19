@@ -8,13 +8,20 @@ import {
   Button,
   Alert,
   CircularProgress,
-  Chip
+  Chip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Snackbar
 } from '@mui/material';
 import {
   Explore,
   Refresh,
   Navigation,
-  MyLocation
+  MyLocation,
+  CompassCalibration,
+  InstallMobile
 } from '@mui/icons-material';
 
 const PrayerResources = () => {
@@ -24,13 +31,31 @@ const PrayerResources = () => {
   const [compassActive, setCompassActive] = useState(false);
   const [error, setError] = useState('');
   const [userLocation, setUserLocation] = useState(null);
+  const [showCompassDialog, setShowCompassDialog] = useState(false);
+  const [compassPermissionRequested, setCompassPermissionRequested] = useState(false);
+  const [isPWA, setIsPWA] = useState(false);
+  const [showPWAAlert, setShowPWAAlert] = useState(false);
 
-  // High-precision Qibla calculation using reliable formula
+  // Check if running in PWA mode
+  const checkPWA = () => {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+    const isInPWA = window.navigator.standalone === true || isStandalone;
+    setIsPWA(isInPWA);
+    
+    if (!isInPWA && !localStorage.getItem('pwaAlertShown')) {
+      setShowPWAAlert(true);
+      localStorage.setItem('pwaAlertShown', 'true');
+    }
+    
+    return isInPWA;
+  };
+
+  // High-precision Qibla calculation
   const calculateQiblaDirection = (lat, lng) => {
     const φ1 = lat * Math.PI / 180;
-    const φ2 = 21.4225 * Math.PI / 180; // Mecca latitude
+    const φ2 = 21.4225 * Math.PI / 180;
     const λ1 = lng * Math.PI / 180;
-    const λ2 = 39.8262 * Math.PI / 180; // Mecca longitude
+    const λ2 = 39.8262 * Math.PI / 180;
 
     const y = Math.sin(λ2 - λ1);
     const x = Math.cos(φ1) * Math.tan(φ2) - Math.sin(φ1) * Math.cos(λ2 - λ1);
@@ -43,20 +68,73 @@ const PrayerResources = () => {
 
   const startCompass = async () => {
     try {
-      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-        const permission = await DeviceOrientationEvent.requestPermission();
-        if (permission !== 'granted') {
-          setError('Compass permission denied');
-          return;
-        }
+      setLoading(true);
+      
+      if (!window.DeviceOrientationEvent) {
+        setError('Compass not supported on this device');
+        setLoading(false);
+        return;
       }
 
-      window.addEventListener('deviceorientation', handleCompass, true);
-      setCompassActive(true);
-      setError('');
+      // Enhanced permission handling for PWA
+      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        try {
+          const permission = await DeviceOrientationEvent.requestPermission();
+          if (permission === 'granted') {
+            setupCompass();
+          } else {
+            setError('Compass permission denied. ' + 
+              (isPWA ? 'Check device settings.' : 'Try installing as PWA for better experience.'));
+            setShowCompassDialog(true);
+          }
+        } catch (err) {
+          setError('Failed to get compass permission');
+          setShowCompassDialog(true);
+        }
+      } else {
+        // Direct access for Android and PWA
+        setupCompass();
+      }
     } catch (err) {
       setError('Failed to start compass: ' + err.message);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const setupCompass = () => {
+    window.addEventListener('deviceorientation', handleCompass, true);
+    setCompassActive(true);
+    setError('');
+    setShowCompassDialog(false);
+    
+    // Better experience in PWA
+    if (isPWA) {
+      console.log('Compass active in PWA mode');
+    }
+  };
+
+  const autoEnableCompass = async () => {
+    if (compassPermissionRequested || compassActive) return;
+
+    setCompassPermissionRequested(true);
+    
+    setTimeout(async () => {
+      try {
+        // More aggressive auto-enable in PWA
+        if (isPWA || typeof DeviceOrientationEvent.requestPermission !== 'function') {
+          if (window.DeviceOrientationEvent) {
+            setupCompass();
+            console.log('Compass auto-enabled in ' + (isPWA ? 'PWA' : 'browser'));
+          }
+        } else {
+          // For iOS browser, suggest PWA installation
+          setShowCompassDialog(true);
+        }
+      } catch (err) {
+        console.log('Auto-enable compass failed:', err);
+      }
+    }, 1500);
   };
 
   const stopCompass = () => {
@@ -73,7 +151,11 @@ const PrayerResources = () => {
       }
       
       if (heading !== null && !isNaN(heading)) {
-        setDeviceHeading(heading);
+        setDeviceHeading(prev => {
+          if (prev === null) return heading;
+          const smoothing = 0.1;
+          return prev * (1 - smoothing) + heading * smoothing;
+        });
       }
     }
   };
@@ -96,7 +178,9 @@ const PrayerResources = () => {
         try {
           const direction = calculateQiblaDirection(latitude, longitude);
           setQiblaDirection(direction);
-          console.log('📍 Qibla Direction Calculated:', direction + '°');
+          
+          // Auto-enable compass after getting location
+          autoEnableCompass();
         } catch (error) {
           console.error('Calculation error:', error);
           setError('Error calculating Qibla direction');
@@ -109,16 +193,12 @@ const PrayerResources = () => {
         
         switch (err.code) {
           case err.PERMISSION_DENIED:
-            errorMsg += 'Please enable location permissions.';
-            break;
-          case err.POSITION_UNAVAILABLE:
-            errorMsg += 'Location information unavailable.';
-            break;
-          case err.TIMEOUT:
-            errorMsg += 'Location request timed out.';
+            errorMsg += isPWA ? 
+              'Please enable location permissions in app settings.' :
+              'Please enable location permissions.';
             break;
           default:
-            errorMsg += 'An unknown error occurred.';
+            errorMsg += 'Please try again.';
         }
         
         setError(errorMsg);
@@ -134,12 +214,12 @@ const PrayerResources = () => {
 
   const getQiblaAngle = () => {
     if (!qiblaDirection || !compassActive) return qiblaDirection || 0;
-    
     const relativeDirection = (qiblaDirection - deviceHeading + 360) % 360;
     return relativeDirection;
   };
 
   useEffect(() => {
+    checkPWA();
     getLocation();
     
     return () => {
@@ -153,21 +233,37 @@ const PrayerResources = () => {
     <Container maxWidth="sm" sx={{ py: 3 }}>
       <Card elevation={3}>
         <CardContent sx={{ textAlign: 'center', p: 4 }}>
-          <Explore sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
+            <Explore sx={{ fontSize: 48, color: 'primary.main', mr: 1 }} />
+            {isPWA && (
+              <Chip 
+                label="PWA" 
+                size="small" 
+                color="success" 
+                variant="outlined"
+              />
+            )}
+          </Box>
           
           <Typography variant="h5" gutterBottom fontWeight="bold">
             Qibla Compass
           </Typography>
 
-          {/* Compass Toggle */}
+          {isPWA && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              Running in app mode - Best experience! 
+            </Alert>
+          )}
+
+          {/* Compass Status */}
           <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3, gap: 1 }}>
             <Chip 
-              icon={<Navigation />} 
+              icon={compassActive ? <Navigation /> : <CompassCalibration />}
               label={compassActive ? "Compass Active" : "Enable Compass"} 
-              color={compassActive ? "primary" : "default"} 
+              color={compassActive ? "success" : "primary"}
               onClick={compassActive ? stopCompass : startCompass}
               variant={compassActive ? "filled" : "outlined"}
-              disabled={!qiblaDirection}
+              disabled={!qiblaDirection || loading}
             />
           </Box>
 
@@ -185,97 +281,51 @@ const PrayerResources = () => {
             margin: '0 auto', 
             mb: 4
           }}>
-            {/* Compass Outer Circle */}
             <Box sx={{
               width: '100%', 
               height: '100%', 
               borderRadius: '50%', 
               border: '4px solid',
-              borderColor: 'primary.main', 
+              borderColor: compassActive ? 'success.main' : 'primary.main', 
               position: 'relative', 
               backgroundColor: '#f8f9fa',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+              boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+              opacity: compassActive ? 1 : 0.8
             }}>
               
               {/* Compass Directions */}
-              <Typography variant="h6" fontWeight="bold" sx={{ 
-                position: 'absolute', 
-                top: 8, 
-                left: '50%', 
-                transform: 'translateX(-50%)',
-                color: '#d32f2f'
-              }}>
-                N
-              </Typography>
-              <Typography variant="body2" fontWeight="bold" sx={{ 
-                position: 'absolute', 
-                top: '50%', 
-                right: 12, 
-                transform: 'translateY(-50%)' 
-              }}>
-                E
-              </Typography>
-              <Typography variant="body2" fontWeight="bold" sx={{ 
-                position: 'absolute', 
-                bottom: 8, 
-                left: '50%', 
-                transform: 'translateX(-50%)' 
-              }}>
-                S
-              </Typography>
-              <Typography variant="body2" fontWeight="bold" sx={{ 
-                position: 'absolute', 
-                top: '50%', 
-                left: 12, 
-                transform: 'translateY(-50%)' 
-              }}>
-                W
-              </Typography>
+              <Typography variant="h6" fontWeight="bold" sx={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', color: '#d32f2f' }}>N</Typography>
+              <Typography variant="body2" fontWeight="bold" sx={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>E</Typography>
+              <Typography variant="body2" fontWeight="bold" sx={{ position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)' }}>S</Typography>
+              <Typography variant="body2" fontWeight="bold" sx={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)' }}>W</Typography>
 
-              {/* Degree Markings */}
-              {[0, 45, 90, 135, 180, 225, 270, 315].map((degree) => (
-                <Box
-                  key={degree}
-                  sx={{
-                    position: 'absolute',
-                    top: '50%',
-                    left: '50%',
-                    width: 2,
-                    height: degree % 90 === 0 ? 20 : 10,
-                    backgroundColor: degree % 90 === 0 ? 'primary.main' : 'grey.400',
-                    transform: `translate(-50%, -50%) rotate(${degree}deg)`,
-                    transformOrigin: 'center bottom'
-                  }}
-                />
-              ))}
-
-              {/* Qibla Arrow - Perfectly centered with tail at center */}
+              {/* Qibla Arrow */}
               <Box sx={{
                 position: 'absolute',
                 top: '50%',
                 left: '50%',
-                width: 4,
-                height: '40%', // Only half the radius since it extends from center
-                backgroundColor: '#1976d2',
+                width: 3,
+                height: '45%',
+                backgroundColor: compassActive ? '#1976d2' : '#90caf9',
                 transform: `translate(-50%, -50%) rotate(${currentAngle}deg)`,
-                transformOrigin: 'center center', // Rotate from exact center
+                transformOrigin: 'center center',
                 zIndex: 2,
                 borderRadius: '2px',
                 '&::after': {
                   content: '""',
                   position: 'absolute',
-                  top: '-12px', // Arrowhead at the top end
+                  top: '-10px',
                   left: '50%',
                   transform: 'translateX(-50%)',
                   width: 0,
                   height: 0,
-                  borderLeft: '8px solid transparent',
-                  borderRight: '8px solid transparent',
-                  borderBottom: '12px solid #1976d2'
+                  borderLeft: '6px solid transparent',
+                  borderRight: '6px solid transparent',
+                  borderBottom: `10px solid ${compassActive ? '#1976d2' : '#90caf9'}`
                 }
               }} />
 
-              {/* Center Pin - Arrow tail attaches here */}
+              {/* Center Pin */}
               <Box sx={{
                 position: 'absolute', 
                 top: '50%', 
@@ -289,23 +339,6 @@ const PrayerResources = () => {
                 boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
                 zIndex: 3
               }} />
-
-              {/* Alternative Arrow Design - More precise */}
-              <Box sx={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                width: 3,
-                height: '45%',
-                backgroundColor: 'transparent',
-                borderLeft: '2px solid transparent',
-                borderRight: '2px solid transparent',
-                borderBottom: '140px solid #1976d2', // Using border to create perfect triangle
-                transform: `translate(-50%, -50%) rotate(${currentAngle}deg)`,
-                transformOrigin: 'center 70%', // Tail at center, head pointing outwards
-                zIndex: 1,
-                filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.3))'
-              }} />
             </Box>
           </Box>
 
@@ -315,45 +348,83 @@ const PrayerResources = () => {
               <Typography variant="h3" color="primary.main" gutterBottom fontWeight="bold">
                 {qiblaDirection}°
               </Typography>
-              
               <Typography variant="h6" gutterBottom color="text.primary">
                 {compassActive 
-                  ? `Rotate until arrow points straight up` 
-                  : `Face ${qiblaDirection}° from North towards Mecca`
+                  ? `Point device towards Mecca (${currentAngle.toFixed(0)}°)` 
+                  : `Face ${qiblaDirection}° from North`
                 }
               </Typography>
             </Box>
           )}
 
-          {/* Location Info */}
-          {userLocation && (
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              <MyLocation sx={{ fontSize: 16, verticalAlign: 'text-bottom', mr: 0.5 }} />
-              Location: {userLocation.latitude.toFixed(4)}, {userLocation.longitude.toFixed(4)}
-            </Typography>
-          )}
-
           {/* Controls */}
-          <Button 
-            startIcon={<Refresh />} 
-            onClick={getLocation}
-            variant="contained"
-            disabled={loading}
-            size="large"
-            sx={{ borderRadius: 3, px: 3 }}
-          >
-            {loading ? <CircularProgress size={24} /> : 'Recalibrate'}
-          </Button>
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Button 
+              startIcon={<Refresh />} 
+              onClick={getLocation}
+              variant="outlined"
+              disabled={loading}
+            >
+              {loading ? <CircularProgress size={20} /> : 'Recalibrate'}
+            </Button>
+            
+            <Button 
+              startIcon={<Navigation />} 
+              onClick={compassActive ? stopCompass : startCompass}
+              variant={compassActive ? "outlined" : "contained"}
+              color={compassActive ? "secondary" : "primary"}
+            >
+              {compassActive ? 'Stop Compass' : 'Start Compass'}
+            </Button>
+          </Box>
 
-          {/* Help Text */}
-          <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 3 }}>
-            {compassActive 
-              ? 'Hold device flat and rotate until blue arrow points up → that\'s Mecca direction' 
-              : 'Enable compass for live direction guidance'
-            }
-          </Typography>
+          {/* PWA Benefits Notice */}
+          {!isPWA && (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              <Typography variant="body2">
+                <strong>Tip:</strong> Install as app for better compass performance and offline access!
+              </Typography>
+            </Alert>
+          )}
         </CardContent>
       </Card>
+
+      {/* Compass Permission Dialog with PWA suggestion */}
+      <Dialog open={showCompassDialog} onClose={() => setShowCompassDialog(false)}>
+        <DialogTitle>
+          <CompassCalibration sx={{ mr: 1, verticalAlign: 'middle' }} />
+          Enable Compass
+        </DialogTitle>
+        <DialogContent>
+          <Typography>
+            To use the live compass feature, we need access to your device's orientation sensors.
+          </Typography>
+          {!isPWA && (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              <InstallMobile sx={{ fontSize: 16, mr: 1 }} />
+              For best experience, install this app to your home screen!
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowCompassDialog(false)}>Cancel</Button>
+          <Button onClick={startCompass} variant="contained">
+            Enable Compass
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* PWA Installation Prompt */}
+      <Snackbar
+        open={showPWAAlert && !isPWA}
+        onClose={() => setShowPWAAlert(false)}
+        message="Install this app for better compass performance and offline access!"
+        action={
+          <Button color="primary" size="small" onClick={() => setShowPWAAlert(false)}>
+            OK
+          </Button>
+        }
+      />
     </Container>
   );
 };
