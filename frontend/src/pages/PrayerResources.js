@@ -39,7 +39,6 @@ const PrayerResources = () => {
   const [showPWAAlert, setShowPWAAlert] = useState(false);
   const [gettingLocationName, setGettingLocationName] = useState(false);
 
-  // Check if running in PWA mode
   const checkPWA = () => {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
     const isInPWA = window.navigator.standalone === true || isStandalone;
@@ -53,11 +52,9 @@ const PrayerResources = () => {
     return isInPWA;
   };
 
-  // Reverse geocoding to get location name
   const getLocationName = async (latitude, longitude) => {
     setGettingLocationName(true);
     try {
-      // Using OpenStreetMap Nominatim API (free, no API key required)
       const response = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
       );
@@ -70,8 +67,6 @@ const PrayerResources = () => {
       
       if (data && data.address) {
         const address = data.address;
-        
-        // Build location name in a readable format
         let locationParts = [];
         
         if (address.city) {
@@ -93,7 +88,6 @@ const PrayerResources = () => {
         const locationString = locationParts.join(', ');
         setLocationName(locationString);
         
-        // Also try to get more detailed name
         if (data.display_name) {
           const displayName = data.display_name.split(',').slice(0, 3).join(', ');
           setLocationName(displayName);
@@ -103,41 +97,12 @@ const PrayerResources = () => {
       }
     } catch (error) {
       console.log('Error getting location name:', error);
-      // Fallback to coordinates if reverse geocoding fails
       setLocationName(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
     } finally {
       setGettingLocationName(false);
     }
   };
 
-  // Alternative geocoding service (LocationIQ - requires free API key)
-  const getLocationNameWithLocationIQ = async (latitude, longitude) => {
-    // You can get a free API key from https://locationiq.com/
-    const API_KEY = 'your_locationiq_api_key_here'; // Replace with your actual key
-    
-    try {
-      const response = await fetch(
-        `https://us1.locationiq.com/v1/reverse.php?key=${API_KEY}&lat=${latitude}&lon=${longitude}&format=json`
-      );
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch location name');
-      }
-      
-      const data = await response.json();
-      
-      if (data && data.display_name) {
-        const displayName = data.display_name.split(',').slice(0, 3).join(', ');
-        setLocationName(displayName);
-      }
-    } catch (error) {
-      console.log('LocationIQ error:', error);
-      // Fallback to OpenStreetMap
-      getLocationName(latitude, longitude);
-    }
-  };
-
-  // High-precision Qibla calculation
   const calculateQiblaDirection = (lat, lng) => {
     const φ1 = lat * Math.PI / 180;
     const φ2 = 21.4225 * Math.PI / 180;
@@ -257,10 +222,7 @@ const PrayerResources = () => {
           const direction = calculateQiblaDirection(latitude, longitude);
           setQiblaDirection(direction);
           
-          // Get location name
           getLocationName(latitude, longitude);
-          
-          // Auto-enable compass after getting location
           autoEnableCompass();
         } catch (error) {
           console.error('Calculation error:', error);
@@ -354,7 +316,7 @@ const PrayerResources = () => {
             </Alert>
           )}
 
-          {/* Location Information */}
+          {/* Location Information - Now includes coordinates */}
           {userLocation && (
             <Box sx={{ mb: 3, p: 2, backgroundColor: 'grey.50', borderRadius: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
@@ -371,19 +333,15 @@ const PrayerResources = () => {
                     Getting location name...
                   </Typography>
                 </Box>
-              ) : locationName ? (
+              ) : (
                 <>
                   <Typography variant="body1" fontWeight="medium" gutterBottom>
-                    {locationName}
+                    {locationName || `${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)}`}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    {userLocation.latitude.toFixed(4)}, {userLocation.longitude.toFixed(4)}
+                    Coordinates: {userLocation.latitude.toFixed(6)}, {userLocation.longitude.toFixed(6)}
                   </Typography>
                 </>
-              ) : (
-                <Typography variant="body1" color="text.secondary">
-                  {userLocation.latitude.toFixed(4)}, {userLocation.longitude.toFixed(4)}
-                </Typography>
               )}
             </Box>
           )}
@@ -457,7 +415,7 @@ const PrayerResources = () => {
             </Box>
           </Box>
 
-          {/* Direction Display */}
+          {/* Direction Display - Clean without coordinates */}
           {qiblaDirection !== null && (
             <Box sx={{ mb: 3 }}>
               <Typography variant="h3" color="primary.main" gutterBottom fontWeight="bold">
@@ -466,7 +424,7 @@ const PrayerResources = () => {
               <Typography variant="h6" gutterBottom color="text.primary">
                 {compassActive 
                   ? `Point device towards Mecca (${currentAngle.toFixed(0)}°)` 
-                  : `Face ${qiblaDirection}° from North`
+                  : `Face ${qiblaDirection}° from North towards Mecca`
                 }
               </Typography>
             </Box>
