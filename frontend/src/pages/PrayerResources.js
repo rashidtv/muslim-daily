@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Container,
   Card,
@@ -11,9 +11,10 @@ import {
   Chip
 } from '@mui/material';
 import {
-  CompassCalibration,
+  Explore,
   Refresh,
-  Navigation
+  Navigation,
+  MyLocation
 } from '@mui/icons-material';
 
 const PrayerResources = () => {
@@ -23,60 +24,64 @@ const PrayerResources = () => {
   const [compassActive, setCompassActive] = useState(false);
   const [error, setError] = useState('');
   const [userLocation, setUserLocation] = useState(null);
+  const compassRef = useRef(null);
 
-  // High-precision Qibla calculation using spherical trigonometry
+  // High-precision Qibla calculation using reliable formula
   const calculateQiblaDirection = (lat, lng) => {
-    const meccaLat = 21.4225 * Math.PI / 180;
-    const meccaLng = 39.8262 * Math.PI / 180;
-    const userLat = lat * Math.PI / 180;
-    const userLng = lng * Math.PI / 180;
+    const φ1 = lat * Math.PI / 180;
+    const φ2 = 21.4225 * Math.PI / 180; // Mecca latitude
+    const λ1 = lng * Math.PI / 180;
+    const λ2 = 39.8262 * Math.PI / 180; // Mecca longitude
 
-    const y = Math.sin(meccaLng - userLng);
-    const x = Math.cos(userLat) * Math.tan(meccaLat) - Math.sin(userLat) * Math.cos(meccaLng - userLng);
+    const y = Math.sin(λ2 - λ1);
+    const x = Math.cos(φ1) * Math.tan(φ2) - Math.sin(φ1) * Math.cos(λ2 - λ1);
     
     let bearing = Math.atan2(y, x) * 180 / Math.PI;
     bearing = (bearing + 360) % 360;
     
-    return Math.round(bearing * 10) / 10;
+    return Math.round(bearing);
   };
 
-  const startCompass = () => {
-    if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-      DeviceOrientationEvent.requestPermission()
-        .then(permissionState => {
-          if (permissionState === 'granted') {
-            window.addEventListener('deviceorientation', handleCompass);
-            setCompassActive(true);
-          }
-        })
-        .catch(console.error);
-    } else {
-      window.addEventListener('deviceorientation', handleCompass);
+  const startCompass = async () => {
+    try {
+      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        const permission = await DeviceOrientationEvent.requestPermission();
+        if (permission !== 'granted') {
+          setError('Compass permission denied');
+          return;
+        }
+      }
+
+      window.addEventListener('deviceorientation', handleCompass, true);
       setCompassActive(true);
+      setError('');
+    } catch (err) {
+      setError('Failed to start compass: ' + err.message);
     }
   };
 
   const stopCompass = () => {
-    window.removeEventListener('deviceorientation', handleCompass);
+    window.removeEventListener('deviceorientation', handleCompass, true);
     setCompassActive(false);
-    setDeviceHeading(0);
   };
 
   const handleCompass = (event) => {
     if (event.alpha !== null) {
-      // Smooth the compass reading to reduce jitter
-      setDeviceHeading(prev => {
-        const newHeading = event.alpha;
-        if (prev === null) return newHeading;
-        
-        // Smoothing factor (0.1 = heavy smoothing, 0.9 = light smoothing)
-        const smoothing = 0.2;
-        return prev * (1 - smoothing) + newHeading * smoothing;
-      });
+      // Use alpha for compass heading (0-360 degrees)
+      let heading = event.alpha;
+      
+      // iOS sometimes provides absolute orientation
+      if (typeof event.webkitCompassHeading !== 'undefined') {
+        heading = event.webkitCompassHeading;
+      }
+      
+      if (heading !== null && !isNaN(heading)) {
+        setDeviceHeading(heading);
+      }
     }
   };
 
-  const getLocation = async () => {
+  const getLocation = () => {
     setLoading(true);
     setError('');
 
@@ -87,72 +92,87 @@ const PrayerResources = () => {
     }
 
     navigator.geolocation.getCurrentPosition(
-      async (position) => {
+      (position) => {
         const { latitude, longitude } = position.coords;
         setUserLocation({ latitude, longitude });
         
         try {
           const direction = calculateQiblaDirection(latitude, longitude);
           setQiblaDirection(direction);
-          setLoading(false);
+          console.log('📍 Qibla Direction Calculated:', direction + '°');
         } catch (error) {
           console.error('Calculation error:', error);
           setError('Error calculating Qibla direction');
-          setLoading(false);
         }
+        setLoading(false);
       },
       (err) => {
         console.error('Location error:', err);
-        setError('Unable to get your location. Please ensure location services are enabled.');
+        let errorMsg = 'Unable to get your location. ';
+        
+        switch (err.code) {
+          case err.PERMISSION_DENIED:
+            errorMsg += 'Please enable location permissions.';
+            break;
+          case err.POSITION_UNAVAILABLE:
+            errorMsg += 'Location information unavailable.';
+            break;
+          case err.TIMEOUT:
+            errorMsg += 'Location request timed out.';
+            break;
+          default:
+            errorMsg += 'An unknown error occurred.';
+        }
+        
+        setError(errorMsg);
         setLoading(false);
       },
       {
         enableHighAccuracy: true,
         timeout: 15000,
-        maximumAge: 600000 // 10 minutes cache
+        maximumAge: 600000
       }
     );
+  };
+
+  // Calculate the angle for the Qibla arrow
+  const getQiblaAngle = () => {
+    if (!qiblaDirection || !compassActive) return qiblaDirection || 0;
+    
+    // When compass is active, arrow shows relative direction to Qibla
+    const relativeDirection = (qiblaDirection - deviceHeading + 360) % 360;
+    return relativeDirection;
   };
 
   useEffect(() => {
     getLocation();
     
     return () => {
-      window.removeEventListener('deviceorientation', handleCompass);
+      window.removeEventListener('deviceorientation', handleCompass, true);
     };
   }, []);
 
-  // Calculate arrow rotation based on compass mode
-  const getArrowRotation = () => {
-    if (!qiblaDirection) return 0;
-    
-    if (compassActive) {
-      // In compass mode, arrow stays fixed pointing to Qibla while compass rotates
-      return qiblaDirection;
-    } else {
-      // In static mode, arrow shows direction relative to North
-      return qiblaDirection;
-    }
-  };
-
-  const getCompassRotation = () => {
-    if (!compassActive) return 0;
-    return -deviceHeading;
-  };
+  const currentAngle = getQiblaAngle();
 
   return (
-    <Container maxWidth="md" sx={{ py: 3 }}>
-      <Card sx={{ mb: 3 }}>
-        <CardContent sx={{ textAlign: 'center' }}>
-          <CompassCalibration sx={{ fontSize: 40, color: 'primary.main', mb: 2 }} />
+    <Container maxWidth="sm" sx={{ py: 3 }}>
+      <Card elevation={3}>
+        <CardContent sx={{ textAlign: 'center', p: 4 }}>
+          <Explore sx={{ fontSize: 48, color: 'primary.main', mb: 2 }} />
           
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2, gap: 1 }}>
+          <Typography variant="h5" gutterBottom fontWeight="bold">
+            Qibla Compass
+          </Typography>
+
+          {/* Compass Toggle */}
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3, gap: 1 }}>
             <Chip 
               icon={<Navigation />} 
-              label={compassActive ? "Compass Active" : "Enable Live Compass"} 
+              label={compassActive ? "Compass Active" : "Enable Compass"} 
               color={compassActive ? "primary" : "default"} 
               onClick={compassActive ? stopCompass : startCompass}
               variant={compassActive ? "filled" : "outlined"}
+              disabled={!qiblaDirection}
             />
           </Box>
 
@@ -165,122 +185,153 @@ const PrayerResources = () => {
           {/* Compass Container */}
           <Box sx={{ 
             position: 'relative', 
-            width: 250, 
-            height: 250, 
+            width: 280, 
+            height: 280, 
             margin: '0 auto', 
-            mb: 3
+            mb: 4
           }}>
-            {/* Compass Base - Rotates with device */}
+            {/* Compass Outer Circle */}
             <Box sx={{
               width: '100%', 
               height: '100%', 
               borderRadius: '50%', 
-              border: '3px solid',
+              border: '4px solid',
               borderColor: 'primary.main', 
               position: 'relative', 
               backgroundColor: '#f8f9fa',
-              transform: `rotate(${getCompassRotation()}deg)`,
-              transition: compassActive ? 'transform 0.1s ease' : 'none'
+              boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
             }}>
+              
               {/* Compass Directions */}
-              <Typography variant="caption" fontWeight="bold" sx={{ 
+              <Typography variant="h6" fontWeight="bold" sx={{ 
                 position: 'absolute', 
-                top: '5%', 
+                top: 8, 
                 left: '50%', 
-                transform: 'translateX(-50%)' 
+                transform: 'translateX(-50%)',
+                color: '#d32f2f'
               }}>
                 N
               </Typography>
-              <Typography variant="caption" fontWeight="bold" sx={{ 
+              <Typography variant="body2" fontWeight="bold" sx={{ 
                 position: 'absolute', 
                 top: '50%', 
-                right: '5%', 
+                right: 12, 
                 transform: 'translateY(-50%)' 
               }}>
                 E
               </Typography>
-              <Typography variant="caption" fontWeight="bold" sx={{ 
+              <Typography variant="body2" fontWeight="bold" sx={{ 
                 position: 'absolute', 
-                bottom: '5%', 
+                bottom: 8, 
                 left: '50%', 
                 transform: 'translateX(-50%)' 
               }}>
                 S
               </Typography>
-              <Typography variant="caption" fontWeight="bold" sx={{ 
+              <Typography variant="body2" fontWeight="bold" sx={{ 
                 position: 'absolute', 
                 top: '50%', 
-                left: '5%', 
+                left: 12, 
                 transform: 'translateY(-50%)' 
               }}>
                 W
               </Typography>
 
-              {/* Qibla Arrow - Always points to Mecca */}
+              {/* Degree Markings */}
+              {[0, 45, 90, 135, 180, 225, 270, 315].map((degree) => (
+                <Box
+                  key={degree}
+                  sx={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    width: 2,
+                    height: degree % 90 === 0 ? 20 : 10,
+                    backgroundColor: degree % 90 === 0 ? 'primary.main' : 'grey.400',
+                    transform: `translate(-50%, -50%) rotate(${degree}deg)`,
+                    transformOrigin: 'center bottom'
+                  }}
+                />
+              ))}
+
+              {/* Qibla Arrow - Centered and properly positioned */}
+              <Box sx={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                width: 3,
+                height: '40%',
+                backgroundColor: '#d32f2f',
+                transform: `translate(-50%, -100%) rotate(${currentAngle}deg)`,
+                transformOrigin: 'bottom center',
+                zIndex: 2,
+                borderRadius: '2px',
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  bottom: 0,
+                  left: '50%',
+                  transform: 'translateX(-50%)',
+                  width: 0,
+                  height: 0,
+                  borderLeft: '8px solid transparent',
+                  borderRight: '8px solid transparent',
+                  borderTop: '12px solid #d32f2f'
+                }
+              }} />
+
+              {/* Center Pin */}
+              <Box sx={{
+                position: 'absolute', 
+                top: '50%', 
+                left: '50%', 
+                width: 20, 
+                height: 20,
+                backgroundColor: 'primary.main', 
+                borderRadius: '50%', 
+                transform: 'translate(-50%, -50%)',
+                border: '3px solid white',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                zIndex: 3
+              }} />
+
+              {/* Compass Needle (North indicator) */}
               <Box sx={{
                 position: 'absolute',
                 top: '50%',
                 left: '50%',
                 width: 2,
-                height: '45%',
+                height: '35%',
                 backgroundColor: '#d32f2f',
-                transform: `translateX(-50%) rotate(${getArrowRotation()}deg)`,
+                transform: `translate(-50%, -100%) rotate(0deg)`,
                 transformOrigin: 'bottom center',
-                zIndex: 2,
-                '&::after': {
-                  content: '""',
-                  position: 'absolute',
-                  top: 0,
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  width: 0,
-                  height: 0,
-                  borderLeft: '6px solid transparent',
-                  borderRight: '6px solid transparent',
-                  borderBottom: '12px solid #d32f2f'
-                }
-              }} />
-
-              {/* Center Dot */}
-              <Box sx={{
-                position: 'absolute', 
-                top: '50%', 
-                left: '50%', 
-                width: 16, 
-                height: 16,
-                backgroundColor: 'primary.main', 
-                borderRadius: '50%', 
-                transform: 'translate(-50%, -50%)',
-                border: '2px solid white',
-                zIndex: 3
+                zIndex: 1,
+                opacity: 0.7
               }} />
             </Box>
           </Box>
 
           {/* Direction Display */}
-          {qiblaDirection && (
-            <>
-              <Typography variant="h4" color="primary.main" gutterBottom>
+          {qiblaDirection !== null && (
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="h3" color="primary.main" gutterBottom fontWeight="bold">
                 {qiblaDirection}°
               </Typography>
               
-              <Typography variant="body1" gutterBottom>
+              <Typography variant="h6" gutterBottom color="text.primary">
                 {compassActive 
-                  ? 'Point your device towards the red arrow' 
-                  : `Face ${qiblaDirection}° from North towards Mecca`
+                  ? `Point ${currentAngle.toFixed(0)}° to your right` 
+                  : `Face ${qiblaDirection}° from North`
                 }
               </Typography>
-            </>
+            </Box>
           )}
 
           {/* Location Info */}
-          {userLocation ? (
-            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
-              Based on your location: {userLocation.latitude.toFixed(4)}, {userLocation.longitude.toFixed(4)}
-            </Typography>
-          ) : (
-            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
-              Getting your location...
+          {userLocation && (
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              <MyLocation sx={{ fontSize: 16, verticalAlign: 'text-bottom', mr: 0.5 }} />
+              Location: {userLocation.latitude.toFixed(4)}, {userLocation.longitude.toFixed(4)}
             </Typography>
           )}
 
@@ -288,12 +339,18 @@ const PrayerResources = () => {
           <Button 
             startIcon={<Refresh />} 
             onClick={getLocation}
-            variant="outlined"
+            variant="contained"
             disabled={loading}
-            sx={{ mb: 2 }}
+            size="large"
+            sx={{ borderRadius: 3, px: 3 }}
           >
-            {loading ? <CircularProgress size={20} /> : 'Recalibrate Direction'}
+            {loading ? <CircularProgress size={24} /> : 'Recalibrate'}
           </Button>
+
+          {/* Help Text */}
+          <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 3 }}>
+            Hold your device flat and rotate until the red arrow points straight up
+          </Typography>
         </CardContent>
       </Card>
     </Container>
