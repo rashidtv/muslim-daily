@@ -1,26 +1,73 @@
-// public/sw.js - Simple & Working Version
-const CACHE_NAME = 'muslim-daily-v1.1';
+// public/sw.js - Complete working version
+const CACHE_NAME = 'muslim-daily-v2.0';
+const APP_VERSION = '2.0.0';
+
+const urlsToCache = [
+  '/',
+  '/static/js/bundle.js',
+  '/manifest.json'
+];
 
 self.addEventListener('install', (event) => {
-  console.log('🔄 Service Worker installing...');
+  console.log(`🔄 Service Worker v${APP_VERSION} installing...`);
   self.skipWaiting(); // Activate immediately
+  
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      console.log('📦 Opened cache');
+      return cache.addAll(urlsToCache).catch(error => {
+        console.warn('Some files failed to cache:', error);
+      });
+    })
+  );
 });
 
 self.addEventListener('activate', (event) => {
-  console.log('🔄 Service Worker activating...');
-  event.waitUntil(self.clients.claim()); // Take control immediately
+  console.log(`🔄 Service Worker v${APP_VERSION} activating...`);
+  
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            console.log('🗑️ Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    }).then(() => {
+      // Take control of all clients
+      return self.clients.claim();
+    }).then(() => {
+      // Notify all clients about the new version
+      self.clients.matchAll().then((clients) => {
+        clients.forEach((client) => {
+          client.postMessage({
+            type: 'NEW_VERSION_AVAILABLE',
+            version: APP_VERSION
+          });
+        });
+      });
+    })
+  );
 });
 
 self.addEventListener('fetch', (event) => {
-  // Only handle same-origin requests
-  if (event.request.url.startsWith('http') && 
-      event.request.url.includes('muslimdaily.onrender.com')) {
-    event.respondWith(
-      fetch(event.request).catch(() => {
-        return caches.match(event.request);
-      })
-    );
-  }
+  // Skip non-GET requests
+  if (event.request.method !== 'GET') return;
+
+  event.respondWith(
+    caches.match(event.request).then((response) => {
+      // Return cached version or fetch from network
+      if (response) {
+        return response;
+      }
+
+      return fetch(event.request).catch(() => {
+        console.log('❌ Network failed for:', event.request.url);
+      });
+    })
+  );
 });
 
 // Push notifications
@@ -48,6 +95,7 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+
   event.waitUntil(
     clients.matchAll({ type: 'window' }).then((windowClients) => {
       for (let client of windowClients) {
@@ -60,4 +108,13 @@ self.addEventListener('notificationclick', (event) => {
       }
     })
   );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SEND_NOTIFICATION') {
+    self.registration.showNotification(
+      event.data.notification.title,
+      event.data.notification
+    );
+  }
 });

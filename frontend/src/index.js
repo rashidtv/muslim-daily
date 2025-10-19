@@ -11,24 +11,25 @@ root.render(
   </React.StrictMode>
 );
 
-// Simple Service Worker Registration
+// Service Worker with proper update detection
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js?v=1.1')
+    navigator.serviceWorker.register('/sw.js')
       .then((registration) => {
         console.log('✅ SW registered: ', registration);
-        
-        // Check for updates when app starts
+
+        // Check for updates
         registration.update();
-        
-        // Listen for updates
+
+        // Listen for new service worker
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;
           console.log('🔄 New SW update found!');
           
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              // Notify app about update
+              console.log('✅ New version available!');
+              // Trigger update notification in App.js
               if (window.showPWAUpdateNotification) {
                 window.showPWAUpdateNotification();
               }
@@ -42,7 +43,4 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
 reportWebVitals();

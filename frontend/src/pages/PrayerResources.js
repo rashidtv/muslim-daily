@@ -20,25 +20,26 @@ const PrayerResources = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Accurate Qibla calculation for any location
-  const calculateQibla = (lat, lng) => {
+  // Accurate Qibla calculation
+  const calculateQiblaDirection = (lat, lng) => {
     // Mecca coordinates
     const meccaLat = 21.4225;
     const meccaLng = 39.8262;
 
     // Convert to radians
-    const phiK = (meccaLat * Math.PI) / 180.0;
-    const lambdaK = (meccaLng * Math.PI) / 180.0;
-    const phi = (lat * Math.PI) / 180.0;
-    const lambda = (lng * Math.PI) / 180.0;
+    const latRad = lat * Math.PI / 180;
+    const lngRad = lng * Math.PI / 180;
+    const meccaLatRad = meccaLat * Math.PI / 180;
+    const meccaLngRad = meccaLng * Math.PI / 180;
 
-    // Calculate Qibla direction
-    const psi = (180.0 / Math.PI) * Math.atan2(
-      Math.sin(lambdaK - lambda),
-      Math.cos(phi) * Math.tan(phiK) - Math.sin(phi) * Math.cos(lambdaK - lambda)
-    );
-
-    return (psi + 360.0) % 360.0;
+    // Calculate Qibla direction using correct formula
+    const y = Math.sin(meccaLngRad - lngRad);
+    const x = Math.cos(latRad) * Math.tan(meccaLatRad) - Math.sin(latRad) * Math.cos(meccaLngRad - lngRad);
+    
+    let qibla = Math.atan2(y, x) * 180 / Math.PI;
+    qibla = (qibla + 360) % 360;
+    
+    return Math.round(qibla);
   };
 
   const getUserLocation = () => {
@@ -46,7 +47,7 @@ const PrayerResources = () => {
     setError('');
 
     if (!navigator.geolocation) {
-      setError('Geolocation not supported. Using default Malaysia direction.');
+      setError('Location not supported. Using default direction.');
       setQiblaDirection(292); // Default for Malaysia
       setLoading(false);
       return;
@@ -57,15 +58,15 @@ const PrayerResources = () => {
         const { latitude, longitude } = position.coords;
         console.log('User location:', latitude, longitude);
         
-        const direction = calculateQibla(latitude, longitude);
+        const direction = calculateQiblaDirection(latitude, longitude);
         console.log('Calculated Qibla:', direction);
         
-        setQiblaDirection(Math.round(direction));
+        setQiblaDirection(direction);
         setLoading(false);
       },
-      (locationError) => {
-        console.error('Location error:', locationError);
-        setError('Could not get location. Using default direction.');
+      (err) => {
+        console.error('Location error:', err);
+        setError('Location access denied. Using default direction.');
         setQiblaDirection(292); // Fallback for Malaysia
         setLoading(false);
       },
@@ -91,7 +92,8 @@ const PrayerResources = () => {
           border: '3px solid',
           borderColor: 'primary.main',
           position: 'relative',
-          backgroundColor: '#f8f9fa'
+          backgroundColor: '#f8f9fa',
+          background: 'conic-gradient(from 0deg, #0D9488, #F59E0B, #0D9488)'
         }}
       >
         {/* Qibla Indicator */}
@@ -125,10 +127,10 @@ const PrayerResources = () => {
         />
 
         {/* Direction markers */}
-        <Typography variant="caption" fontWeight="bold" sx={{ position: 'absolute', top: '5%', left: '50%', transform: 'translateX(-50%)', color: 'text.primary' }}>N</Typography>
-        <Typography variant="caption" fontWeight="bold" sx={{ position: 'absolute', top: '50%', right: '5%', transform: 'translateY(-50%)', color: 'text.primary' }}>E</Typography>
-        <Typography variant="caption" fontWeight="bold" sx={{ position: 'absolute', bottom: '5%', left: '50%', transform: 'translateX(-50%)', color: 'text.primary' }}>S</Typography>
-        <Typography variant="caption" fontWeight="bold" sx={{ position: 'absolute', top: '50%', left: '5%', transform: 'translateY(-50%)', color: 'text.primary' }}>W</Typography>
+        <Typography variant="caption" fontWeight="bold" sx={{ position: 'absolute', top: '5%', left: '50%', transform: 'translateX(-50%)', color: 'white' }}>N</Typography>
+        <Typography variant="caption" fontWeight="bold" sx={{ position: 'absolute', top: '50%', right: '5%', transform: 'translateY(-50%)', color: 'white' }}>E</Typography>
+        <Typography variant="caption" fontWeight="bold" sx={{ position: 'absolute', bottom: '5%', left: '50%', transform: 'translateX(-50%)', color: 'white' }}>S</Typography>
+        <Typography variant="caption" fontWeight="bold" sx={{ position: 'absolute', top: '50%', left: '5%', transform: 'translateY(-50%)', color: 'white' }}>W</Typography>
       </Box>
     </Box>
   );
@@ -173,7 +175,7 @@ const PrayerResources = () => {
               </Typography>
               
               <Typography variant="body1" gutterBottom>
-                Face this direction for prayer
+                Face this direction for prayer towards Mecca
               </Typography>
 
               <Button 
