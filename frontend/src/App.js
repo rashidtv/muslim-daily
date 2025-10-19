@@ -541,32 +541,15 @@ function App() {
 
 // In your App.js, update the useEffect for updates:
 useEffect(() => {
-  // Listen for service worker messages about updates
-  if ('serviceWorker' in navigator) {
-    const handleMessage = (event) => {
-      if (event.data && event.data.type === 'NEW_VERSION_AVAILABLE') {
-        console.log('🔄 Update detected in App.js');
-        setUpdateAvailable(true);
-      }
-    };
-
-    navigator.serviceWorker.addEventListener('message', handleMessage);
-
-    // Also check for updates on app start
-    navigator.serviceWorker.ready.then(registration => {
-      registration.update();
-    });
-
-    return () => {
-      navigator.serviceWorker.removeEventListener('message', handleMessage);
-    };
-  }
+  // Make update function available globally
+  window.showPWAUpdateNotification = () => {
+    setUpdateAvailable(true);
+  };
 }, []);
 
   const handleUpdate = () => {
-    console.log('🔄 User triggered update');
-    window.location.reload();
-  };
+  window.location.reload();
+};
 
   const handleCloseUpdateNotification = () => {
     setUpdateAvailable(false);
@@ -620,30 +603,18 @@ useEffect(() => {
                 {/* Auto-update notification */}
                 <Snackbar
   open={updateAvailable}
-  autoHideDuration={10000} // Show for 10 seconds
+  autoHideDuration={10000}
   onClose={() => setUpdateAvailable(false)}
   anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-  sx={{ 
-    bottom: { xs: 70, md: 24 } // Adjust for mobile bottom nav
-  }}
 >
   <Alert 
     severity="info" 
     variant="filled"
     action={
-      <Button 
-        color="inherit" 
-        size="small" 
-        onClick={handleUpdate}
-        sx={{ fontWeight: 'bold' }}
-      >
+      <Button color="inherit" size="small" onClick={handleUpdate}>
         RELOAD
       </Button>
     }
-    sx={{ 
-      width: '100%',
-      alignItems: 'center'
-    }}
   >
     🆕 New version available! Tap RELOAD to update.
   </Alert>

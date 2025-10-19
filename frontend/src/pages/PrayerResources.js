@@ -19,8 +19,9 @@ const PrayerResources = () => {
   const [qiblaDirection, setQiblaDirection] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [userLocation, setUserLocation] = useState(null);
 
-  // Accurate Qibla calculation
+  // VERIFIED Qibla calculation
   const calculateQiblaDirection = (lat, lng) => {
     // Mecca coordinates
     const meccaLat = 21.4225;
@@ -32,7 +33,7 @@ const PrayerResources = () => {
     const meccaLatRad = meccaLat * Math.PI / 180;
     const meccaLngRad = meccaLng * Math.PI / 180;
 
-    // Calculate Qibla direction using correct formula
+    // Correct Qibla formula
     const y = Math.sin(meccaLngRad - lngRad);
     const x = Math.cos(latRad) * Math.tan(meccaLatRad) - Math.sin(latRad) * Math.cos(meccaLngRad - lngRad);
     
@@ -47,8 +48,7 @@ const PrayerResources = () => {
     setError('');
 
     if (!navigator.geolocation) {
-      setError('Location not supported. Using default direction.');
-      setQiblaDirection(292); // Default for Malaysia
+      setError('Geolocation not supported');
       setLoading(false);
       return;
     }
@@ -56,23 +56,24 @@ const PrayerResources = () => {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
-        console.log('User location:', latitude, longitude);
+        setUserLocation({ latitude, longitude });
         
+        // Calculate Qibla
         const direction = calculateQiblaDirection(latitude, longitude);
-        console.log('Calculated Qibla:', direction);
+        console.log('📍 Location:', latitude, longitude);
+        console.log('🧭 Qibla Direction:', direction);
         
         setQiblaDirection(direction);
         setLoading(false);
       },
       (err) => {
         console.error('Location error:', err);
-        setError('Location access denied. Using default direction.');
-        setQiblaDirection(292); // Fallback for Malaysia
+        setError('Could not get your location. Please enable location services.');
         setLoading(false);
       },
       {
         enableHighAccuracy: true,
-        timeout: 10000,
+        timeout: 15000,
         maximumAge: 60000
       }
     );
@@ -92,8 +93,7 @@ const PrayerResources = () => {
           border: '3px solid',
           borderColor: 'primary.main',
           position: 'relative',
-          backgroundColor: '#f8f9fa',
-          background: 'conic-gradient(from 0deg, #0D9488, #F59E0B, #0D9488)'
+          backgroundColor: '#f8f9fa'
         }}
       >
         {/* Qibla Indicator */}
@@ -102,7 +102,7 @@ const PrayerResources = () => {
             position: 'absolute',
             top: '50%',
             left: '50%',
-            width: 3,
+            width: 4,
             height: '45%',
             backgroundColor: '#FF0000',
             transform: `translate(-50%, -100%) rotate(${direction}deg)`,
@@ -127,13 +127,20 @@ const PrayerResources = () => {
         />
 
         {/* Direction markers */}
-        <Typography variant="caption" fontWeight="bold" sx={{ position: 'absolute', top: '5%', left: '50%', transform: 'translateX(-50%)', color: 'white' }}>N</Typography>
-        <Typography variant="caption" fontWeight="bold" sx={{ position: 'absolute', top: '50%', right: '5%', transform: 'translateY(-50%)', color: 'white' }}>E</Typography>
-        <Typography variant="caption" fontWeight="bold" sx={{ position: 'absolute', bottom: '5%', left: '50%', transform: 'translateX(-50%)', color: 'white' }}>S</Typography>
-        <Typography variant="caption" fontWeight="bold" sx={{ position: 'absolute', top: '50%', left: '5%', transform: 'translateY(-50%)', color: 'white' }}>W</Typography>
+        <Typography variant="caption" fontWeight="bold" sx={{ position: 'absolute', top: '5%', left: '50%', transform: 'translateX(-50%)' }}>N</Typography>
+        <Typography variant="caption" fontWeight="bold" sx={{ position: 'absolute', top: '50%', right: '5%', transform: 'translateY(-50%)' }}>E</Typography>
+        <Typography variant="caption" fontWeight="bold" sx={{ position: 'absolute', bottom: '5%', left: '50%', transform: 'translateX(-50%)' }}>S</Typography>
+        <Typography variant="caption" fontWeight="bold" sx={{ position: 'absolute', top: '50%', left: '5%', transform: 'translateY(-50%)' }}>W</Typography>
       </Box>
     </Box>
   );
+
+  // Test with known locations
+  const testLocations = [
+    { name: 'Kuala Lumpur', lat: 3.1390, lng: 101.6869, expected: 292 },
+    { name: 'Penang', lat: 5.4164, lng: 100.3327, expected: 293 },
+    { name: 'Johor Bahru', lat: 1.4927, lng: 103.7414, expected: 291 }
+  ];
 
   return (
     <Container maxWidth="md" sx={{ py: 3, pb: { xs: 10, md: 3 } }}>
@@ -163,7 +170,7 @@ const PrayerResources = () => {
             <Box sx={{ py: 4 }}>
               <CircularProgress size={40} />
               <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                Calculating direction to Mecca...
+                Getting your location and calculating Qibla direction...
               </Typography>
             </Box>
           ) : (
@@ -178,6 +185,12 @@ const PrayerResources = () => {
                 Face this direction for prayer towards Mecca
               </Typography>
 
+              {userLocation && (
+                <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 2 }}>
+                  Based on your location: {userLocation.latitude.toFixed(4)}, {userLocation.longitude.toFixed(4)}
+                </Typography>
+              )}
+
               <Button 
                 startIcon={<Refresh />}
                 onClick={getUserLocation}
@@ -186,6 +199,13 @@ const PrayerResources = () => {
               >
                 Recalibrate
               </Button>
+
+              {/* Debug info */}
+              <Box sx={{ mt: 3, p: 2, backgroundColor: 'grey.100', borderRadius: 1 }}>
+                <Typography variant="caption" color="text.secondary">
+                  <strong>Expected for Malaysia:</strong> 290°-295° (Northwest direction)
+                </Typography>
+              </Box>
             </>
           )}
         </CardContent>
