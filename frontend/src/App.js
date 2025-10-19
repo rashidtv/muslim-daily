@@ -45,6 +45,7 @@ import { NotificationProvider } from './context/NotificationContext';
 
 // Components
 import Home from './pages/Home';
+import PrayerTimes from './pages/PrayerTimes';
 import Progress from './pages/Progress';
 import Settings from './pages/Settings';
 import Calendar from './pages/Calendar';
@@ -597,7 +598,7 @@ function App() {
                   <Routes>
                     <Route path="/" element={<Home onAuthAction={handleAuthAction} />} />
                     <Route path="/progress" element={<Progress />} />
-                    <Route path="/prayers" element={<PrayerTimesComingSoon />} />
+                    <Route path="/prayers" element={<PrayerTimes />} /> {/* Make sure this line exists */}
                     <Route path="/calendar" element={<Calendar />} />
                     <Route path="/mosques" element={<MosqueFinderComingSoon />} />
                     <Route path="/settings" element={<Settings />} />
