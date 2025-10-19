@@ -168,17 +168,17 @@ export const NotificationProvider = ({ children }) => {
     let scheduledCount = 0;
 
     // TEST: Send immediate test notifications for PWA
-    console.log('🧪 Scheduling test notifications for PWA...');
+    console.log('🧪 Scheduling test notifications...');
     
     // Test notification in 5 seconds
     setTimeout(() => {
-      sendPrayerNotification('Fajr Test');
+      sendPrayerNotification('Fajr');
       console.log('🧪 Test Fajr notification sent');
     }, 5000);
 
     // Test notification in 15 seconds  
     setTimeout(() => {
-      sendPrayerNotification('Dhuhr Test');
+      sendPrayerNotification('Dhuhr');
       console.log('🧪 Test Dhuhr notification sent');
     }, 15000);
 
@@ -249,43 +249,38 @@ export const NotificationProvider = ({ children }) => {
       return false;
     }
 
-    const options = {
-      body: `It's time for ${prayerName} prayer. May your prayers be accepted. 🌙`,
-      tag: `prayer-${prayerName}-${Date.now()}`,
-      requireInteraction: true,
-      vibrate: [200, 100, 200],
-      actions: [
-        {
-          action: 'snooze',
-          title: '⏰ Snooze 5 min'
-        },
-        {
-          action: 'dismiss',
-          title: '❌ Dismiss'
-        }
-      ]
-    };
-
     try {
-      // Use service worker for PWA, fallback to browser notifications
+      // Use service worker for PWA (supports actions)
       if ('serviceWorker' in navigator && serviceWorkerReady) {
+        const options = {
+          body: `It's time for ${prayerName} prayer. May your prayers be accepted. 🌙`,
+          tag: `prayer-${prayerName}-${Date.now()}`,
+          requireInteraction: true,
+          vibrate: [200, 100, 200],
+          actions: [
+            {
+              action: 'snooze',
+              title: '⏰ Snooze 5 min'
+            },
+            {
+              action: 'dismiss',
+              title: '❌ Dismiss'
+            }
+          ]
+        };
+
         navigator.serviceWorker.ready.then(registration => {
           registration.showNotification(`${prayerName} Prayer Time`, options)
             .then(() => console.log(`📢 PWA Notification sent: ${prayerName}`))
             .catch(error => {
-              console.error('PWA Notification failed, falling back to browser:', error);
-              // Fallback to browser notifications
-              new Notification(`${prayerName} Prayer Time`, options);
+              console.error('PWA Notification failed, falling back to simple notification:', error);
+              // Fallback to simple browser notification without actions
+              sendSimpleBrowserNotification(prayerName);
             });
         });
       } else {
-        // Fallback to browser notifications
-        const notification = new Notification(`${prayerName} Prayer Time`, options);
-        notification.onclick = () => {
-          window.focus();
-          notification.close();
-        };
-        console.log(`📢 Browser Notification sent: ${prayerName}`);
+        // Use simple browser notifications (no actions)
+        sendSimpleBrowserNotification(prayerName);
       }
       
       return true;
@@ -293,6 +288,22 @@ export const NotificationProvider = ({ children }) => {
       console.error('Error sending notification:', error);
       return false;
     }
+  };
+
+  const sendSimpleBrowserNotification = (prayerName) => {
+    // Simple notification without actions for browsers that don't support them
+    const options = {
+      body: `It's time for ${prayerName} prayer. May your prayers be accepted. 🌙`,
+      tag: `prayer-${prayerName}-${Date.now()}`,
+      requireInteraction: false // Don't require interaction for simple notifications
+    };
+
+    const notification = new Notification(`${prayerName} Prayer Time`, options);
+    notification.onclick = () => {
+      window.focus();
+      notification.close();
+    };
+    console.log(`📢 Simple Browser Notification sent: ${prayerName}`);
   };
 
   const refreshNotifications = async () => {

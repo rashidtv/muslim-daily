@@ -1,4 +1,4 @@
-const CACHE_NAME = 'muslim-daily-v3.1.0';
+const CACHE_NAME = 'muslim-daily-v3.2.0';
 const urlsToCache = [
   '/',
   '/static/js/bundle.js',
@@ -99,19 +99,32 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
   if (event.action === 'snooze') {
+    // Reschedule notification after 5 minutes
     event.waitUntil(
       self.registration.showNotification(
         event.notification.title,
         {
-          ...event.notification,
           body: '⏰ Reminder: ' + event.notification.body,
-          tag: 'snoozed-' + Date.now()
+          tag: 'snoozed-' + Date.now(),
+          requireInteraction: true,
+          vibrate: [200, 100, 200],
+          actions: [
+            {
+              action: 'snooze',
+              title: '⏰ Snooze 5 min'
+            },
+            {
+              action: 'dismiss',
+              title: '❌ Dismiss'
+            }
+          ]
         }
       )
     );
   } else if (event.action === 'dismiss') {
     console.log('Notification dismissed');
   } else {
+    // Default click behavior - open app
     event.waitUntil(
       clients.matchAll({ 
         type: 'window',
