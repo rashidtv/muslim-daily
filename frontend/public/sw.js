@@ -1,6 +1,4 @@
-// Simple Service Worker
-const CACHE_NAME = 'muslim-daily-v1';
-
+// Empty service worker - no updates, no caching
 self.addEventListener('install', (event) => {
   self.skipWaiting();
 });
