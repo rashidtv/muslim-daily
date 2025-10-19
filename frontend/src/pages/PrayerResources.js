@@ -14,7 +14,7 @@ import {
   Mosque,
   Refresh
 } from '@mui/icons-material';
-import { getQiblaDirection } from 'qibla-direction';
+import * as qibla from 'qibla-direction';
 
 const PrayerResources = () => {
   const [qiblaDirection, setQiblaDirection] = useState(null);
@@ -38,8 +38,8 @@ const PrayerResources = () => {
         setUserLocation({ latitude, longitude });
         
         try {
-          // Use the reliable qibla-direction package
-          const direction = getQiblaDirection([longitude, latitude]);
+          // Use the reliable qibla-direction package with correct syntax
+          const direction = qibla(longitude, latitude);
           console.log('📍 Location:', latitude, longitude);
           console.log('🧭 Accurate Qibla Direction:', direction);
           
