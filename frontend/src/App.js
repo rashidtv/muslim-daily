@@ -551,13 +551,13 @@ function App() {
                   }}
                 >
                  <Routes>
-                  <Route path="/" element={<Home onAuthAction={handleAuthAction} />} />
-                  <Route path="/progress" element={<Progress />} />
-                  <Route path="/prayer-resources" element={<PrayerResources />} /> {/* This was probably missing or wrong path */}
-                  <Route path="/calendar" element={<Calendar />} />
-                  <Route path="/settings" element={<Settings />} />
-                  <Route path="*" element={<Home onAuthAction={handleAuthAction} />} />
-                </Routes>
+  <Route path="/" element={<Home onAuthAction={handleAuthAction} />} />
+  <Route path="/progress" element={<Progress />} />
+  <Route path="/prayer-resources" element={<PrayerResources />} /> {/* This line must exist */}
+  <Route path="/calendar" element={<Calendar />} />
+  <Route path="/settings" element={<Settings />} />
+  <Route path="*" element={<Home onAuthAction={handleAuthAction} />} />
+</Routes>
                 </Container>
 
                 {/* Mobile Bottom Navigation */}
