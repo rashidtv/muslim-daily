@@ -11,91 +11,36 @@ root.render(
   </React.StrictMode>
 );
 
-// Service Worker Registration with Auto-Updates
+// Simple Service Worker Registration
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', async () => {
-    try {
-      // Use a cache-busting URL to force update detection
-      const registration = await navigator.serviceWorker.register('/sw.js?v=' + Date.now());
-      
-      console.log('✅ SW registered: ', registration);
-
-      // Check for updates immediately and every 30 minutes
-      registration.update();
-      setInterval(() => registration.update(), 30 * 60 * 1000);
-
-      // Listen for new service worker installation
-      registration.addEventListener('updatefound', () => {
-        const newWorker = registration.installing;
-        console.log('🔄 New SW update found!');
-
-        newWorker.addEventListener('statechange', () => {
-          console.log('🔄 SW state:', newWorker.state);
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js?v=1.1')
+      .then((registration) => {
+        console.log('✅ SW registered: ', registration);
+        
+        // Check for updates when app starts
+        registration.update();
+        
+        // Listen for updates
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          console.log('🔄 New SW update found!');
           
-          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-            // New content is available - show update notification
-            console.log('✅ New version available!');
-            showUpdateNotification();
-          }
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              // Notify app about update
+              if (window.showPWAUpdateNotification) {
+                window.showPWAUpdateNotification();
+              }
+            }
+          });
         });
+      })
+      .catch((error) => {
+        console.log('❌ SW registration failed: ', error);
       });
-
-      // Listen for messages from service worker
-      navigator.serviceWorker.addEventListener('message', (event) => {
-        if (event.data && event.data.type === 'NEW_VERSION_AVAILABLE') {
-          showUpdateNotification();
-        }
-      });
-
-    } catch (error) {
-      console.log('❌ SW registration failed: ', error);
-    }
-  });
-
-  // Auto-reload when new service worker takes control
-  let isRefreshing = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!isRefreshing) {
-      console.log('🔄 New SW activated, reloading...');
-      isRefreshing = true;
-      window.location.reload();
-    }
   });
 }
-
-// Show update notification to user
-function showUpdateNotification() {
-  // Check if we're in a PWA
-  const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
-                window.navigator.standalone ||
-                document.referrer.includes('android-app://');
-
-  if (isPWA) {
-    // For PWA - rely on the App.js notification system
-    if (window.showPWAUpdateNotification) {
-      window.showPWAUpdateNotification();
-    }
-  } else {
-    // For browser - use the App.js notification system
-    if (window.showPWAUpdateNotification) {
-      window.showPWAUpdateNotification();
-    } else {
-      // Fallback: auto-update after short delay
-      setTimeout(() => {
-        window.location.reload();
-      }, 3000);
-    }
-  }
-}
-
-// Make update function available globally for App.js to use
-window.checkForUpdates = () => {
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.ready.then(registration => {
-      registration.update();
-    });
-  }
-};
 
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))

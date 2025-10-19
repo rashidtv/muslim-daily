@@ -12,8 +12,7 @@ import {
 import {
   CompassCalibration,
   Mosque,
-  Refresh,
-  MyLocation
+  Refresh
 } from '@mui/icons-material';
 
 const PrayerResources = () => {
@@ -21,10 +20,25 @@ const PrayerResources = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Simple Qibla calculation for Malaysia (generally Southeast direction)
-  const getQiblaForMalaysia = () => {
-    // For Malaysia, Qibla is generally Northwest direction (~292° from North)
-    return 292;
+  // Accurate Qibla calculation for any location
+  const calculateQibla = (lat, lng) => {
+    // Mecca coordinates
+    const meccaLat = 21.4225;
+    const meccaLng = 39.8262;
+
+    // Convert to radians
+    const phiK = (meccaLat * Math.PI) / 180.0;
+    const lambdaK = (meccaLng * Math.PI) / 180.0;
+    const phi = (lat * Math.PI) / 180.0;
+    const lambda = (lng * Math.PI) / 180.0;
+
+    // Calculate Qibla direction
+    const psi = (180.0 / Math.PI) * Math.atan2(
+      Math.sin(lambdaK - lambda),
+      Math.cos(phi) * Math.tan(phiK) - Math.sin(phi) * Math.cos(lambdaK - lambda)
+    );
+
+    return (psi + 360.0) % 360.0;
   };
 
   const getUserLocation = () => {
@@ -32,8 +46,8 @@ const PrayerResources = () => {
     setError('');
 
     if (!navigator.geolocation) {
-      // Fallback to Malaysia general direction
-      setQiblaDirection(getQiblaForMalaysia());
+      setError('Geolocation not supported. Using default Malaysia direction.');
+      setQiblaDirection(292); // Default for Malaysia
       setLoading(false);
       return;
     }
@@ -41,32 +55,24 @@ const PrayerResources = () => {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
+        console.log('User location:', latitude, longitude);
         
-        // Simple calculation: Malaysia is generally Northwest of Mecca
-        // For most locations in Malaysia, Qibla is around 290-300 degrees
-        let direction = getQiblaForMalaysia();
+        const direction = calculateQibla(latitude, longitude);
+        console.log('Calculated Qibla:', direction);
         
-        // Adjust slightly based on exact location in Malaysia
-        if (latitude > 4 && latitude < 6) { // Northern Malaysia
-          direction = 295;
-        } else if (latitude > 1 && latitude < 3) { // Southern Malaysia
-          direction = 290;
-        } else { // Central Malaysia
-          direction = 292;
-        }
-        
-        setQiblaDirection(direction);
+        setQiblaDirection(Math.round(direction));
         setLoading(false);
       },
-      (error) => {
-        // Fallback to general Malaysia direction
-        setQiblaDirection(getQiblaForMalaysia());
+      (locationError) => {
+        console.error('Location error:', locationError);
+        setError('Could not get location. Using default direction.');
+        setQiblaDirection(292); // Fallback for Malaysia
         setLoading(false);
       },
       {
-        enableHighAccuracy: false, // Faster location
-        timeout: 5000,
-        maximumAge: 300000 // 5 minutes
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 60000
       }
     );
   };
@@ -77,7 +83,6 @@ const PrayerResources = () => {
 
   const Compass = ({ direction }) => (
     <Box sx={{ position: 'relative', width: 200, height: 200, margin: '0 auto', mb: 3 }}>
-      {/* Compass Circle */}
       <Box
         sx={{
           width: '100%',
@@ -86,8 +91,7 @@ const PrayerResources = () => {
           border: '3px solid',
           borderColor: 'primary.main',
           position: 'relative',
-          backgroundColor: '#f8f9fa',
-          background: 'conic-gradient(from 0deg, #0D9488, #F59E0B, #0D9488)'
+          backgroundColor: '#f8f9fa'
         }}
       >
         {/* Qibla Indicator */}
@@ -101,7 +105,6 @@ const PrayerResources = () => {
             backgroundColor: '#FF0000',
             transform: `translate(-50%, -100%) rotate(${direction}deg)`,
             transformOrigin: 'bottom center',
-            borderRadius: 2,
             boxShadow: '0 0 10px rgba(255, 0, 0, 0.7)'
           }}
         />
@@ -122,58 +125,10 @@ const PrayerResources = () => {
         />
 
         {/* Direction markers */}
-        <Typography
-          variant="caption"
-          fontWeight="bold"
-          sx={{
-            position: 'absolute',
-            top: '5%',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            color: 'white'
-          }}
-        >
-          N
-        </Typography>
-        <Typography
-          variant="caption"
-          fontWeight="bold"
-          sx={{
-            position: 'absolute',
-            top: '50%',
-            right: '5%',
-            transform: 'translateY(-50%)',
-            color: 'white'
-          }}
-        >
-          E
-        </Typography>
-        <Typography
-          variant="caption"
-          fontWeight="bold"
-          sx={{
-            position: 'absolute',
-            bottom: '5%',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            color: 'white'
-          }}
-        >
-          S
-        </Typography>
-        <Typography
-          variant="caption"
-          fontWeight="bold"
-          sx={{
-            position: 'absolute',
-            top: '50%',
-            left: '5%',
-            transform: 'translateY(-50%)',
-            color: 'white'
-          }}
-        >
-          W
-        </Typography>
+        <Typography variant="caption" fontWeight="bold" sx={{ position: 'absolute', top: '5%', left: '50%', transform: 'translateX(-50%)', color: 'text.primary' }}>N</Typography>
+        <Typography variant="caption" fontWeight="bold" sx={{ position: 'absolute', top: '50%', right: '5%', transform: 'translateY(-50%)', color: 'text.primary' }}>E</Typography>
+        <Typography variant="caption" fontWeight="bold" sx={{ position: 'absolute', bottom: '5%', left: '50%', transform: 'translateX(-50%)', color: 'text.primary' }}>S</Typography>
+        <Typography variant="caption" fontWeight="bold" sx={{ position: 'absolute', top: '50%', left: '5%', transform: 'translateY(-50%)', color: 'text.primary' }}>W</Typography>
       </Box>
     </Box>
   );
@@ -189,7 +144,6 @@ const PrayerResources = () => {
         </Typography>
       </Box>
 
-      {/* Qibla Direction */}
       <Card sx={{ mb: 3 }}>
         <CardContent sx={{ textAlign: 'center' }}>
           <CompassCalibration sx={{ fontSize: 40, color: 'primary.main', mb: 2 }} />
@@ -197,11 +151,17 @@ const PrayerResources = () => {
             Qibla Direction
           </Typography>
           
+          {error && (
+            <Alert severity="warning" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
+
           {loading ? (
             <Box sx={{ py: 4 }}>
               <CircularProgress size={40} />
               <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                Finding your direction to Mecca...
+                Calculating direction to Mecca...
               </Typography>
             </Box>
           ) : (
@@ -213,17 +173,14 @@ const PrayerResources = () => {
               </Typography>
               
               <Typography variant="body1" gutterBottom>
-                Face Northwest direction for prayer
-              </Typography>
-
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                ↖️ Point yourself between North and West
+                Face this direction for prayer
               </Typography>
 
               <Button 
                 startIcon={<Refresh />}
                 onClick={getUserLocation}
                 variant="outlined"
+                sx={{ mt: 1 }}
               >
                 Recalibrate
               </Button>
@@ -232,7 +189,6 @@ const PrayerResources = () => {
         </CardContent>
       </Card>
 
-      {/* Mosque Finder */}
       <Card>
         <CardContent sx={{ textAlign: 'center' }}>
           <Mosque sx={{ fontSize: 40, color: 'primary.main', mb: 2 }} />
@@ -243,19 +199,7 @@ const PrayerResources = () => {
             Find nearby mosques and prayer facilities
           </Typography>
           
-          <Box 
-            sx={{ 
-              height: 150, 
-              display: 'flex', 
-              alignItems: 'center', 
-              justifyContent: 'center',
-              backgroundColor: 'background.default',
-              borderRadius: 1,
-              border: `2px dashed`,
-              borderColor: 'divider',
-              mt: 2
-            }}
-          >
+          <Box sx={{ height: 150, display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'background.default', borderRadius: 1, border: '2px dashed', borderColor: 'divider', mt: 2 }}>
             <Typography variant="body1" color="text.secondary">
               Coming Soon
             </Typography>
