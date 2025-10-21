@@ -414,13 +414,7 @@ const PrayerResources = () => {
 <Button 
   startIcon={<Refresh />} 
   onClick={() => {
-    console.log('🔍 Compass Debug:', {
-      qiblaDirection,
-      deviceHeading,
-      compassActive,
-      currentAngle: getQiblaAngle(),
-      userLocation
-    });
+    debugCompass(); // Use the debug function from context
   }}
   variant="outlined"
   color="secondary"

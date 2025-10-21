@@ -19,6 +19,7 @@ export const CompassProvider = ({ children }) => {
   const [compassError, setCompassError] = useState('');
   const compassListenerRef = useRef(null);
   const lastHeadingRef = useRef(0);
+  const eventCountRef = useRef(0);
 
   // Check compass permission status on load
   useEffect(() => {
@@ -50,102 +51,143 @@ export const CompassProvider = ({ children }) => {
   };
 
   const handleCompass = (event) => {
-    if (event.alpha !== null) {
-      let heading = event.alpha;
-      
-      console.log('🧭 Raw compass data:', {
-        alpha: event.alpha,
-        beta: event.beta,
-        gamma: event.gamma,
-        webkitCompassHeading: event.webkitCompassHeading
-      });
+    eventCountRef.current++;
+    
+    let heading = null;
 
-      // For iOS Safari - use webkitCompassHeading if available
-      if (typeof event.webkitCompassHeading !== 'undefined' && event.webkitCompassHeading !== null) {
-        heading = event.webkitCompassHeading;
-        console.log('📱 Using iOS webkitCompassHeading:', heading);
+    // For iOS Safari
+    if (typeof event.webkitCompassHeading !== 'undefined') {
+      heading = event.webkitCompassHeading;
+      console.log(`📱 iOS Compass Heading: ${heading}° (Event #${eventCountRef.current})`);
+    }
+    // For Android and other browsers
+    else if (event.alpha !== null) {
+      // Convert device orientation to compass heading
+      heading = (360 - event.alpha) % 360;
+      console.log(`🤖 Device Orientation - Alpha: ${event.alpha}°, Converted Heading: ${heading}° (Event #${eventCountRef.current})`);
+    }
+
+    if (heading !== null && !isNaN(heading)) {
+      // Smooth the heading changes
+      const smoothing = 0.3;
+      const currentHeading = lastHeadingRef.current;
+      let smoothedHeading;
+      
+      // Handle the 0-360 wrap-around for smoothing
+      if (Math.abs(heading - currentHeading) > 180) {
+        if (heading > currentHeading) {
+          smoothedHeading = (currentHeading * (1 - smoothing) + (heading - 360) * smoothing + 360) % 360;
+        } else {
+          smoothedHeading = (currentHeading * (1 - smoothing) + (heading + 360) * smoothing) % 360;
+        }
       } else {
-        // For Android and other browsers - convert alpha to compass heading
-        // DeviceOrientation alpha is 0-360, but we need to convert to compass heading
-        heading = (360 - event.alpha) % 360;
-        console.log('🤖 Using standard alpha converted to heading:', heading);
+        smoothedHeading = currentHeading * (1 - smoothing) + heading * smoothing;
       }
       
-      if (heading !== null && !isNaN(heading)) {
-        // Smooth the heading changes for better UX
-        const smoothing = 0.2;
-        const smoothedHeading = lastHeadingRef.current * (1 - smoothing) + heading * smoothing;
-        
-        setDeviceHeading(smoothedHeading);
-        lastHeadingRef.current = smoothedHeading;
-        
-        console.log('🎯 Heading updated:', {
-          raw: heading,
-          smoothed: smoothedHeading,
-          qiblaDirection: qiblaDirection,
-          relativeAngle: (qiblaDirection - smoothedHeading + 360) % 360
-        });
-      }
+      setDeviceHeading(smoothedHeading);
+      lastHeadingRef.current = smoothedHeading;
+    } else {
+      console.warn('⚠️ No valid compass data received:', {
+        alpha: event.alpha,
+        webkitCompassHeading: event.webkitCompassHeading,
+        beta: event.beta,
+        gamma: event.gamma
+      });
     }
   };
 
   const setupCompass = () => {
-    if (window.DeviceOrientationEvent) {
-      // Remove any existing listener first
-      if (compassListenerRef.current) {
-        window.removeEventListener('deviceorientation', compassListenerRef.current, true);
-      }
-
-      compassListenerRef.current = handleCompass;
-      
-      // Add event listener with better error handling
-      try {
-        window.addEventListener('deviceorientation', handleCompass, true);
-        setCompassActive(true);
-        setCompassError('');
-        console.log('🎯 Global compass activated successfully - event listener added');
-        
-        // Test if we're getting events
-        setTimeout(() => {
-          console.log('🔍 Compass status check - active:', compassActive, 'listener set:', !!compassListenerRef.current);
-        }, 1000);
-        
-      } catch (error) {
-        console.error('❌ Failed to add compass event listener:', error);
-        setCompassError('Failed to start compass sensor');
-      }
-    } else {
+    if (!window.DeviceOrientationEvent) {
       console.error('❌ DeviceOrientationEvent not supported');
       setCompassError('Compass not supported on this device');
+      return;
     }
+
+    console.log('🔄 Setting up compass...');
+
+    // Remove any existing listener first
+    if (compassListenerRef.current) {
+      window.removeEventListener('deviceorientation', compassListenerRef.current, true);
+      console.log('🗑️ Removed previous compass listener');
+    }
+
+    // Reset counters
+    eventCountRef.current = 0;
+    lastHeadingRef.current = 0;
+
+    // Set up new listener
+    compassListenerRef.current = handleCompass;
+    
+    try {
+      // Use capture phase and make it non-passive to ensure we get events
+      window.addEventListener('deviceorientation', handleCompass, {
+        capture: true,
+        passive: false
+      });
+      
+      setCompassActive(true);
+      setCompassError('');
+      console.log('🎯 Compass event listener added successfully');
+      
+      // Set up a test to check if events are coming through
+      const testTimeout = setTimeout(() => {
+        if (eventCountRef.current === 0) {
+          console.warn('⚠️ No compass events received in 2 seconds - checking permissions...');
+          checkCompassEvents();
+        } else {
+          console.log(`✅ Compass working - received ${eventCountRef.current} events`);
+        }
+      }, 2000);
+
+      return () => clearTimeout(testTimeout);
+      
+    } catch (error) {
+      console.error('❌ Failed to add compass event listener:', error);
+      setCompassError('Failed to start compass sensor: ' + error.message);
+    }
+  };
+
+  const checkCompassEvents = () => {
+    console.log('🔍 Checking compass event status:', {
+      hasListener: !!compassListenerRef.current,
+      eventCount: eventCountRef.current,
+      deviceHeading,
+      compassActive
+    });
   };
 
   const stopCompass = () => {
     if (compassListenerRef.current) {
       window.removeEventListener('deviceorientation', compassListenerRef.current, true);
       compassListenerRef.current = null;
+      console.log('⏹️ Compass stopped - event listener removed');
     }
     setCompassActive(false);
     setDeviceHeading(0);
     lastHeadingRef.current = 0;
-    console.log('⏹️ Global compass stopped');
+    eventCountRef.current = 0;
   };
 
   const autoEnableCompass = async () => {
-    if (compassActive || !window.DeviceOrientationEvent) {
-      console.log('ℹ️ Compass already active or not supported');
+    if (compassActive) {
+      console.log('ℹ️ Compass already active');
       return;
     }
 
-    console.log('🔄 Attempting to auto-enable global compass...');
+    if (!window.DeviceOrientationEvent) {
+      console.error('❌ Device orientation not supported');
+      setCompassError('Compass not supported on this device');
+      return;
+    }
+
+    console.log('🔄 Attempting to auto-enable compass...');
 
     try {
       // Check if we already have permission
       const savedPermission = localStorage.getItem('compassPermission');
       
       if (savedPermission === 'granted') {
-        // Already have permission - just enable compass
-        console.log('✅ Already have compass permission - enabling global compass');
+        console.log('✅ Already have compass permission - enabling compass');
         setupCompass();
         return;
       }
@@ -171,7 +213,7 @@ export const CompassProvider = ({ children }) => {
         }
       } else {
         // For Android and desktop - no permission needed, just enable
-        console.log('🤖 Android/Desktop - auto-enabling global compass');
+        console.log('🤖 Android/Desktop - auto-enabling compass');
         localStorage.setItem('compassPermission', 'granted');
         setCompassPermissionGranted(true);
         setupCompass();
@@ -200,13 +242,22 @@ export const CompassProvider = ({ children }) => {
     // Calculate the relative direction from current heading to Qibla
     const relativeDirection = (qiblaDirection - deviceHeading + 360) % 360;
     
-    console.log('🧭 Qibla angle calculation:', {
+    return relativeDirection;
+  };
+
+  // Debug function to check compass status
+  const debugCompass = () => {
+    console.log('🔍 COMPASS DEBUG:', {
       qiblaDirection,
       deviceHeading,
-      relativeDirection
+      compassActive,
+      compassPermissionGranted,
+      userLocation,
+      eventCount: eventCountRef.current,
+      lastHeading: lastHeadingRef.current,
+      hasListener: !!compassListenerRef.current,
+      relativeAngle: getQiblaAngle()
     });
-    
-    return relativeDirection;
   };
 
   // Cleanup on unmount
@@ -230,7 +281,8 @@ export const CompassProvider = ({ children }) => {
     stopCompass,
     setupCompass,
     getQiblaAngle,
-    setCompassError
+    setCompassError,
+    debugCompass // Add debug function to context
   };
 
   return (
