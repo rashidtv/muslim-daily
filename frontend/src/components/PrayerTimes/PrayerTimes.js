@@ -12,7 +12,7 @@ import {
   Snackbar,
   Grid
 } from '@mui/material';
-import { Refresh, CheckCircle, RadioButtonUnchecked, MyLocation, PrayerTimes as PrayerIcon } from '@mui/icons-material';
+import { Refresh, CheckCircle, RadioButtonUnchecked, MyLocation } from '@mui/icons-material'; // REMOVED PrayerTimes import
 import { usePractice } from '../../context/PracticeContext';
 import { useAuth } from '../../context/AuthContext';
 import { calculatePrayerTimes, getCurrentLocation, getNextPrayer } from '../../utils/prayerTimes';
@@ -170,7 +170,8 @@ const PrayerTimes = () => {
           {/* Compact Header */}
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <PrayerIcon sx={{ fontSize: 20, color: 'primary.main' }} />
+              {/* CHANGED: Using mosque emoji instead of non-existent icon */}
+              <Typography variant="h6" sx={{ fontSize: '1.2rem' }}>🕌</Typography>
               <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: '600' }}>
                 Prayer Times
               </Typography>
