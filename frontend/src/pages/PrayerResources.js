@@ -8,136 +8,70 @@ import {
   Button,
   Alert,
   CircularProgress,
-  Chip,
-  Snackbar
+  Chip
 } from '@mui/material';
 import {
   Explore,
   Refresh,
   Navigation,
-  Place,
-  NotificationsActive
+  Place
 } from '@mui/icons-material';
-import { useNotification } from '../context/NotificationContext';
 import { useCompass } from '../context/CompassContext';
 
 const PrayerResources = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [locationName, setLocationName] = useState('');
-  const [isPWA, setIsPWA] = useState(false);
-  const [showPWAAlert, setShowPWAAlert] = useState(false);
-  const [gettingLocationName, setGettingLocationName] = useState(false);
 
-  // Use the global compass context
   const {
     qiblaDirection,
     deviceHeading,
     compassActive,
-    compassSupported,
-    compassAvailable,
-    usingSimulation,
     userLocation,
     compassError,
     setUserLocationAndCalculateQibla,
-    autoEnableCompass,
-    manualStartCompass,
+    startCompass,
     stopCompass,
-    getQiblaAngle,
-    debugCompass,
-    testCompassMovement
+    getQiblaAngle
   } = useCompass();
 
-  // Get notification status
-  const { notificationsEnabled, loading: notificationsLoading, serviceWorkerReady } = useNotification();
-
-  // Check PWA status on load
   useEffect(() => {
-    checkPWA();
-    // Auto-get location when component mounts
     if (!userLocation) {
       getLocation();
-    } else {
-      // If we already have location but compass isn't active, try to enable it
-      if (!compassActive) {
-        console.log('📍 Location exists but compass inactive - re-enabling...');
-        autoEnableCompass();
-      }
     }
   }, []);
 
-  const checkPWA = () => {
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    const isInPWA = window.navigator.standalone === true || isStandalone;
-    setIsPWA(isInPWA);
-    
-    if (!isInPWA && !localStorage.getItem('pwaAlertShown')) {
-      setShowPWAAlert(true);
-      localStorage.setItem('pwaAlertShown', 'true');
-    }
-    
-    console.log(`📱 PWA Mode: ${isInPWA}`);
-    return isInPWA;
-  };
-
   const getLocationName = async (latitude, longitude) => {
-    setGettingLocationName(true);
     try {
       const response = await fetch(
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
       );
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch location name');
-      }
-      
       const data = await response.json();
       
       if (data && data.address) {
         const address = data.address;
         let locationParts = [];
         
-        if (address.city) {
-          locationParts.push(address.city);
-        } else if (address.town) {
-          locationParts.push(address.town);
-        } else if (address.village) {
-          locationParts.push(address.village);
-        }
+        if (address.city) locationParts.push(address.city);
+        else if (address.town) locationParts.push(address.town);
+        else if (address.village) locationParts.push(address.village);
         
-        if (address.state && !locationParts.includes(address.state)) {
-          locationParts.push(address.state);
-        }
+        if (address.state) locationParts.push(address.state);
+        if (address.country) locationParts.push(address.country);
         
-        if (address.country && !locationParts.includes(address.country)) {
-          locationParts.push(address.country);
-        }
-        
-        const locationString = locationParts.join(', ');
-        setLocationName(locationString);
-        
-        if (data.display_name) {
-          const displayName = data.display_name.split(',').slice(0, 3).join(', ');
-          setLocationName(displayName);
-        }
-      } else {
-        setLocationName(`Location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+        setLocationName(locationParts.join(', '));
       }
     } catch (error) {
-      console.log('Error getting location name:', error);
       setLocationName(`Location: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
-    } finally {
-      setGettingLocationName(false);
     }
   };
 
   const getLocation = () => {
     setLoading(true);
     setError('');
-    setLocationName('');
 
     if (!navigator.geolocation) {
-      setError('Geolocation is not supported by your browser');
+      setError('Geolocation not supported');
       setLoading(false);
       return;
     }
@@ -145,35 +79,15 @@ const PrayerResources = () => {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
-        
-        // Use the global compass context to set location and calculate Qibla
         setUserLocationAndCalculateQibla(latitude, longitude);
-        
         getLocationName(latitude, longitude);
         setLoading(false);
       },
       (err) => {
-        console.error('Location error:', err);
-        let errorMsg = 'Unable to get your location. ';
-        
-        switch (err.code) {
-          case err.PERMISSION_DENIED:
-            errorMsg += isPWA ? 
-              'Please enable location permissions in app settings.' :
-              'Please enable location permissions.';
-            break;
-          default:
-            errorMsg += 'Please try again.';
-        }
-        
-        setError(errorMsg);
+        setError('Unable to get your location');
         setLoading(false);
       },
-      {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 600000
-      }
+      { enableHighAccuracy: true, timeout: 15000 }
     );
   };
 
@@ -183,109 +97,23 @@ const PrayerResources = () => {
     <Container maxWidth="sm" sx={{ py: 3 }}>
       <Card elevation={3}>
         <CardContent sx={{ textAlign: 'center', p: 4 }}>
+          {/* Header */}
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
             <Explore sx={{ fontSize: 48, color: 'primary.main', mr: 1 }} />
-            {isPWA && (
-              <Chip 
-                label="PWA" 
-                size="small" 
-                color="success" 
-                variant="outlined"
-              />
-            )}
           </Box>
           
           <Typography variant="h5" gutterBottom fontWeight="bold">
             Qibla Compass
           </Typography>
 
-          {isPWA && (
-            <Alert severity="success" sx={{ mb: 2 }}>
-              Running in app mode - Best experience! 
-              {compassActive && ' • Compass auto-enabled!'}
-            </Alert>
-          )}
-
-          {/* Service Worker Status */}
-          {serviceWorkerReady && (
-            <Alert severity="success" sx={{ mb: 2 }}>
-              <Typography variant="body2">
-                ✅ PWA Mode Active - Notifications will work even when app is closed
-              </Typography>
-            </Alert>
-          )}
-
-          {/* Prayer Notification Status */}
-          {notificationsEnabled && (
-            <Alert 
-              severity="success" 
-              sx={{ mb: 2 }}
-              icon={<NotificationsActive />}
-            >
-              <Typography variant="body1" fontWeight="600">
-                Prayer Time Notifications Enabled!
-              </Typography>
-              <Typography variant="body2">
-                You'll receive automatic reminders for all 5 daily prayers based on your precise location.
-              </Typography>
-            </Alert>
-          )}
-
-          {!notificationsEnabled && !notificationsLoading && (
-            <Alert severity="info" sx={{ mb: 2 }}>
-              <Typography variant="body2">
-                🔔 Prayer time notifications will be enabled automatically...
-              </Typography>
-            </Alert>
-          )}
-
-          {notificationsLoading && (
-            <Alert severity="info" sx={{ mb: 2 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                <CircularProgress size={16} sx={{ mr: 1 }} />
-                <Typography variant="body2">
-                  Setting up automatic prayer time notifications...
-                </Typography>
-              </Box>
-            </Alert>
-          )}
-
           {/* Compass Status */}
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3, gap: 1 }}>
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
             <Chip 
               icon={<Navigation />}
-              label={
-                compassActive 
-                  ? usingSimulation 
-                    ? "Simulation Active" 
-                    : "Compass Active"
-                  : "Compass Ready"
-              } 
-              color={
-                compassActive 
-                  ? usingSimulation 
-                    ? "warning" 
-                    : "success"
-                  : "primary"
-              }
+              label={compassActive ? "Compass Active" : "Enable Compass"} 
+              color={compassActive ? "success" : "primary"}
               variant={compassActive ? "filled" : "outlined"}
             />
-            {compassActive && usingSimulation && (
-              <Chip 
-                label="Simulation" 
-                size="small" 
-                color="warning" 
-                variant="outlined"
-              />
-            )}
-            {compassActive && !usingSimulation && compassAvailable && (
-              <Chip 
-                label="Real Compass" 
-                size="small" 
-                color="success" 
-                variant="outlined"
-              />
-            )}
           </Box>
 
           {(error || compassError) && (
@@ -300,160 +128,106 @@ const PrayerResources = () => {
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
                 <Place sx={{ fontSize: 20, color: 'primary.main', mr: 1 }} />
                 <Typography variant="h6" color="primary.main">
-                  Your Precise Location
+                  Your Location
                 </Typography>
               </Box>
               
-              {gettingLocationName ? (
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <CircularProgress size={16} sx={{ mr: 1 }} />
-                  <Typography variant="body2" color="text.secondary">
-                    Getting location name...
-                  </Typography>
-                </Box>
-              ) : (
-                <>
-                  <Typography variant="body1" fontWeight="medium" gutterBottom>
-                    {locationName || `GPS: ${userLocation.latitude.toFixed(6)}, ${userLocation.longitude.toFixed(6)}`}
-                  </Typography>
-                  
-                  <Typography variant="caption" color="text.secondary" display="block">
-                    Coordinates: {userLocation.latitude.toFixed(6)}, {userLocation.longitude.toFixed(6)}
-                  </Typography>
-                  {compassActive && (
-                    <Typography variant="caption" display="block" fontWeight="medium" sx={{
-                      color: usingSimulation ? 'warning.main' : 'success.main'
-                    }}>
-                      {usingSimulation 
-                        ? '🎮 Using compass simulation (device has no compass)' 
-                        : '✅ Real compass active & tracking'
-                      }
-                    </Typography>
-                  )}
-                </>
-              )}
+              <Typography variant="body1" fontWeight="medium" gutterBottom>
+                {locationName || `${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)}`}
+              </Typography>
             </Box>
           )}
 
-          {/* Compass Container */}
+          {/* Compass Container - FIXED ARROW POSITIONING */}
           <Box sx={{ 
             position: 'relative', 
-            width: 280, 
-            height: 280, 
-            margin: '0 auto', 
-            mb: 4
+            width: 250, 
+            height: 250, 
+            margin: '0 auto 32px auto',
+            borderRadius: '50%',
+            border: '3px solid',
+            borderColor: compassActive ? 'success.main' : 'primary.main',
+            backgroundColor: '#f8f9fa',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
           }}>
-            <Box sx={{
-              width: '100%', 
-              height: '100%', 
-              borderRadius: '50%', 
-              border: '4px solid',
-              borderColor: compassActive 
-                ? (usingSimulation ? 'warning.main' : 'success.main') 
-                : 'primary.main', 
-              position: 'relative', 
-              backgroundColor: '#f8f9fa',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-              opacity: compassActive ? 1 : 0.8,
-              transition: 'all 0.3s ease'
+            
+            {/* Compass Directions */}
+            <Typography variant="h6" fontWeight="bold" sx={{ 
+              position: 'absolute', 
+              top: 8, 
+              left: '50%', 
+              transform: 'translateX(-50%)', 
+              color: '#d32f2f' 
             }}>
-              
-              {/* Compass Directions */}
-              <Typography variant="h6" fontWeight="bold" sx={{ 
-                position: 'absolute', 
-                top: 8, 
-                left: '50%', 
-                transform: 'translateX(-50%)', 
-                color: '#d32f2f' 
-              }}>
-                N
-              </Typography>
-              <Typography variant="body2" fontWeight="bold" sx={{ 
-                position: 'absolute', 
-                top: '50%', 
-                right: 12, 
-                transform: 'translateY(-50%)' 
-              }}>
-                E
-              </Typography>
-              <Typography variant="body2" fontWeight="bold" sx={{ 
-                position: 'absolute', 
-                bottom: 8, 
-                left: '50%', 
-                transform: 'translateX(-50%)' 
-              }}>
-                S
-              </Typography>
-              <Typography variant="body2" fontWeight="bold" sx={{ 
-                position: 'absolute', 
-                top: '50%', 
-                left: 12, 
-                transform: 'translateY(-50%)' 
-              }}>
-                W
-              </Typography>
+              N
+            </Typography>
+            <Typography variant="body2" fontWeight="bold" sx={{ 
+              position: 'absolute', 
+              top: '50%', 
+              right: 8, 
+              transform: 'translateY(-50%)' 
+            }}>
+              E
+            </Typography>
+            <Typography variant="body2" fontWeight="bold" sx={{ 
+              position: 'absolute', 
+              bottom: 8, 
+              left: '50%', 
+              transform: 'translateX(-50%)' 
+            }}>
+              S
+            </Typography>
+            <Typography variant="body2" fontWeight="bold" sx={{ 
+              position: 'absolute', 
+              top: '50%', 
+              left: 8, 
+              transform: 'translateY(-50%)' 
+            }}>
+              W
+            </Typography>
 
-              {/* Qibla Arrow */}
-              <Box sx={{
+            {/* Qibla Arrow - FIXED POSITIONING */}
+            <Box sx={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              width: 2,
+              height: '40%',
+              backgroundColor: compassActive ? '#1976d2' : '#90caf9',
+              transform: `translate(-50%, -100%) rotate(${currentAngle}deg)`,
+              transformOrigin: 'bottom center',
+              zIndex: 2,
+              '&::after': {
+                content: '""',
                 position: 'absolute',
-                top: '50%',
+                bottom: 0,
                 left: '50%',
-                width: 3,
-                height: '45%',
-                backgroundColor: compassActive 
-                  ? (usingSimulation ? '#ed6c02' : '#1976d2') 
-                  : '#90caf9',
-                transform: `translate(-50%, -50%) rotate(${currentAngle}deg)`,
-                transformOrigin: 'center bottom',
-                zIndex: 2,
-                borderRadius: '2px',
-                transition: 'transform 0.3s ease',
-                '&::after': {
-                  content: '""',
-                  position: 'absolute',
-                  top: '-10px',
-                  left: '50%',
-                  transform: 'translateX(-50%)',
-                  width: 0,
-                  height: 0,
-                  borderLeft: '6px solid transparent',
-                  borderRight: '6px solid transparent',
-                  borderBottom: `10px solid ${
-                    compassActive 
-                      ? (usingSimulation ? '#ed6c02' : '#1976d2') 
-                      : '#90caf9'
-                  }`,
-                  transition: 'all 0.3s ease'
-                }
-              }} />
+                transform: 'translateX(-50%)',
+                width: 0,
+                height: 0,
+                borderLeft: '6px solid transparent',
+                borderRight: '6px solid transparent',
+                borderTop: `12px solid ${compassActive ? '#1976d2' : '#90caf9'}`
+              }
+            }} />
 
-              {/* Center Pin */}
-              <Box sx={{
-                position: 'absolute', 
-                top: '50%', 
-                left: '50%', 
-                width: 20, 
-                height: 20,
-                backgroundColor: '#d32f2f', 
-                borderRadius: '50%', 
-                transform: 'translate(-50%, -50%)',
-                border: '3px solid white',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                zIndex: 3
-              }} />
-
-              {/* Compass Degree Markings */}
-              <Box sx={{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                width: '92%',
-                height: '92%',
-                transform: 'translate(-50%, -50%)',
-                borderRadius: '50%',
-                border: '1px solid rgba(0,0,0,0.1)'
-              }} />
-            </Box>
+            {/* Center Pin */}
+            <Box sx={{
+              position: 'absolute', 
+              top: '50%', 
+              left: '50%', 
+              width: 16, 
+              height: 16,
+              backgroundColor: '#d32f2f', 
+              borderRadius: '50%', 
+              transform: 'translate(-50%, -50%)',
+              border: '2px solid white',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+              zIndex: 3
+            }} />
           </Box>
 
           {/* Direction Display */}
@@ -464,19 +238,15 @@ const PrayerResources = () => {
               </Typography>
               <Typography variant="h6" gutterBottom color="text.primary">
                 {compassActive 
-                  ? usingSimulation 
-                    ? `Face ${qiblaDirection}° from North towards Mecca`
-                    : `Point towards Mecca (${currentAngle.toFixed(0)}°)` 
-                  : `Face ${qiblaDirection}° from North towards Mecca`
+                  ? `Point towards Mecca (${currentAngle.toFixed(0)}°)` 
+                  : `Face ${qiblaDirection}° from North`
                 }
               </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {compassActive && (
-                  usingSimulation 
-                    ? "🎮 Simulation mode - arrow moves automatically"
-                    : "📱 Real compass mode - move your device to see direction change"
-                )}
-              </Typography>
+              {compassActive && (
+                <Typography variant="body2" color="text.secondary">
+                  Current heading: {deviceHeading.toFixed(0)}°
+                </Typography>
+              )}
             </Box>
           )}
 
@@ -487,87 +257,30 @@ const PrayerResources = () => {
               onClick={getLocation}
               variant="outlined"
               disabled={loading}
-              size="medium"
             >
-              {loading ? <CircularProgress size={20} /> : 'Recalibrate'}
+              {loading ? <CircularProgress size={20} /> : 'Refresh Location'}
             </Button>
             
             <Button 
               startIcon={<Navigation />} 
-              onClick={compassActive ? stopCompass : manualStartCompass}
+              onClick={compassActive ? stopCompass : startCompass}
               variant={compassActive ? "outlined" : "contained"}
               color={compassActive ? "secondary" : "primary"}
-              disabled={!userLocation}
-              size="medium"
             >
               {compassActive ? 'Stop Compass' : 'Start Compass'}
             </Button>
-
-            {/* Debug Button */}
-            <Button 
-              startIcon={<Refresh />} 
-              onClick={debugCompass}
-              variant="outlined"
-              color="secondary"
-              size="medium"
-            >
-              Debug
-            </Button>
-
-            {/* Test Compass Button */}
-            <Button 
-              startIcon={<Refresh />} 
-              onClick={testCompassMovement}
-              variant="outlined"
-              color="warning"
-              disabled={!compassActive}
-              size="medium"
-            >
-              Test Movement
-            </Button>
           </Box>
 
-          {/* Compass Information */}
-          {compassActive && (
+          {/* Instructions */}
+          {!compassActive && (
             <Alert severity="info" sx={{ mt: 2 }}>
               <Typography variant="body2">
-                <strong>
-                  {usingSimulation 
-                    ? "Simulation Mode" 
-                    : "Real Compass Mode"
-                  }
-                </strong>
-                <br />
-                {usingSimulation 
-                  ? "Your device doesn't have compass hardware. The arrow shows the Qibla direction and moves automatically for demonstration."
-                  : "Compass is active! Rotate your device to see the arrow point towards Mecca."
-                }
-              </Typography>
-            </Alert>
-          )}
-
-          {/* PWA Benefits Notice */}
-          {!isPWA && (
-            <Alert severity="info" sx={{ mt: 2 }}>
-              <Typography variant="body2">
-                <strong>Tip:</strong> Install as app for better compass performance and offline access!
+                Click "Start Compass" to enable compass functionality. On iOS, you may need to allow compass permissions.
               </Typography>
             </Alert>
           )}
         </CardContent>
       </Card>
-
-      {/* PWA Installation Prompt */}
-      <Snackbar
-        open={showPWAAlert && !isPWA}
-        onClose={() => setShowPWAAlert(false)}
-        message="Install this app for better compass performance and offline access!"
-        action={
-          <Button color="primary" size="small" onClick={() => setShowPWAAlert(false)}>
-            OK
-          </Button>
-        }
-      />
     </Container>
   );
 };
