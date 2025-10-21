@@ -1,11 +1,9 @@
-import { CalculationMethod, PrayerTimes, Coordinates, Madhab, HighLatitudeRule } from 'adhan';
+import { CalculationMethod, PrayerTimes, Coordinates, Madhab } from 'adhan';
 
-// Malaysia calculation parameters
+// Malaysia calculation parameters - using precise coordinates
 const getCalculationParams = () => {
   const params = CalculationMethod.MuslimWorldLeague();
   params.madhab = Madhab.Shafi;
-  // Remove high latitude rule for Malaysia (not needed near equator)
-  // params.highLatitudeRule = HighLatitudeRule.MiddleOfTheNight;
   params.fajrAngle = 20;
   params.ishaAngle = 18;
   return params;
@@ -20,43 +18,53 @@ const formatTime = (date) => {
   });
 };
 
-// Calculate prayer times for given coordinates and date
+// Calculate prayer times for given coordinates - USING PRECISE GPS
 export const calculatePrayerTimes = (latitude, longitude, date = new Date()) => {
   try {
+    console.log(`📍 Calculating prayer times for EXACT location: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+    
     const coordinates = new Coordinates(latitude, longitude);
     const params = getCalculationParams();
     
     const prayerTimes = new PrayerTimes(coordinates, date, params);
     
-    return {
+    const result = {
       fajr: formatTime(prayerTimes.fajr),
       sunrise: formatTime(prayerTimes.sunrise),
       dhuhr: formatTime(prayerTimes.dhuhr),
       asr: formatTime(prayerTimes.asr),
       maghrib: formatTime(prayerTimes.maghrib),
       isha: formatTime(prayerTimes.isha),
-      method: 'Muslim World League (Mazhab Shafi)',
+      method: 'Muslim World League - Precise GPS',
       location: { latitude, longitude },
       date: date.toDateString(),
       calculated: true,
       success: true
     };
+
+    console.log('✅ Prayer times calculated using PRECISE GPS coordinates');
+    console.log('🕌 Calculated Times:', {
+      fajr: result.fajr,
+      dhuhr: result.dhuhr, 
+      asr: result.asr,
+      maghrib: result.maghrib,
+      isha: result.isha
+    });
+    
+    return result;
   } catch (error) {
     console.error('Prayer time calculation error:', error);
-    // Try with simpler parameters
+    // Fallback - but still use the exact coordinates
     return calculateWithSimpleParams(latitude, longitude, date);
   }
 };
 
-// Alternative calculation with simpler parameters
+// Alternative calculation
 const calculateWithSimpleParams = (latitude, longitude, date = new Date()) => {
   try {
     const coordinates = new Coordinates(latitude, longitude);
     const params = CalculationMethod.MuslimWorldLeague();
     params.madhab = Madhab.Shafi;
-    // Use simpler calculation without high latitude rules
-    params.fajrAngle = 20;
-    params.ishaAngle = 18;
     
     const prayerTimes = new PrayerTimes(coordinates, date, params);
     
@@ -67,21 +75,23 @@ const calculateWithSimpleParams = (latitude, longitude, date = new Date()) => {
       asr: formatTime(prayerTimes.asr),
       maghrib: formatTime(prayerTimes.maghrib),
       isha: formatTime(prayerTimes.isha),
-      method: 'Muslim World League (Simple)',
+      method: 'Muslim World League - Simple',
       location: { latitude, longitude },
       date: date.toDateString(),
       calculated: true,
       success: true
     };
   } catch (error) {
-    console.error('Simple calculation also failed:', error);
-    return getFallbackTimes();
+    console.error('Simple calculation failed:', error);
+    return getFallbackTimes(latitude, longitude);
   }
 };
 
-// Fallback times for Kuala Lumpur
-const getFallbackTimes = () => {
+// Fallback that still shows the actual coordinates
+const getFallbackTimes = (latitude, longitude) => {
   const now = new Date();
+  console.log(`⚠️ Using fallback times but keeping exact location: ${latitude}, ${longitude}`);
+  
   return {
     fajr: '5:45 AM',
     sunrise: '7:10 AM',
@@ -89,64 +99,56 @@ const getFallbackTimes = () => {
     asr: '4:30 PM',
     maghrib: '7:05 PM',
     isha: '8:20 PM',
-    method: 'Fallback (Kuala Lumpur)',
-    location: { latitude: 3.1390, longitude: 101.6869 },
+    method: 'Fallback (Using exact location)',
+    location: { latitude, longitude },
     date: now.toDateString(),
     calculated: false,
     success: true,
-    note: 'Using default Kuala Lumpur times'
+    note: 'Using approximate times but your exact location is recorded'
   };
 };
 
-// Group cities by region for better organization
-export const citiesByRegion = {
-  'West Malaysia': [
-    'Kuala Lumpur', 'Putrajaya', 'Johor Bahru', 'Penang', 'Ipoh', 
-    'Klang', 'Kota Bharu', 'Kuala Terengganu', 'Kuantan', 'Malacca',
-    'Seremban', 'Shah Alam', 'Petaling Jaya', 'Alor Setar', 'Butterworth', 'Taiping'
-  ],
-  'Sabah': [
-    'Kota Kinabalu', 'Sandakan', 'Tawau', 'Lahad Datu', 'Keningau',
-    'Semporna', 'Kudat', 'Ranau', 'Beaufort'
-  ],
-  'Sarawak': [
-    'Kuching', 'Miri', 'Sibu', 'Bintulu', 'Limbang',
-    'Sarikei', 'Sri Aman', 'Kapit', 'Mukah'
-  ],
-  'Federal Territories': [
-    'Labuan'
-  ]
-};
-
-// Get user's current location
+// USE THE SAME LOCATION LOGIC AS QIBLA COMPASS
 export const getCurrentLocation = () => {
   return new Promise((resolve, reject) => { 
     if (!navigator.geolocation) {
+      console.warn('📍 Geolocation not supported');
       reject(new Error('Geolocation not supported'));
       return;
     }
 
+    console.log('📍 Getting PRECISE location for prayer times (same as Qibla)...');
+    
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        resolve({
+        const location = {
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
           accuracy: position.coords.accuracy
+        };
+        
+        console.log('📍 PRECISE Location for Prayer Times:', {
+          lat: location.latitude,
+          lng: location.longitude,
+          accuracy: `${location.accuracy}m`
         });
+        
+        resolve(location);
       },
       (error) => {
+        console.error('📍 Location error:', error);
         reject(error);
       },
       {
-        enableHighAccuracy: false,
-        timeout: 10000,
-        maximumAge: 600000 // 10 minutes
+        enableHighAccuracy: true, // SAME AS QIBLA - HIGH ACCURACY
+        timeout: 15000, // SAME AS QIBLA
+        maximumAge: 600000 // SAME AS QIBLA - 10 minutes
       }
     );
   });
 };
 
-// Get next prayer
+// Keep your existing getNextPrayer and getCurrentPrayer functions
 export const getNextPrayer = (prayerTimes) => {
   const now = new Date();
   const prayers = [
@@ -169,7 +171,6 @@ export const getNextPrayer = (prayerTimes) => {
     }
   }
 
-  // If all prayers passed, return first prayer of next day
   const tomorrow = new Date(now);
   tomorrow.setDate(tomorrow.getDate() + 1);
   const fajrTime = parseTimeString(prayerTimes.fajr);
@@ -183,23 +184,6 @@ export const getNextPrayer = (prayerTimes) => {
   };
 };
 
-// Helper function to parse time strings
-const parseTimeString = (timeStr) => {
-  const [time, modifier] = timeStr.split(' ');
-  let [hours, minutes] = time.split(':');
-  
-  hours = parseInt(hours);
-  minutes = parseInt(minutes);
-  
-  if (modifier === 'PM' && hours < 12) hours += 12;
-  if (modifier === 'AM' && hours === 12) hours = 0;
-  
-  const date = new Date();
-  date.setHours(hours, minutes, 0, 0);
-  return date;
-};
-
-// Simple function to get current prayer
 export const getCurrentPrayer = (prayerTimes) => {
   const now = new Date();
   const prayers = [
@@ -220,7 +204,6 @@ export const getCurrentPrayer = (prayerTimes) => {
         return prayer.name;
       }
     } else {
-      // For Isha, check if it's after Maghrib and before midnight
       const maghribTime = parseTimeString(prayerTimes.maghrib);
       if (now >= maghribTime) {
         return prayer.name;
@@ -230,3 +213,20 @@ export const getCurrentPrayer = (prayerTimes) => {
 
   return null;
 };
+
+const parseTimeString = (timeStr) => {
+  const [time, modifier] = timeStr.split(' ');
+  let [hours, minutes] = time.split(':');
+  
+  hours = parseInt(hours);
+  minutes = parseInt(minutes);
+  
+  if (modifier === 'PM' && hours < 12) hours += 12;
+  if (modifier === 'AM' && hours === 12) hours = 0;
+  
+  const date = new Date();
+  date.setHours(hours, minutes, 0, 0);
+  return date;
+};
+
+// REMOVED ALL ZONING CODE - using precise coordinates only

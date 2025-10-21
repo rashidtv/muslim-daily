@@ -40,9 +40,25 @@ const PrayerResources = () => {
   const [isPWA, setIsPWA] = useState(false);
   const [showPWAAlert, setShowPWAAlert] = useState(false);
   const [gettingLocationName, setGettingLocationName] = useState(false);
+  const [compassPermissionGranted, setCompassPermissionGranted] = useState(false);
 
   // Get notification status
   const { notificationsEnabled, loading: notificationsLoading, serviceWorkerReady } = useNotification();
+
+  // Check compass permission status on load
+  useEffect(() => {
+    checkCompassPermissionStatus();
+    checkPWA();
+    getLocation();
+  }, []);
+
+  const checkCompassPermissionStatus = () => {
+    const savedPermission = localStorage.getItem('compassPermission');
+    if (savedPermission === 'granted') {
+      setCompassPermissionGranted(true);
+      autoStartCompass();
+    }
+  };
 
   const checkPWA = () => {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
@@ -137,10 +153,13 @@ const PrayerResources = () => {
         try {
           const permission = await DeviceOrientationEvent.requestPermission();
           if (permission === 'granted') {
+            // Save permission to avoid asking again
+            localStorage.setItem('compassPermission', 'granted');
+            setCompassPermissionGranted(true);
             setupCompass();
           } else {
-            setError('Compass permission denied. ' + 
-              (isPWA ? 'Check device settings.' : 'Try installing as PWA for better experience.'));
+            setError('Compass permission denied. You can enable it in browser settings.');
+            localStorage.setItem('compassPermission', 'denied');
             setShowCompassDialog(true);
           }
         } catch (err) {
@@ -148,12 +167,21 @@ const PrayerResources = () => {
           setShowCompassDialog(true);
         }
       } else {
+        // Auto-grant for browsers that don't require permission
+        localStorage.setItem('compassPermission', 'granted');
+        setCompassPermissionGranted(true);
         setupCompass();
       }
     } catch (err) {
       setError('Failed to start compass: ' + err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const autoStartCompass = () => {
+    if (compassPermissionGranted && !compassActive) {
+      setupCompass();
     }
   };
 
@@ -266,15 +294,6 @@ const PrayerResources = () => {
     return relativeDirection;
   };
 
-  useEffect(() => {
-    checkPWA();
-    getLocation();
-    
-    return () => {
-      window.removeEventListener('deviceorientation', handleCompass, true);
-    };
-  }, []);
-
   const currentAngle = getQiblaAngle();
 
   return (
@@ -323,7 +342,7 @@ const PrayerResources = () => {
                 Prayer Time Notifications Enabled!
               </Typography>
               <Typography variant="body2">
-                You'll receive automatic reminders for all 5 daily prayers. Test notifications will appear in 5-15 seconds.
+                You'll receive automatic reminders for all 5 daily prayers based on your precise location.
               </Typography>
             </Alert>
           )}
@@ -351,9 +370,9 @@ const PrayerResources = () => {
           <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3, gap: 1 }}>
             <Chip 
               icon={compassActive ? <Navigation /> : <CompassCalibration />}
-              label={compassActive ? "Compass Active" : "Enable Compass"} 
+              label={compassActive ? "Compass Active" : compassPermissionGranted ? "Start Compass" : "Enable Compass"} 
               color={compassActive ? "success" : "primary"}
-              onClick={compassActive ? stopCompass : startCompass}
+              onClick={compassPermissionGranted ? (compassActive ? stopCompass : startCompass) : startCompass}
               variant={compassActive ? "filled" : "outlined"}
               disabled={!qiblaDirection || loading}
             />
@@ -371,7 +390,7 @@ const PrayerResources = () => {
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
                 <Place sx={{ fontSize: 20, color: 'primary.main', mr: 1 }} />
                 <Typography variant="h6" color="primary.main">
-                  Your Location
+                  Your Precise Location
                 </Typography>
               </Box>
               
@@ -385,13 +404,21 @@ const PrayerResources = () => {
               ) : (
                 <>
                   <Typography variant="body1" fontWeight="medium" gutterBottom>
-                    {locationName || `${userLocation.latitude.toFixed(4)}, ${userLocation.longitude.toFixed(4)}`}
+                    {locationName || `GPS: ${userLocation.latitude.toFixed(6)}, ${userLocation.longitude.toFixed(6)}`}
                   </Typography>
-                  {locationName && (
-                    <Typography variant="caption" color="text.secondary">
-                      Coordinates: {userLocation.latitude.toFixed(6)}, {userLocation.longitude.toFixed(6)}
+                  
+                  {/* Show GPS accuracy if available */}
+                  {userLocation.accuracy && (
+                    <Typography variant="caption" color="text.secondary" display="block">
+                      📍 GPS Accuracy: {userLocation.accuracy.toFixed(0)} meters
+                      {userLocation.note && ` • ${userLocation.note}`}
                     </Typography>
                   )}
+                  
+                  {/* Always show precise coordinates */}
+                  <Typography variant="caption" color="text.secondary" display="block">
+                    Coordinates: {userLocation.latitude.toFixed(6)}, {userLocation.longitude.toFixed(6)}
+                  </Typography>
                 </>
               )}
             </Box>
@@ -494,11 +521,11 @@ const PrayerResources = () => {
             
             <Button 
               startIcon={<Navigation />} 
-              onClick={compassActive ? stopCompass : startCompass}
+              onClick={compassPermissionGranted ? (compassActive ? stopCompass : startCompass) : startCompass}
               variant={compassActive ? "outlined" : "contained"}
               color={compassActive ? "secondary" : "primary"}
             >
-              {compassActive ? 'Stop Compass' : 'Start Compass'}
+              {compassActive ? 'Stop Compass' : compassPermissionGranted ? 'Start Compass' : 'Enable Compass'}
             </Button>
           </Box>
 

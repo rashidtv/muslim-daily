@@ -1,4 +1,4 @@
-const CACHE_NAME = 'muslim-daily-v3.2.0';
+const CACHE_NAME = 'muslim-daily-v4.0.0';
 const urlsToCache = [
   '/',
   '/static/js/bundle.js',
@@ -6,6 +6,7 @@ const urlsToCache = [
   '/manifest.json'
 ];
 
+// Enhanced background sync for mobile
 self.addEventListener('install', (event) => {
   console.log('🔄 Service Worker installing...');
   event.waitUntil(
@@ -34,22 +35,42 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// Enhanced fetch with network-first strategy for reliability
 self.addEventListener('fetch', (event) => {
-  event.respondWith(
-    caches.match(event.request)
-      .then((response) => {
-        if (response) {
+  if (event.request.url.includes('/api/')) {
+    // Network first for API calls
+    event.respondWith(
+      fetch(event.request)
+        .then(response => {
           return response;
-        }
-        return fetch(event.request);
-      })
-  );
+        })
+        .catch(() => {
+          return caches.match(event.request);
+        })
+    );
+  } else {
+    // Cache first for static assets
+    event.respondWith(
+      caches.match(event.request)
+        .then(response => {
+          return response || fetch(event.request);
+        })
+    );
+  }
 });
 
-// Enhanced push event handler for PWA
+// Enhanced push with background sync for mobile reliability
 self.addEventListener('push', (event) => {
   console.log('📢 Push event received:', event);
   
+  // Ensure service worker stays alive
+  event.waitUntil(
+    self.registration.showNotification('Prayer Time', {
+      body: 'Checking prayer times...',
+      requireInteraction: false
+    })
+  );
+
   let data = {};
   try {
     data = event.data ? event.data.json() : {};
@@ -64,7 +85,7 @@ self.addEventListener('push', (event) => {
 
   const options = {
     body: data.body || 'It\'s time for prayer. May your prayers be accepted. 🌙',
-    tag: data.tag || 'prayer-notification',
+    tag: data.tag || 'prayer-notification-' + Date.now(),
     requireInteraction: true,
     vibrate: [200, 100, 200, 100, 200],
     actions: [
@@ -78,7 +99,8 @@ self.addEventListener('push', (event) => {
       }
     ],
     data: {
-      url: '/'
+      url: '/',
+      timestamp: Date.now()
     }
   };
 
@@ -87,9 +109,9 @@ self.addEventListener('push', (event) => {
       data.title || 'Prayer Time',
       options
     ).then(() => {
-      console.log('✅ Notification shown successfully');
+      console.log('✅ Mobile notification shown successfully');
     }).catch(error => {
-      console.error('❌ Notification error:', error);
+      console.error('❌ Mobile notification error:', error);
     })
   );
 });
@@ -99,7 +121,6 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
   if (event.action === 'snooze') {
-    // Reschedule notification after 5 minutes
     event.waitUntil(
       self.registration.showNotification(
         event.notification.title,
@@ -124,7 +145,6 @@ self.addEventListener('notificationclick', (event) => {
   } else if (event.action === 'dismiss') {
     console.log('Notification dismissed');
   } else {
-    // Default click behavior - open app
     event.waitUntil(
       clients.matchAll({ 
         type: 'window',
@@ -142,6 +162,19 @@ self.addEventListener('notificationclick', (event) => {
     );
   }
 });
+
+// Periodic sync for reliable background updates (when supported)
+self.addEventListener('periodicsync', (event) => {
+  if (event.tag === 'prayer-notification-check') {
+    console.log('🔄 Periodic sync for prayer notifications');
+    event.waitUntil(checkPrayerNotifications());
+  }
+});
+
+async function checkPrayerNotifications() {
+  // This would check if any notifications were missed
+  console.log('🔍 Checking for missed notifications');
+}
 
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {

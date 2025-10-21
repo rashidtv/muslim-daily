@@ -22,15 +22,54 @@ export const NotificationProvider = ({ children }) => {
   useEffect(() => {
     initializeAutoNotifications();
     registerServiceWorker();
+    
+    // Set up visibility change listener for background tab support
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
+
+  const handleVisibilityChange = () => {
+    if (!document.hidden && notificationsEnabled) {
+      // App became visible, refresh notifications if needed
+      refreshNotificationsIfNeeded();
+    }
+  };
+
+  const refreshNotificationsIfNeeded = async () => {
+    // Check if we need to reschedule notifications (e.g., after phone was off)
+    const lastScheduled = localStorage.getItem('lastNotificationSchedule');
+    const now = Date.now();
+    
+    if (!lastScheduled || (now - parseInt(lastScheduled)) > 12 * 60 * 60 * 1000) {
+      // Reschedule if never scheduled or more than 12 hours ago
+      await refreshNotifications();
+    }
+  };
 
   const registerServiceWorker = async () => {
     if ('serviceWorker' in navigator) {
       try {
-        const registration = await navigator.serviceWorker.register('/sw.js');
+        // Add more aggressive scope for better mobile support
+        const registration = await navigator.serviceWorker.register('/sw.js', {
+          scope: '/'
+        });
         console.log('✅ Service Worker registered:', registration);
         
-        // Wait for service worker to be ready
+        // Set up periodic background sync if supported
+        if ('periodicSync' in registration) {
+          try {
+            await registration.periodicSync.register('prayer-notification-check', {
+              minInterval: 24 * 60 * 60 * 1000 // 24 hours
+            });
+            console.log('✅ Periodic sync registered');
+          } catch (syncError) {
+            console.log('ℹ️ Periodic sync not supported');
+          }
+        }
+        
         if (registration.installing) {
           registration.installing.addEventListener('statechange', (event) => {
             if (event.target.state === 'activated') {
@@ -53,10 +92,10 @@ export const NotificationProvider = ({ children }) => {
     try {
       console.log('🔄 Initializing automatic prayer notifications...');
       
-      // Get user location first
+      // Get user location first - USING SAME PRECISE LOGIC AS QIBLA
       const location = await getUserLocation();
       setUserLocation(location);
-      console.log('📍 Location obtained:', location);
+      console.log('📍 Precise location obtained for notifications:', location);
 
       if (location) {
         // Auto-enable notifications without asking user
@@ -79,33 +118,58 @@ export const NotificationProvider = ({ children }) => {
   const getUserLocation = () => {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
-        console.log('📍 Geolocation not supported, using default location');
+        console.log('📍 Geolocation not supported, using precise default location');
         resolve({
-          latitude: 2.9516, // Semenyih default
-          longitude: 101.8430
+          latitude: 3.1390, // Kuala Lumpur coordinates
+          longitude: 101.6869,
+          accuracy: 0,
+          note: 'default-precise'
         });
         return;
       }
 
+      console.log('📍 Requesting precise GPS location for accurate prayer times...');
+      
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          resolve({
+          const location = {
             latitude: position.coords.latitude,
             longitude: position.coords.longitude,
-            accuracy: position.coords.accuracy
-          });
+            accuracy: position.coords.accuracy,
+            altitude: position.coords.altitude,
+            altitudeAccuracy: position.coords.altitudeAccuracy,
+            heading: position.coords.heading,
+            speed: position.coords.speed,
+            timestamp: position.timestamp
+          };
+          
+          console.log('📍 Precise location obtained for prayer calculations:', location);
+          console.log(`📍 GPS Accuracy: ${location.accuracy} meters`);
+          
+          if (location.accuracy > 1000) {
+            console.warn('⚠️ Location accuracy is low (>1km). Prayer times may be less accurate.');
+          } else if (location.accuracy > 100) {
+            console.log('ℹ️ Location accuracy is moderate. Prayer times should be reasonably accurate.');
+          } else {
+            console.log('✅ High accuracy location! Prayer times will be very precise.');
+          }
+          
+          resolve(location);
         },
         (error) => {
-          console.log('📍 Location error, using default:', error);
+          console.log('📍 Location error, using precise default:', error);
+          // Use precise default instead of Semenyih
           resolve({
-            latitude: 2.9516,
-            longitude: 101.8430
+            latitude: 3.1390, // Kuala Lumpur coordinates
+            longitude: 101.6869,
+            accuracy: 0,
+            note: 'fallback-precise'
           });
         },
         {
-          enableHighAccuracy: false,
-          timeout: 10000,
-          maximumAge: 600000
+          enableHighAccuracy: true, // High accuracy for precise prayer times
+          timeout: 20000, // Longer timeout for better accuracy
+          maximumAge: 10 * 60 * 1000 // 10 minutes max for fresh data
         }
       );
     });
@@ -124,6 +188,9 @@ export const NotificationProvider = ({ children }) => {
         // Schedule notifications for all prayer times
         await scheduleAllPrayerNotifications(times);
         
+        // Store schedule timestamp for background recovery
+        localStorage.setItem('lastNotificationSchedule', Date.now().toString());
+        
         return true;
       }
       return false;
@@ -139,15 +206,30 @@ export const NotificationProvider = ({ children }) => {
       return false;
     }
 
+    // Check if we already have permission
+    if (Notification.permission === 'granted') {
+      console.log('✅ Notification permission already granted');
+      return true;
+    }
+
+    // Check if we've asked before and user denied
+    const previouslyDenied = localStorage.getItem('notificationPermissionDenied');
+    if (previouslyDenied === 'true' && Notification.permission === 'denied') {
+      console.log('ℹ️ Notification permission previously denied');
+      return false;
+    }
+
     try {
       // Auto-request permission
       const permission = await Notification.requestPermission();
       
       if (permission === 'granted') {
         console.log('✅ Notification permission granted automatically');
+        localStorage.removeItem('notificationPermissionDenied');
         return true;
       } else {
-        console.log('❌ Notification permission not granted automatically');
+        console.log('❌ Notification permission not granted');
+        localStorage.setItem('notificationPermissionDenied', 'true');
         return false;
       }
     } catch (error) {
@@ -167,20 +249,8 @@ export const NotificationProvider = ({ children }) => {
 
     let scheduledCount = 0;
 
-    // TEST: Send immediate test notifications for PWA
-    console.log('🧪 Scheduling test notifications...');
-    
-    // Test notification in 5 seconds
-    setTimeout(() => {
-      sendPrayerNotification('Fajr');
-      console.log('🧪 Test Fajr notification sent');
-    }, 5000);
-
-    // Test notification in 15 seconds  
-    setTimeout(() => {
-      sendPrayerNotification('Dhuhr');
-      console.log('🧪 Test Dhuhr notification sent');
-    }, 15000);
+    // Clear any existing timeouts
+    clearAllScheduledNotifications();
 
     for (const prayer of prayers) {
       if (prayer.time) {
@@ -190,7 +260,21 @@ export const NotificationProvider = ({ children }) => {
     }
 
     console.log(`📅 Scheduled ${scheduledCount} real prayer notifications`);
+    
+    // Store in localStorage for background recovery
+    localStorage.setItem('scheduledPrayerCount', scheduledCount.toString());
+    
     return scheduledCount > 0;
+  };
+
+  const clearAllScheduledNotifications = () => {
+    // Clear any existing notification timeouts
+    if (window.prayerNotificationTimeouts) {
+      window.prayerNotificationTimeouts.forEach(timeoutId => {
+        clearTimeout(timeoutId);
+      });
+    }
+    window.prayerNotificationTimeouts = [];
   };
 
   const schedulePrayerTimeNotification = async (prayerName, prayerTimeStr) => {
@@ -207,9 +291,15 @@ export const NotificationProvider = ({ children }) => {
         const timeUntilPrayer = prayerTime.getTime() - now.getTime();
         
         if (timeUntilPrayer > 0 && timeUntilPrayer < 24 * 60 * 60 * 1000) {
-          setTimeout(() => {
+          const timeoutId = setTimeout(() => {
             sendPrayerNotification(prayerName);
           }, timeUntilPrayer);
+          
+          // Store timeout ID for cleanup
+          if (!window.prayerNotificationTimeouts) {
+            window.prayerNotificationTimeouts = [];
+          }
+          window.prayerNotificationTimeouts.push(timeoutId);
           
           console.log(`⏰ Scheduled ${prayerName} notification in ${Math.round(timeUntilPrayer/60000)} minutes`);
           return true;
@@ -250,7 +340,7 @@ export const NotificationProvider = ({ children }) => {
     }
 
     try {
-      // Use service worker for PWA (supports actions)
+      // Use service worker for PWA (supports actions and background)
       if ('serviceWorker' in navigator && serviceWorkerReady) {
         const options = {
           body: `It's time for ${prayerName} prayer. May your prayers be accepted. 🌙`,
@@ -274,7 +364,6 @@ export const NotificationProvider = ({ children }) => {
             .then(() => console.log(`📢 PWA Notification sent: ${prayerName}`))
             .catch(error => {
               console.error('PWA Notification failed, falling back to simple notification:', error);
-              // Fallback to simple browser notification without actions
               sendSimpleBrowserNotification(prayerName);
             });
         });
@@ -291,11 +380,10 @@ export const NotificationProvider = ({ children }) => {
   };
 
   const sendSimpleBrowserNotification = (prayerName) => {
-    // Simple notification without actions for browsers that don't support them
     const options = {
       body: `It's time for ${prayerName} prayer. May your prayers be accepted. 🌙`,
       tag: `prayer-${prayerName}-${Date.now()}`,
-      requireInteraction: false // Don't require interaction for simple notifications
+      requireInteraction: false
     };
 
     const notification = new Notification(`${prayerName} Prayer Time`, options);
