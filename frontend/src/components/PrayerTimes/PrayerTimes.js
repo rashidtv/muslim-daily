@@ -12,7 +12,7 @@ import {
   Snackbar,
   Grid
 } from '@mui/material';
-import { Refresh, CheckCircle, RadioButtonUnchecked, MyLocation, GpsFixed, Wifi } from '@mui/icons-material';
+import { Refresh, CheckCircle, RadioButtonUnchecked, MyLocation, PrayerTimes as PrayerIcon } from '@mui/icons-material';
 import { usePractice } from '../../context/PracticeContext';
 import { useAuth } from '../../context/AuthContext';
 import { calculatePrayerTimes, getCurrentLocation, getNextPrayer } from '../../utils/prayerTimes';
@@ -20,7 +20,7 @@ import { calculatePrayerTimes, getCurrentLocation, getNextPrayer } from '../../u
 const PrayerTimes = () => {
   const [prayerTimes, setPrayerTimes] = useState(null);
   const [nextPrayer, setNextPrayer] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(false);
   const [error, setError] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
@@ -37,45 +37,67 @@ const PrayerTimes = () => {
     return todayPrayers.some(prayer => prayer.name.toLowerCase() === prayerName.toLowerCase());
   };
 
-  // Auto-detect location on component mount - USING PRECISE GPS
-  const autoDetectLocation = async () => {
+  // Load prayer times from cache or get new ones
+  const loadPrayerTimes = async (forceRefresh = false) => {
+    // Check if we already have recent prayer times (less than 30 minutes old)
+    const cachedPrayerTimes = localStorage.getItem('cachedPrayerTimes');
+    const cachedLocation = localStorage.getItem('cachedLocation');
+    const cacheTimestamp = localStorage.getItem('prayerTimesTimestamp');
+    
+    const now = Date.now();
+    const thirtyMinutes = 30 * 60 * 1000;
+    
+    if (!forceRefresh && cachedPrayerTimes && cachedLocation && cacheTimestamp && 
+        (now - parseInt(cacheTimestamp)) < thirtyMinutes) {
+      
+      const times = JSON.parse(cachedPrayerTimes);
+      const location = JSON.parse(cachedLocation);
+      
+      setPrayerTimes(times);
+      setUserLocation(location);
+      setNextPrayer(getNextPrayer(times));
+      setLoading(false);
+      console.log('✅ Using cached prayer times');
+      return;
+    }
+
+    // Get new prayer times
+    setLocationLoading(true);
     try {
-      setLocationLoading(true);
-      console.log('📍 Auto-detecting precise location for prayer times...');
+      console.log('📍 Getting fresh prayer times...');
       
       const currentLocation = await getCurrentLocation();
       setUserLocation(currentLocation);
       
-      // Calculate prayer times using PRECISE GPS coordinates with JAKIM API
       const times = await calculatePrayerTimes(currentLocation.latitude, currentLocation.longitude);
       setPrayerTimes(times);
       setNextPrayer(getNextPrayer(times));
       
-      setSnackbarMessage(`📍 Using precise location with JAKIM official times`);
-      setSnackbarOpen(true);
+      // Cache the results
+      localStorage.setItem('cachedPrayerTimes', JSON.stringify(times));
+      localStorage.setItem('cachedLocation', JSON.stringify(currentLocation));
+      localStorage.setItem('prayerTimesTimestamp', now.toString());
       
-      console.log('✅ Prayer times calculated:', {
-        coordinates: `${currentLocation.latitude.toFixed(6)}, ${currentLocation.longitude.toFixed(6)}`,
-        accuracy: `${Math.round(currentLocation.accuracy)}m`,
-        method: times.method,
-        dhuhr: times.dhuhr,
-        zone: times.zone
-      });
+      if (forceRefresh) {
+        setSnackbarMessage('📍 Location and prayer times updated');
+        setSnackbarOpen(true);
+      }
       
     } catch (error) {
-      console.error('❌ Auto-location failed:', error);
-      setError('Unable to detect your location. Using default coordinates.');
+      console.error('❌ Location failed:', error);
+      setError('Unable to detect location. Using cached times.');
       
-      // Fallback to Kuala Lumpur coordinates
-      const fallbackLocation = { latitude: 3.1390, longitude: 101.6869, accuracy: 0, note: 'fallback' };
-      setUserLocation(fallbackLocation);
-      
-      const times = await calculatePrayerTimes(fallbackLocation.latitude, fallbackLocation.longitude);
-      setPrayerTimes(times);
-      setNextPrayer(getNextPrayer(times));
-      
-      setSnackbarMessage('⚠️ Using default location. Enable GPS for precise prayer times.');
-      setSnackbarOpen(true);
+      // Try to use cached data even if it's old
+      if (cachedPrayerTimes && cachedLocation) {
+        const times = JSON.parse(cachedPrayerTimes);
+        const location = JSON.parse(cachedLocation);
+        
+        setPrayerTimes(times);
+        setUserLocation({ ...location, note: 'cached' });
+        setNextPrayer(getNextPrayer(times));
+        setSnackbarMessage('⚠️ Using cached prayer times');
+        setSnackbarOpen(true);
+      }
     } finally {
       setLocationLoading(false);
       setLoading(false);
@@ -84,28 +106,7 @@ const PrayerTimes = () => {
 
   // Manual location refresh
   const handleRefreshLocation = async () => {
-    setLocationLoading(true);
-    try {
-      console.log('📍 Manually refreshing precise location...');
-      
-      const currentLocation = await getCurrentLocation();
-      setUserLocation(currentLocation);
-      
-      const times = await calculatePrayerTimes(currentLocation.latitude, currentLocation.longitude);
-      setPrayerTimes(times);
-      setNextPrayer(getNextPrayer(times));
-      
-      setSnackbarMessage(`📍 Location refreshed! Using precise GPS`);
-      setSnackbarOpen(true);
-      
-    } catch (error) {
-      console.error('❌ Location refresh failed:', error);
-      setError('Unable to refresh location. Keeping current prayer times.');
-      setSnackbarMessage('❌ Location refresh failed. Please check GPS permissions.');
-      setSnackbarOpen(true);
-    } finally {
-      setLocationLoading(false);
-    }
+    await loadPrayerTimes(true);
   };
 
   const handlePracticeToggle = async (prayerName) => {
@@ -135,9 +136,10 @@ const PrayerTimes = () => {
     }
   };
 
-  // Auto-detect location on component mount
+  // Load prayer times on component mount (only once)
   useEffect(() => {
-    autoDetectLocation();
+    setLoading(true);
+    loadPrayerTimes();
   }, []);
 
   const prayers = [
@@ -150,17 +152,12 @@ const PrayerTimes = () => {
 
   if (loading && !prayerTimes) {
     return (
-      <Card sx={{ borderRadius: 3, boxShadow: 3 }}>
-        <CardContent sx={{ textAlign: 'center', py: 4 }}>
-          <CircularProgress />
-          <Typography variant="body1" sx={{ mt: 2, fontSize: '0.9rem' }}>
-            {locationLoading ? 'Detecting your precise location...' : 'Loading JAKIM prayer times...'}
+      <Card sx={{ borderRadius: 2, boxShadow: 1 }}>
+        <CardContent sx={{ textAlign: 'center', py: 3 }}>
+          <CircularProgress size={24} />
+          <Typography variant="body2" sx={{ mt: 1, fontSize: '0.8rem' }}>
+            Loading prayer times...
           </Typography>
-          {locationLoading && (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontSize: '0.8rem' }}>
-              Using GPS for accurate prayer time calculation
-            </Typography>
-          )}
         </CardContent>
       </Card>
     );
@@ -168,95 +165,64 @@ const PrayerTimes = () => {
 
   return (
     <>
-      <Card sx={{ borderRadius: 3, boxShadow: 3 }}>
-        <CardContent>
-          {/* Header */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-            <Box>
-              <Typography variant="h5" sx={{ display: 'flex', alignItems: 'center', gap: 1, fontSize: '1.25rem' }}>
-                <GpsFixed fontSize="small" />
+      <Card sx={{ borderRadius: 2, boxShadow: 1 }}>
+        <CardContent sx={{ p: 2 }}>
+          {/* Compact Header */}
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <PrayerIcon sx={{ fontSize: 20, color: 'primary.main' }} />
+              <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: '600' }}>
                 Prayer Times
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', mt: 0.5 }}>
-                Official JAKIM times using your precise location
               </Typography>
             </Box>
             
             <Button
               size="small"
-              startIcon={locationLoading ? <CircularProgress size={16} /> : <MyLocation />}
+              startIcon={locationLoading ? <CircularProgress size={14} /> : <MyLocation />}
               onClick={handleRefreshLocation}
               disabled={locationLoading}
               variant="outlined"
               color="primary"
-              sx={{ fontSize: '0.8rem', minWidth: '140px' }}
+              sx={{ 
+                fontSize: '0.7rem', 
+                minWidth: 'auto',
+                px: 1,
+                py: 0.5
+              }}
             >
-              {locationLoading ? 'Refreshing...' : 'Refresh Location'}
+              {locationLoading ? '' : 'Refresh'}
             </Button>
           </Box>
 
           {error && (
-            <Alert severity="warning" sx={{ mb: 2, fontSize: '0.8rem' }}>
+            <Alert severity="warning" sx={{ mb: 1.5, fontSize: '0.75rem', py: 0.5 }}>
               {error}
             </Alert>
           )}
 
-          {!user && (
-            <Alert severity="info" sx={{ mb: 2, fontSize: '0.8rem' }}>
-              Sign in to track your prayers and view progress
-            </Alert>
-          )}
-
-          {/* Location Info */}
-          {userLocation && (
-            <Box sx={{ 
-              p: 1.5, 
-              borderRadius: 2, 
-              mb: 2,
-              backgroundColor: 'success.50',
-              border: '1px solid',
-              borderColor: 'success.100'
-            }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Wifi sx={{ fontSize: 16, color: 'success.main' }} />
-                <Typography variant="body2" color="success.main" fontWeight="medium">
-                  Live JAKIM Times • {userLocation.note === 'fallback' ? 'Default location' : 'Precise GPS'}
-                </Typography>
-              </Box>
-              <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
-                {userLocation.latitude.toFixed(6)}, {userLocation.longitude.toFixed(6)}
-                {userLocation.accuracy > 0 && ` • Accuracy: ${Math.round(userLocation.accuracy)}m`}
-                {prayerTimes?.zone && ` • Zone: ${prayerTimes.zone}`}
-              </Typography>
-            </Box>
-          )}
-
-          {/* Next Prayer */}
+          {/* Next Prayer - Compact */}
           {nextPrayer && (
             <Box sx={{ 
               bgcolor: 'primary.main', 
               color: 'white', 
-              p: 2, 
-              borderRadius: 2, 
+              p: 1.5, 
+              borderRadius: 1.5, 
               mb: 2,
               textAlign: 'center'
             }}>
-              <Typography variant="h6" gutterBottom sx={{ fontSize: '0.9rem' }}>
-                🎯 Next Prayer
+              <Typography variant="body2" fontWeight="medium" sx={{ fontSize: '0.8rem' }}>
+                Next: {nextPrayer.name}
               </Typography>
-              <Typography variant="h4" fontWeight="bold" sx={{ fontSize: { xs: '1.25rem', md: '1.5rem' } }}>
-                {nextPrayer.name}
-              </Typography>
-              <Typography variant="h6" sx={{ fontSize: '0.9rem' }}>
+              <Typography variant="h6" fontWeight="bold" sx={{ fontSize: '1rem' }}>
                 {nextPrayer.time}
                 {nextPrayer.isTomorrow && ' (Tomorrow)'}
               </Typography>
             </Box>
           )}
 
-          {/* Prayer Times List */}
+          {/* Compact Prayer Times List */}
           {prayerTimes && (
-            <Grid container spacing={1} sx={{ mb: 1 }}>
+            <Grid container spacing={0.5}>
               {prayers.map((prayer) => {
                 const isCompleted = isPrayerCompletedToday(prayer.name);
                 const isNextPrayer = nextPrayer?.name === prayer.name;
@@ -268,65 +234,48 @@ const PrayerTimes = () => {
                         display: 'flex', 
                         justifyContent: 'space-between', 
                         alignItems: 'center',
-                        p: 1.5,
-                        borderRadius: 2,
+                        p: 1,
+                        borderRadius: 1,
                         bgcolor: isNextPrayer ? 'action.hover' : 'transparent',
-                        border: isNextPrayer ? '2px solid' : '1px solid',
-                        borderColor: isNextPrayer ? 'primary.main' : 'divider',
-                        opacity: isCompleted ? 0.8 : 1,
-                        transition: 'all 0.2s ease'
+                        border: isNextPrayer ? '1px solid' : 'none',
+                        borderColor: isNextPrayer ? 'primary.main' : 'transparent',
                       }}
                     >
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Typography variant="h6" sx={{ fontSize: '1.25rem' }}>{prayer.icon}</Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                        <Typography variant="body2" sx={{ fontSize: '1rem', minWidth: '24px' }}>
+                          {prayer.icon}
+                        </Typography>
                         <Box>
                           <Typography 
-                            variant="body1"
-                            fontWeight="600"
+                            variant="body2"
+                            fontWeight="500"
                             sx={{ 
                               textDecoration: isCompleted ? 'line-through' : 'none',
                               color: isCompleted ? 'text.secondary' : 'text.primary',
-                              fontSize: '0.9rem'
+                              fontSize: '0.8rem'
                             }}
                           >
                             {prayer.name}
                           </Typography>
-                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem' }}>
+                          <Typography variant="caption" color="text.secondary">
                             {prayer.time || '--:--'}
                           </Typography>
                         </Box>
                       </Box>
                       
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        {isNextPrayer && (
-                          <Chip 
-                            label="Next" 
-                            color="primary" 
-                            size="small"
-                            sx={{ fontSize: '0.65rem', height: '20px' }}
-                          />
-                        )}
-                        
-                        <IconButton
-                          onClick={() => handlePracticeToggle(prayer.name)}
-                          color={isCompleted ? "success" : "default"}
-                          size="small"
-                          disabled={!user}
-                          sx={{
-                            border: isCompleted ? '2px solid' : '1px solid',
-                            borderColor: isCompleted ? 'success.main' : 'grey.400',
-                            width: '32px',
-                            height: '32px',
-                            opacity: !user ? 0.5 : 1,
-                            '&:hover': {
-                              backgroundColor: isCompleted ? 'success.50' : 'action.hover'
-                            }
-                          }}
-                          aria-label={!user ? 'Sign in to track prayers' : (isCompleted ? `Mark ${prayer.name} as incomplete` : `Mark ${prayer.name} as completed`)}
-                        >
-                          {isCompleted ? <CheckCircle /> : <RadioButtonUnchecked />}
-                        </IconButton>
-                      </Box>
+                      <IconButton
+                        onClick={() => handlePracticeToggle(prayer.name)}
+                        color={isCompleted ? "success" : "default"}
+                        size="small"
+                        disabled={!user}
+                        sx={{
+                          width: '28px',
+                          height: '28px',
+                          opacity: !user ? 0.5 : 1,
+                        }}
+                      >
+                        {isCompleted ? <CheckCircle fontSize="small" /> : <RadioButtonUnchecked fontSize="small" />}
+                      </IconButton>
                     </Box>
                   </Grid>
                 );
@@ -334,11 +283,11 @@ const PrayerTimes = () => {
             </Grid>
           )}
 
-          {/* Footer Info */}
+          {/* Compact Footer */}
           <Box sx={{ mt: 1, textAlign: 'center' }}>
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-              {prayerTimes?.method} • Official JAKIM e-solat.gov.my data
-              {prayerTimes?.note && ` • ${prayerTimes.note}`}
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
+              {prayerTimes?.zone ? `Zone: ${prayerTimes.zone}` : 'Official JAKIM times'}
+              {userLocation?.note === 'cached' && ' • Cached'}
             </Typography>
           </Box>
         </CardContent>
@@ -346,10 +295,11 @@ const PrayerTimes = () => {
 
       <Snackbar
         open={snackbarOpen}
-        autoHideDuration={4000}
+        autoHideDuration={3000}
         onClose={() => setSnackbarOpen(false)}
         message={snackbarMessage}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        sx={{ '& .MuiSnackbarContent-root': { fontSize: '0.8rem' } }}
       />
     </>
   );
