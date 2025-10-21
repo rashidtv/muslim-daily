@@ -12,7 +12,7 @@ import {
   Snackbar,
   Grid
 } from '@mui/material';
-import { Refresh, CheckCircle, RadioButtonUnchecked, MyLocation, GpsFixed, Wifi, Schedule } from '@mui/icons-material';
+import { Refresh, CheckCircle, RadioButtonUnchecked, MyLocation, GpsFixed, Wifi } from '@mui/icons-material';
 import { usePractice } from '../../context/PracticeContext';
 import { useAuth } from '../../context/AuthContext';
 import { calculatePrayerTimes, getCurrentLocation, getNextPrayer } from '../../utils/prayerTimes';
@@ -26,8 +26,6 @@ const PrayerTimes = () => {
   const [userLocation, setUserLocation] = useState(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
-  const [usingAPI, setUsingAPI] = useState(false);
-  const [calculationMethod, setCalculationMethod] = useState('local');
   
   const { trackPrayer, getTodayPrayers } = usePractice();
   const { user } = useAuth();
@@ -48,14 +46,12 @@ const PrayerTimes = () => {
       const currentLocation = await getCurrentLocation();
       setUserLocation(currentLocation);
       
-      // Calculate prayer times using PRECISE GPS coordinates
+      // Calculate prayer times using PRECISE GPS coordinates with JAKIM API
       const times = await calculatePrayerTimes(currentLocation.latitude, currentLocation.longitude);
       setPrayerTimes(times);
       setNextPrayer(getNextPrayer(times));
-      setUsingAPI(times.source === 'api');
-      setCalculationMethod(times.source === 'api' ? 'api' : 'local');
       
-      setSnackbarMessage(`📍 Using precise location (${times.source === 'api' ? 'JAKIM API' : 'Local calculation'})`);
+      setSnackbarMessage(`📍 Using precise location with JAKIM official times`);
       setSnackbarOpen(true);
       
       console.log('✅ Prayer times calculated:', {
@@ -63,22 +59,20 @@ const PrayerTimes = () => {
         accuracy: `${Math.round(currentLocation.accuracy)}m`,
         method: times.method,
         dhuhr: times.dhuhr,
-        source: times.source
+        zone: times.zone
       });
       
     } catch (error) {
       console.error('❌ Auto-location failed:', error);
       setError('Unable to detect your location. Using default coordinates.');
       
-      // Fallback to Kuala Lumpur coordinates but STILL USE PRECISE CALCULATION
+      // Fallback to Kuala Lumpur coordinates
       const fallbackLocation = { latitude: 3.1390, longitude: 101.6869, accuracy: 0, note: 'fallback' };
       setUserLocation(fallbackLocation);
       
       const times = await calculatePrayerTimes(fallbackLocation.latitude, fallbackLocation.longitude);
       setPrayerTimes(times);
       setNextPrayer(getNextPrayer(times));
-      setUsingAPI(times.source === 'api');
-      setCalculationMethod(times.source === 'api' ? 'api' : 'local');
       
       setSnackbarMessage('⚠️ Using default location. Enable GPS for precise prayer times.');
       setSnackbarOpen(true);
@@ -100,55 +94,14 @@ const PrayerTimes = () => {
       const times = await calculatePrayerTimes(currentLocation.latitude, currentLocation.longitude);
       setPrayerTimes(times);
       setNextPrayer(getNextPrayer(times));
-      setUsingAPI(times.source === 'api');
-      setCalculationMethod(times.source === 'api' ? 'api' : 'local');
       
-      setSnackbarMessage(`📍 Location refreshed! (${times.source === 'api' ? 'JAKIM API' : 'Local calculation'})`);
+      setSnackbarMessage(`📍 Location refreshed! Using precise GPS`);
       setSnackbarOpen(true);
       
     } catch (error) {
       console.error('❌ Location refresh failed:', error);
       setError('Unable to refresh location. Keeping current prayer times.');
       setSnackbarMessage('❌ Location refresh failed. Please check GPS permissions.');
-      setSnackbarOpen(true);
-    } finally {
-      setLocationLoading(false);
-    }
-  };
-
-  // Switch between calculation methods
-  const handleSwitchMethod = async () => {
-    if (!userLocation) return;
-    
-    setLocationLoading(true);
-    try {
-      let times;
-      let method;
-      
-      if (calculationMethod === 'local') {
-        // Switch to API
-        const { calculatePrayerTimesFromAPI } = await import('../../utils/prayerTimes');
-        times = await calculatePrayerTimesFromAPI(userLocation.latitude, userLocation.longitude);
-        method = 'api';
-        setSnackbarMessage('🔄 Switched to JAKIM API calculation');
-      } else {
-        // Switch to local
-        const { calculatePrayerTimesLocal } = await import('../../utils/prayerTimes');
-        times = await calculatePrayerTimesLocal(userLocation.latitude, userLocation.longitude);
-        method = 'local';
-        setSnackbarMessage('🔄 Switched to local calculation');
-      }
-      
-      if (times.success) {
-        setPrayerTimes(times);
-        setNextPrayer(getNextPrayer(times));
-        setUsingAPI(method === 'api');
-        setCalculationMethod(method);
-        setSnackbarOpen(true);
-      }
-    } catch (error) {
-      console.error('Method switch failed:', error);
-      setSnackbarMessage('❌ Failed to switch calculation method');
       setSnackbarOpen(true);
     } finally {
       setLocationLoading(false);
@@ -201,7 +154,7 @@ const PrayerTimes = () => {
         <CardContent sx={{ textAlign: 'center', py: 4 }}>
           <CircularProgress />
           <Typography variant="body1" sx={{ mt: 2, fontSize: '0.9rem' }}>
-            {locationLoading ? 'Detecting your precise location...' : 'Calculating prayer times...'}
+            {locationLoading ? 'Detecting your precise location...' : 'Loading JAKIM prayer times...'}
           </Typography>
           {locationLoading && (
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1, fontSize: '0.8rem' }}>
@@ -225,35 +178,21 @@ const PrayerTimes = () => {
                 Prayer Times
               </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8rem', mt: 0.5 }}>
-                Calculated using your precise GPS location
+                Official JAKIM times using your precise location
               </Typography>
             </Box>
             
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, alignItems: 'flex-end' }}>
-              <Button
-                size="small"
-                startIcon={locationLoading ? <CircularProgress size={16} /> : <MyLocation />}
-                onClick={handleRefreshLocation}
-                disabled={locationLoading}
-                variant="outlined"
-                color="primary"
-                sx={{ fontSize: '0.7rem', minWidth: '140px' }}
-              >
-                {locationLoading ? 'Refreshing...' : 'Refresh Location'}
-              </Button>
-              
-              <Button
-                size="small"
-                startIcon={<Schedule />}
-                onClick={handleSwitchMethod}
-                disabled={locationLoading || !userLocation}
-                variant="outlined"
-                color={usingAPI ? "success" : "primary"}
-                sx={{ fontSize: '0.7rem', minWidth: '140px' }}
-              >
-                {usingAPI ? 'Using API' : 'Using Local'}
-              </Button>
-            </Box>
+            <Button
+              size="small"
+              startIcon={locationLoading ? <CircularProgress size={16} /> : <MyLocation />}
+              onClick={handleRefreshLocation}
+              disabled={locationLoading}
+              variant="outlined"
+              color="primary"
+              sx={{ fontSize: '0.8rem', minWidth: '140px' }}
+            >
+              {locationLoading ? 'Refreshing...' : 'Refresh Location'}
+            </Button>
           </Box>
 
           {error && (
@@ -274,28 +213,20 @@ const PrayerTimes = () => {
               p: 1.5, 
               borderRadius: 2, 
               mb: 2,
-              backgroundColor: usingAPI ? 'info.50' : 'primary.50',
+              backgroundColor: 'success.50',
               border: '1px solid',
-              borderColor: usingAPI ? 'info.100' : 'primary.100'
+              borderColor: 'success.100'
             }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  {usingAPI ? <Wifi sx={{ fontSize: 16, color: 'info.main' }} /> : <GpsFixed sx={{ fontSize: 16, color: 'primary.main' }} />}
-                  <Typography variant="body2" color={usingAPI ? 'info.main' : 'primary.main'} fontWeight="medium">
-                    {usingAPI ? 'Live JAKIM API' : 'Local Calculation'} • {userLocation.note === 'fallback' ? 'Default location' : 'Precise GPS'}
-                  </Typography>
-                </Box>
-                <Chip 
-                  label={usingAPI ? "API" : "Local"} 
-                  size="small" 
-                  color={usingAPI ? "info" : "primary"}
-                  variant="outlined"
-                  sx={{ fontSize: '0.6rem', height: '20px' }}
-                />
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Wifi sx={{ fontSize: 16, color: 'success.main' }} />
+                <Typography variant="body2" color="success.main" fontWeight="medium">
+                  Live JAKIM Times • {userLocation.note === 'fallback' ? 'Default location' : 'Precise GPS'}
+                </Typography>
               </Box>
               <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
                 {userLocation.latitude.toFixed(6)}, {userLocation.longitude.toFixed(6)}
                 {userLocation.accuracy > 0 && ` • Accuracy: ${Math.round(userLocation.accuracy)}m`}
+                {prayerTimes?.zone && ` • Zone: ${prayerTimes.zone}`}
               </Typography>
             </Box>
           )}
@@ -406,7 +337,7 @@ const PrayerTimes = () => {
           {/* Footer Info */}
           <Box sx={{ mt: 1, textAlign: 'center' }}>
             <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-              {prayerTimes?.method} • Using precise GPS coordinates
+              {prayerTimes?.method} • Official JAKIM e-solat.gov.my data
               {prayerTimes?.note && ` • ${prayerTimes.note}`}
             </Typography>
           </Box>
