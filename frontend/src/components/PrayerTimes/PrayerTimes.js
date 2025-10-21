@@ -86,7 +86,7 @@ const PrayerTimes = () => {
       const fallbackLocation = { latitude: 3.1390, longitude: 101.6869, accuracy: 0, note: 'fallback' };
       setUserLocation(fallbackLocation);
       
-      const times = await calculatePrayerTimes(fallbackLocation.latitude, fallbackLocation.longitude);
+      const times = await calculatePrayerTimes(location.latitude, location.longitude);
       setPrayerTimes(times);
       setNextPrayer(getNextPrayer(times));
       setUsingAPI(false);
