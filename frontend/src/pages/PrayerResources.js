@@ -34,13 +34,15 @@ const PrayerResources = () => {
     qiblaDirection,
     deviceHeading,
     compassActive,
+    compassSupported,
     userLocation,
     compassError,
     setUserLocationAndCalculateQibla,
     autoEnableCompass,
     stopCompass,
     getQiblaAngle,
-    debugCompass // Get the debug function from context
+    debugCompass,
+    testCompassMovement // Get the test function from context
   } = useCompass();
 
   // Get notification status
@@ -261,6 +263,14 @@ const PrayerResources = () => {
                 variant="outlined"
               />
             )}
+            {!compassSupported && (
+              <Chip 
+                label="Static" 
+                size="small" 
+                color="warning" 
+                variant="outlined"
+              />
+            )}
           </Box>
 
           {(error || compassError) && (
@@ -297,7 +307,7 @@ const PrayerResources = () => {
                   </Typography>
                   {compassActive && (
                     <Typography variant="caption" color="success.main" display="block" fontWeight="medium">
-                      ✅ Compass auto-enabled & persistent
+                      {compassSupported ? '✅ Compass auto-enabled & persistent' : '📍 Static Qibla direction (compass not available)'}
                     </Typography>
                   )}
                 </>
@@ -318,7 +328,7 @@ const PrayerResources = () => {
               height: '100%', 
               borderRadius: '50%', 
               border: '4px solid',
-              borderColor: compassActive ? 'success.main' : 'primary.main', 
+              borderColor: compassActive ? (compassSupported ? 'success.main' : 'warning.main') : 'primary.main', 
               position: 'relative', 
               backgroundColor: '#f8f9fa',
               boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
@@ -338,7 +348,7 @@ const PrayerResources = () => {
                 left: '50%',
                 width: 3,
                 height: '45%',
-                backgroundColor: compassActive ? '#1976d2' : '#90caf9',
+                backgroundColor: compassActive ? (compassSupported ? '#1976d2' : '#ed6c02') : '#90caf9',
                 transform: `translate(-50%, -50%) rotate(${currentAngle}deg)`,
                 transformOrigin: 'center center',
                 zIndex: 2,
@@ -353,7 +363,7 @@ const PrayerResources = () => {
                   height: 0,
                   borderLeft: '6px solid transparent',
                   borderRight: '6px solid transparent',
-                  borderBottom: `10px solid ${compassActive ? '#1976d2' : '#90caf9'}`
+                  borderBottom: `10px solid ${compassActive ? (compassSupported ? '#1976d2' : '#ed6c02') : '#90caf9'}`
                 }
               }} />
 
@@ -382,10 +392,12 @@ const PrayerResources = () => {
               </Typography>
               <Typography variant="h6" gutterBottom color="text.primary">
                 {compassActive 
-                  ? `Point device towards Mecca (${currentAngle.toFixed(0)}°)` 
+                  ? compassSupported 
+                    ? `Point device towards Mecca (${currentAngle.toFixed(0)}°)` 
+                    : `Face ${qiblaDirection}° from North towards Mecca (Static)`
                   : `Face ${qiblaDirection}° from North towards Mecca`
                 }
-                {compassActive && ' • Auto-enabled & Persistent'}
+                {compassActive && compassSupported && ' • Auto-enabled & Persistent'}
               </Typography>
             </Box>
           )}
@@ -420,16 +432,28 @@ const PrayerResources = () => {
             >
               Debug Compass
             </Button>
+
+            {/* Test Compass Button */}
             <Button 
-  startIcon={<Refresh />} 
-  onClick={testCompassMovement}
-  variant="outlined"
-  color="warning"
-  disabled={!compassActive}
->
-  Test Compass
-</Button>
+              startIcon={<Refresh />} 
+              onClick={testCompassMovement}
+              variant="outlined"
+              color="warning"
+              disabled={!compassActive}
+            >
+              Test Compass
+            </Button>
           </Box>
+
+          {/* Compass Support Notice */}
+          {!compassSupported && compassActive && (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              <Typography variant="body2">
+                <strong>Note:</strong> Your device/browser doesn't support compass functionality. 
+                Showing static Qibla direction based on your location.
+              </Typography>
+            </Alert>
+          )}
 
           {/* PWA Benefits Notice */}
           {!isPWA && (
