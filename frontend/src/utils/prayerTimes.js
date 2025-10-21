@@ -1,166 +1,100 @@
-import { CalculationMethod, PrayerTimes, Coordinates, Madhab } from 'adhan';
-
-// Simple reliable prayer time calculation
-export const calculatePrayerTimes = async (latitude, longitude, date = new Date()) => {
+// Use your backend JAKIM API with precise coordinates for ALL Malaysia locations
+export const calculatePrayerTimes = async (latitude, longitude) => {
   try {
-    console.log(`📍 Calculating prayer times for: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
+    console.log(`📍 Getting JAKIM times via backend for: ${latitude}, ${longitude}`);
     
-    // Try JAKIM API first (most accurate)
-    try {
-      const apiTimes = await calculatePrayerTimesFromAPI(latitude, longitude);
-      if (apiTimes.success) {
-        console.log('✅ Using JAKIM API times');
-        return apiTimes;
+    const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+      ? 'http://localhost:5000' 
+      : 'https://muslimdailybackend.onrender.com'; // Your actual backend URL
+
+    const response = await fetch(
+      `${API_BASE}/api/prayertimes/coordinates/${latitude}/${longitude}`
+    );
+
+    if (response.ok) {
+      const data = await response.json();
+      
+      if (data.success) {
+        const result = {
+          fajr: formatTimeFromString(data.data.fajr),
+          sunrise: calculateSunriseTime(data.data.fajr), // Estimate sunrise
+          dhuhr: formatTimeFromString(data.data.dhuhr),
+          asr: formatTimeFromString(data.data.asr),
+          maghrib: formatTimeFromString(data.data.maghrib),
+          isha: formatTimeFromString(data.data.isha),
+          method: `JAKIM ${data.data.zone} - Precise GPS`,
+          location: { latitude, longitude },
+          date: new Date().toDateString(),
+          calculated: true,
+          success: true,
+          source: 'backend-jakim',
+          zone: data.data.zone
+        };
+
+        console.log('✅ Backend JAKIM times:', result);
+        return result;
       }
-    } catch (apiError) {
-      console.log('🌐 API failed, using local calculation');
     }
     
-    // Fallback to reliable local calculation
-    return calculateReliableLocalTimes(latitude, longitude, date);
+    throw new Error('Backend API failed');
   } catch (error) {
-    console.error('All calculations failed:', error);
-    return getDefaultMalaysiaTimes(latitude, longitude);
+    console.error('Backend API failed, using reliable fallback:', error);
+    return calculateReliableFallback(latitude, longitude);
   }
 };
 
-// Reliable local calculation with proper parameters
-const calculateReliableLocalTimes = (latitude, longitude, date = new Date()) => {
+// Estimate sunrise based on Fajr time
+const calculateSunriseTime = (fajrTime) => {
+  const [fajrHours, fajrMinutes] = fajrTime.split(':');
+  let hours = parseInt(fajrHours);
+  let minutes = parseInt(fajrMinutes);
+  
+  // Sunrise is typically about 1-1.5 hours after Fajr
+  minutes += 90; // 1.5 hours
+  if (minutes >= 60) {
+    hours += 1;
+    minutes -= 60;
+  }
+  
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const displayHour = hours % 12 || 12;
+  return `${displayHour}:${minutes.toString().padStart(2, '0')} ${period}`;
+};
+
+// Simple fallback calculation
+const calculateReliableFallback = async (latitude, longitude) => {
   try {
-    const coordinates = new Coordinates(latitude, longitude);
+    const { CalculationMethod, PrayerTimes, Coordinates, Madhab } = await import('adhan');
     
-    // Use parameters that work well for Malaysia
+    const coordinates = new Coordinates(latitude, longitude);
     const params = CalculationMethod.MuslimWorldLeague();
     params.madhab = Madhab.Shafi;
     params.fajrAngle = 20;
     params.ishaAngle = 18;
     
-    const prayerTimes = new PrayerTimes(coordinates, date, params);
+    const prayerTimes = new PrayerTimes(coordinates, new Date(), params);
     
-    const result = {
+    return {
       fajr: formatTime(prayerTimes.fajr),
       sunrise: formatTime(prayerTimes.sunrise),
       dhuhr: formatTime(prayerTimes.dhuhr),
       asr: formatTime(prayerTimes.asr),
       maghrib: formatTime(prayerTimes.maghrib),
       isha: formatTime(prayerTimes.isha),
-      method: 'Reliable Local - Precise GPS',
+      method: 'Reliable Fallback - Precise GPS',
       location: { latitude, longitude },
-      date: date.toDateString(),
       calculated: true,
       success: true,
-      source: 'local'
+      source: 'fallback'
     };
-
-    console.log('✅ Reliable local times calculated:', {
-      fajr: result.fajr,
-      dhuhr: result.dhuhr,
-      asr: result.asr,
-      maghrib: result.maghrib,
-      isha: result.isha
-    });
-    
-    return result;
   } catch (error) {
-    console.error('Reliable local calculation failed:', error);
-    throw error;
+    console.error('Fallback calculation failed:', error);
+    return getDefaultTimes(latitude, longitude);
   }
 };
 
-// Format time to 12-hour format
-const formatTime = (date) => {
-  return date.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
-  });
-};
-
-// JAKIM API with proper error handling
-export const calculatePrayerTimesFromAPI = async (latitude, longitude) => {
-  return new Promise((resolve, reject) => {
-    // Add timeout to prevent hanging
-    const timeout = setTimeout(() => {
-      reject(new Error('API timeout'));
-    }, 10000);
-
-    try {
-      console.log(`🌐 Fetching JAKIM API times for: ${latitude}, ${longitude}`);
-      
-      const today = new Date();
-      const day = today.getDate();
-      const month = today.getMonth() + 1;
-      const year = today.getFullYear();
-      
-      fetch(
-        `https://api.aladhan.com/v1/timings/${day}-${month}-${year}?latitude=${latitude}&longitude=${longitude}&method=13&school=0&timezone=Asia/Kuala_Lumpur`
-      )
-      .then(response => {
-        clearTimeout(timeout);
-        if (!response.ok) {
-          throw new Error('API response not ok');
-        }
-        return response.json();
-      })
-      .then(data => {
-        const timings = data.data.timings;
-        
-        const result = {
-          fajr: formatTimeFromString(timings.Fajr),
-          sunrise: formatTimeFromString(timings.Sunrise),
-          dhuhr: formatTimeFromString(timings.Dhuhr),
-          asr: formatTimeFromString(timings.Asr),
-          maghrib: formatTimeFromString(timings.Maghrib),
-          isha: formatTimeFromString(timings.Isha),
-          method: 'JAKIM API - Precise GPS',
-          location: { latitude, longitude },
-          success: true,
-          calculated: true,
-          source: 'api'
-        };
-
-        console.log('✅ JAKIM API times received:', {
-          fajr: result.fajr,
-          dhuhr: result.dhuhr,
-          asr: result.asr,
-          maghrib: result.maghrib,
-          isha: result.isha
-        });
-        
-        resolve(result);
-      })
-      .catch(error => {
-        clearTimeout(timeout);
-        reject(error);
-      });
-    } catch (error) {
-      clearTimeout(timeout);
-      reject(error);
-    }
-  });
-};
-
-// Format time from API response
-const formatTimeFromString = (timeStr) => {
-  try {
-    const [hours, minutes] = timeStr.split(':');
-    const hour = parseInt(hours);
-    const minute = parseInt(minutes);
-    
-    const period = hour >= 12 ? 'PM' : 'AM';
-    const displayHour = hour % 12 || 12;
-    
-    return `${displayHour}:${minute.toString().padStart(2, '0')} ${period}`;
-  } catch (error) {
-    console.error('Error formatting time from string:', error);
-    return timeStr;
-  }
-};
-
-// Default Malaysia times as last resort
-const getDefaultMalaysiaTimes = (latitude, longitude) => {
-  console.log('🔄 Using default Malaysia times');
-  
+// Absolute fallback
+const getDefaultTimes = (latitude, longitude) => {
   return {
     fajr: '5:45 AM',
     sunrise: '7:05 AM',
@@ -170,25 +104,36 @@ const getDefaultMalaysiaTimes = (latitude, longitude) => {
     isha: '8:30 PM',
     method: 'Default Malaysia Times',
     location: { latitude, longitude },
-    date: new Date().toDateString(),
     calculated: false,
     success: true,
-    source: 'default',
-    note: 'Using standard Malaysia prayer times'
+    source: 'default'
   };
+};
+
+const formatTime = (date) => {
+  return date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
+};
+
+const formatTimeFromString = (timeStr) => {
+  const [hours, minutes] = timeStr.split(':');
+  const hour = parseInt(hours);
+  const period = hour >= 12 ? 'PM' : 'AM';
+  const displayHour = hour % 12 || 12;
+  return `${displayHour}:${minutes} ${period}`;
 };
 
 // Location service
 export const getCurrentLocation = () => {
   return new Promise((resolve, reject) => { 
     if (!navigator.geolocation) {
-      console.warn('📍 Geolocation not supported');
       reject(new Error('Geolocation not supported'));
       return;
     }
 
-    console.log('📍 Getting PRECISE location for prayer times...');
-    
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const location = {
@@ -197,7 +142,7 @@ export const getCurrentLocation = () => {
           accuracy: position.coords.accuracy
         };
         
-        console.log('📍 PRECISE Location:', {
+        console.log('📍 Location obtained:', {
           lat: location.latitude,
           lng: location.longitude,
           accuracy: `${location.accuracy}m`
@@ -218,7 +163,7 @@ export const getCurrentLocation = () => {
   });
 };
 
-// Next prayer calculation
+// Keep existing helper functions
 export const getNextPrayer = (prayerTimes) => {
   const now = new Date();
   const prayers = [
@@ -231,7 +176,6 @@ export const getNextPrayer = (prayerTimes) => {
 
   for (let prayer of prayers) {
     const prayerTime = parseTimeString(prayer.time);
-    
     if (prayerTime > now) {
       return {
         name: prayer.name,
@@ -241,7 +185,6 @@ export const getNextPrayer = (prayerTimes) => {
     }
   }
 
-  // If all prayers passed, return first prayer of next day
   const tomorrow = new Date(now);
   tomorrow.setDate(tomorrow.getDate() + 1);
   const fajrTime = parseTimeString(prayerTimes.fajr);
@@ -255,7 +198,6 @@ export const getNextPrayer = (prayerTimes) => {
   };
 };
 
-// Current prayer calculation
 export const getCurrentPrayer = (prayerTimes) => {
   const now = new Date();
   const prayers = [
@@ -286,33 +228,20 @@ export const getCurrentPrayer = (prayerTimes) => {
   return null;
 };
 
-// Parse time string to Date object
 const parseTimeString = (timeStr) => {
-  try {
-    const [time, modifier] = timeStr.split(' ');
-    let [hours, minutes] = time.split(':');
-    
-    hours = parseInt(hours);
-    minutes = parseInt(minutes);
-    
-    if (modifier === 'PM' && hours < 12) hours += 12;
-    if (modifier === 'AM' && hours === 12) hours = 0;
-    
-    const date = new Date();
-    date.setHours(hours, minutes, 0, 0);
-    
-    // If time has passed, set for next day
-    if (date < new Date()) {
-      date.setDate(date.getDate() + 1);
-    }
-    
-    return date;
-  } catch (error) {
-    console.error('Error parsing time string:', error);
-    return new Date();
-  }
+  const [time, modifier] = timeStr.split(' ');
+  let [hours, minutes] = time.split(':');
+  
+  hours = parseInt(hours);
+  minutes = parseInt(minutes);
+  
+  if (modifier === 'PM' && hours < 12) hours += 12;
+  if (modifier === 'AM' && hours === 12) hours = 0;
+  
+  const date = new Date();
+  date.setHours(hours, minutes, 0, 0);
+  return date;
 };
 
-// Export for flexibility
 export { calculatePrayerTimes as calculatePrayerTimesLocal };
-export { calculatePrayerTimesFromAPI as calculatePrayerTimesAPI };
+export { calculatePrayerTimes as calculatePrayerTimesAPI };
