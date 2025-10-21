@@ -420,6 +420,15 @@ const PrayerResources = () => {
             >
               Debug Compass
             </Button>
+            <Button 
+  startIcon={<Refresh />} 
+  onClick={testCompassMovement}
+  variant="outlined"
+  color="warning"
+  disabled={!compassActive}
+>
+  Test Compass
+</Button>
           </Box>
 
           {/* PWA Benefits Notice */}
