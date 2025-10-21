@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -18,19 +18,48 @@ import {
   NightsStay,
   Brightness4
 } from '@mui/icons-material';
-import { PrayerTimesContext } from '../context/PrayerTimesContext';
-import { getSimpleZoneName } from '../utils/locationZones';
 
 const PrayerTimes = () => {
-  const { prayerTimes, loading, error, zone, fetchPrayerTimes, userLocation } = useContext(PrayerTimesContext);
+  const [prayerTimes, setPrayerTimes] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [lastUpdated, setLastUpdated] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+
+  // Simple mock data for now - we'll replace this with your actual data source
+  const mockPrayerTimes = {
+    fajr: '5:49 AM',
+    sunrise: '6:59 AM', 
+    dhuhr: '1:01 PM',
+    asr: '4:18 PM',
+    maghrib: '7:00 PM',
+    isha: '8:15 PM'
+  };
+
+  useEffect(() => {
+    // Load prayer times on component mount
+    fetchPrayerTimes();
+  }, []);
 
   useEffect(() => {
     if (prayerTimes) {
       setLastUpdated(new Date().toLocaleTimeString());
     }
   }, [prayerTimes]);
+
+  const fetchPrayerTimes = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      // TODO: Replace with your actual API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setPrayerTimes(mockPrayerTimes);
+    } catch (err) {
+      setError('Failed to load prayer times');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -112,7 +141,7 @@ const PrayerTimes = () => {
       }
     }
     
-    return prayers[prayers.length - 1]; // Return Isha if before Fajr
+    return prayers[prayers.length - 1];
   };
 
   const getNextPrayer = () => {
@@ -146,14 +175,14 @@ const PrayerTimes = () => {
       }
     }
     
-    return prayers[0]; // Return Fajr if after Isha
+    return prayers[0];
   };
 
   const currentPrayer = getCurrentPrayer();
   const nextPrayer = getNextPrayer();
 
-  // Get human-readable location name
-  const displayLocation = zone ? getSimpleZoneName(zone) : 'Your Location';
+  // Simple location display - we'll improve this later
+  const displayLocation = 'Your Location';
 
   if (loading) {
     return (
@@ -227,19 +256,17 @@ const PrayerTimes = () => {
                   {displayLocation}
                 </Typography>
               </Box>
-              {userLocation && (
-                <Chip 
-                  label="Live Location" 
-                  size="small" 
-                  variant="outlined"
-                  sx={{ 
-                    backgroundColor: 'rgba(255,255,255,0.2)', 
-                    color: 'white',
-                    borderColor: 'rgba(255,255,255,0.3)',
-                    fontSize: '0.7rem'
-                  }}
-                />
-              )}
+              <Chip 
+                label="Auto Location" 
+                size="small" 
+                variant="outlined"
+                sx={{ 
+                  backgroundColor: 'rgba(255,255,255,0.2)', 
+                  color: 'white',
+                  borderColor: 'rgba(255,255,255,0.3)',
+                  fontSize: '0.7rem'
+                }}
+              />
             </Box>
             
             <Button
