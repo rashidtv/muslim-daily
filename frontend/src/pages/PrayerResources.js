@@ -38,8 +38,11 @@ const PrayerResources = () => {
   useEffect(() => {
     if (!userLocation) {
       getLocation();
+    } else if (!locationName) {
+      // If we have location but no name, get the name
+      getLocationName(userLocation.latitude, userLocation.longitude);
     }
-  }, []);
+  }, [userLocation]);
 
   const getLocationName = async (latitude, longitude) => {
     try {
@@ -52,18 +55,18 @@ const PrayerResources = () => {
         const address = data.address;
         let locationParts = [];
         
-        if (address.city_district) {
-          locationParts.push(address.city_district);
-        } else if (address.suburb) {
-          locationParts.push(address.suburb);
-        } else if (address.city) {
+        // Priority: city -> town -> municipality -> state
+        if (address.city) {
           locationParts.push(address.city);
         } else if (address.town) {
           locationParts.push(address.town);
+        } else if (address.municipality) {
+          locationParts.push(address.municipality);
         } else if (address.village) {
           locationParts.push(address.village);
         }
         
+        // Add state if available
         if (address.state) {
           locationParts.push(address.state);
         }
@@ -71,12 +74,14 @@ const PrayerResources = () => {
         if (locationParts.length > 0) {
           setLocationName(locationParts.join(', '));
         } else {
+          // Fallback to coordinates if no location name found
           setLocationName(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
         }
       } else {
         setLocationName(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
       }
     } catch (error) {
+      console.log('Error getting location name:', error);
       setLocationName(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
     }
   };
@@ -168,7 +173,7 @@ const PrayerResources = () => {
               </Box>
               
               <Typography variant="body1" gutterBottom>
-                {locationName}
+                {locationName || 'Getting location...'}
               </Typography>
               
               <Typography variant="caption" color="text.secondary">
@@ -177,7 +182,7 @@ const PrayerResources = () => {
             </Box>
           )}
 
-          {/* Clean Compass Design */}
+          {/* Clean Compass Design - FIXED ARROW POSITIONING */}
           <Box sx={{ 
             position: 'relative', 
             width: 250, 
@@ -190,13 +195,14 @@ const PrayerResources = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+            overflow: 'hidden' // Prevent any overflow issues
           }}>
             
-            {/* Cardinal Directions */}
+            {/* Cardinal Directions - SIMPLIFIED */}
             <Typography variant="h6" fontWeight="bold" sx={{ 
               position: 'absolute', 
-              top: 12, 
+              top: 16, 
               left: '50%', 
               transform: 'translateX(-50%)', 
               color: '#d32f2f'
@@ -206,7 +212,7 @@ const PrayerResources = () => {
             <Typography variant="body1" fontWeight="bold" sx={{ 
               position: 'absolute', 
               top: '50%', 
-              right: 12, 
+              right: 16, 
               transform: 'translateY(-50%)', 
               color: 'primary.main'
             }}>
@@ -214,7 +220,7 @@ const PrayerResources = () => {
             </Typography>
             <Typography variant="body1" fontWeight="bold" sx={{ 
               position: 'absolute', 
-              bottom: 12, 
+              bottom: 16, 
               left: '50%', 
               transform: 'translateX(-50%)', 
               color: 'success.main'
@@ -224,46 +230,30 @@ const PrayerResources = () => {
             <Typography variant="body1" fontWeight="bold" sx={{ 
               position: 'absolute', 
               top: '50%', 
-              left: 12, 
+              left: 16, 
               transform: 'translateY(-50%)', 
               color: 'warning.main'
             }}>
               W
             </Typography>
 
-            {/* Simple Degree Markings - Only Main Directions */}
-            {[0, 90, 180, 270].map((degree) => (
-              <Box
-                key={degree}
-                sx={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  width: 2,
-                  height: 16,
-                  backgroundColor: '#d32f2f',
-                  transform: `translate(-50%, -50%) rotate(${degree}deg) translateY(-115px)`,
-                  transformOrigin: 'center 115px'
-                }}
-              />
-            ))}
-
-            {/* Clean Qibla Arrow - Single Direction */}
+            {/* Qibla Arrow - PERFECTLY CENTERED AND ATTACHED */}
             <Box sx={{
               position: 'absolute',
               top: '50%',
               left: '50%',
               width: 3,
-              height: '40%',
+              height: 100, // Fixed height from center to edge
               backgroundColor: '#1976d2',
+              // PERFECT CENTERING: Transform from exact center point
               transform: `translate(-50%, -50%) rotate(${currentAngle}deg)`,
-              transformOrigin: 'center bottom',
+              transformOrigin: 'center center', // Rotate from exact center
               zIndex: 2,
               borderRadius: '1px',
               '&::after': {
                 content: '""',
                 position: 'absolute',
-                top: 0,
+                top: 0, // Triangle at the outer end
                 left: '50%',
                 transform: 'translateX(-50%)',
                 width: 0,
@@ -274,13 +264,13 @@ const PrayerResources = () => {
               }
             }} />
 
-            {/* Center Dot */}
+            {/* Center Dot - PERFECTLY CENTERED */}
             <Box sx={{
               position: 'absolute', 
               top: '50%', 
               left: '50%', 
-              width: 12, 
-              height: 12,
+              width: 16, 
+              height: 16,
               backgroundColor: '#d32f2f', 
               borderRadius: '50%', 
               transform: 'translate(-50%, -50%)',
@@ -303,7 +293,7 @@ const PrayerResources = () => {
                 fontSize: '0.7rem',
                 fontWeight: '500'
               }}>
-                {currentAngle.toFixed(0)}°
+                {currentAngle.toFixed(0)}° to Mecca
               </Box>
             )}
           </Box>
@@ -319,10 +309,10 @@ const PrayerResources = () => {
               borderRadius: 1
             }}>
               <Typography variant="body2" fontWeight="500">
-                Current Heading: {deviceHeading.toFixed(0)}°
+                Current Device Heading: {deviceHeading.toFixed(0)}°
               </Typography>
               <Typography variant="caption" sx={{ opacity: 0.9 }}>
-                Rotate device until arrow points to 0°
+                Rotate until arrow points to 0° to face Mecca
               </Typography>
             </Box>
           )}
@@ -359,7 +349,7 @@ const PrayerResources = () => {
           <Typography variant="body2" color="text.secondary" textAlign="center">
             {!compassActive 
               ? 'Click "Start Compass" to begin. Allow permissions if prompted.'
-              : 'The blue arrow points to Mecca. Rotate your device to find the direction.'
+              : 'The blue arrow points to Mecca. Rotate your device until it points to 0°.'
             }
           </Typography>
         </CardContent>
