@@ -54,24 +54,26 @@ const PrayerResources = () => {
         const address = data.address;
         let locationParts = [];
         
+        // Get city/town name (avoid municipal council, district, etc.)
         if (address.city) {
           locationParts.push(address.city);
         } else if (address.town) {
           locationParts.push(address.town);
-        } else if (address.municipality) {
-          locationParts.push(address.municipality);
         } else if (address.village) {
           locationParts.push(address.village);
         }
+        // Note: We're skipping municipality, county, district to avoid "Kajang Municipal Council"
         
-        if (address.state) {
+        // Get state (but avoid if it's the same as city)
+        if (address.state && locationParts[0] !== address.state) {
           locationParts.push(address.state);
         }
         
         if (locationParts.length > 0) {
           setLocationName(locationParts.join(', '));
         } else {
-          setLocationName(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+          // Fallback: if no clean city/state found, use a simpler approach
+          setLocationName(this.getSimpleLocationName(address) || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
         }
       } else {
         setLocationName(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
@@ -80,6 +82,47 @@ const PrayerResources = () => {
       console.log('Error getting location name:', error);
       setLocationName(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
     }
+  };
+
+  // Helper function to extract clean city and state
+  const getSimpleLocationName = (address) => {
+    // Common patterns to exclude
+    const excludePatterns = [
+      'municipal council',
+      'municipality',
+      'district',
+      'county',
+      'city council',
+      'majlis',
+      'daerah'
+    ];
+    
+    let city = '';
+    let state = '';
+    
+    // Find city/town (excluding administrative names)
+    if (address.city && !excludePatterns.some(pattern => address.city.toLowerCase().includes(pattern))) {
+      city = address.city;
+    } else if (address.town && !excludePatterns.some(pattern => address.town.toLowerCase().includes(pattern))) {
+      city = address.town;
+    } else if (address.village) {
+      city = address.village;
+    }
+    
+    // Get state
+    if (address.state) {
+      state = address.state;
+    }
+    
+    if (city && state) {
+      return `${city}, ${state}`;
+    } else if (city) {
+      return city;
+    } else if (state) {
+      return state;
+    }
+    
+    return null;
   };
 
   const getLocation = () => {
@@ -198,7 +241,7 @@ const PrayerResources = () => {
             {/* Cardinal Directions - Adjusted spacing */}
             <Typography variant="h6" fontWeight="bold" sx={{ 
               position: 'absolute', 
-              top: 20,  // Moved down from 16
+              top: 20,
               left: '50%', 
               transform: 'translateX(-50%)', 
               color: '#d32f2f'
@@ -208,7 +251,7 @@ const PrayerResources = () => {
             <Typography variant="body1" fontWeight="bold" sx={{ 
               position: 'absolute', 
               top: '50%', 
-              right: 20,  // Moved in from 16
+              right: 20,
               transform: 'translateY(-50%)', 
               color: 'primary.main'
             }}>
@@ -216,7 +259,7 @@ const PrayerResources = () => {
             </Typography>
             <Typography variant="body1" fontWeight="bold" sx={{ 
               position: 'absolute', 
-              bottom: 20,  // Moved up from 16
+              bottom: 20,
               left: '50%', 
               transform: 'translateX(-50%)', 
               color: 'success.main'
@@ -226,7 +269,7 @@ const PrayerResources = () => {
             <Typography variant="body1" fontWeight="bold" sx={{ 
               position: 'absolute', 
               top: '50%', 
-              left: 20,  // Moved in from 16
+              left: 20,
               transform: 'translateY(-50%)', 
               color: 'warning.main'
             }}>
@@ -274,11 +317,11 @@ const PrayerResources = () => {
               zIndex: 3
             }} />
 
-            {/* Current Angle Display - MOVED TO AVOID OVERLAP */}
+            {/* Current Angle Display */}
             {compassActive && (
               <Box sx={{
                 position: 'absolute',
-                bottom: 40,  // Moved up from 8 to avoid overlapping with "S"
+                bottom: 40,
                 left: '50%',
                 transform: 'translateX(-50%)',
                 backgroundColor: 'primary.main',

@@ -1,308 +1,355 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
+  Box,
   Card,
   CardContent,
   Typography,
-  Box,
-  Chip,
-  Button,
-  CircularProgress,
-  IconButton,
   Alert,
-  Snackbar,
+  CircularProgress,
+  Button,
+  Chip,
   Grid
 } from '@mui/material';
-import { Refresh, CheckCircle, RadioButtonUnchecked, MyLocation } from '@mui/icons-material'; // REMOVED PrayerTimes import
-import { usePractice } from '../../context/PracticeContext';
-import { useAuth } from '../../context/AuthContext';
-import { calculatePrayerTimes, getCurrentLocation, getNextPrayer } from '../../utils/prayerTimes';
+import {
+  AccessTime,
+  Refresh,
+  MyLocation,
+  WbSunny,
+  NightsStay,
+  Brightness4
+} from '@mui/icons-material';
+import { PrayerTimesContext } from '../context/PrayerTimesContext';
+import { getSimpleZoneName } from '../utils/locationZones';
 
 const PrayerTimes = () => {
-  const [prayerTimes, setPrayerTimes] = useState(null);
-  const [nextPrayer, setNextPrayer] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [locationLoading, setLocationLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [userLocation, setUserLocation] = useState(null);
-  const [snackbarOpen, setSnackbarOpen] = useState(false);
-  const [snackbarMessage, setSnackbarMessage] = useState('');
-  
-  const { trackPrayer, getTodayPrayers } = usePractice();
-  const { user } = useAuth();
+  const { prayerTimes, loading, error, zone, fetchPrayerTimes, userLocation } = useContext(PrayerTimesContext);
+  const [lastUpdated, setLastUpdated] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Helper function to check if prayer is completed today
-  const isPrayerCompletedToday = (prayerName) => {
-    if (!user) return false;
-    const todayPrayers = getTodayPrayers();
-    return todayPrayers.some(prayer => prayer.name.toLowerCase() === prayerName.toLowerCase());
-  };
-
-  // Load prayer times from cache or get new ones
-  const loadPrayerTimes = async (forceRefresh = false) => {
-    // Check if we already have recent prayer times (less than 30 minutes old)
-    const cachedPrayerTimes = localStorage.getItem('cachedPrayerTimes');
-    const cachedLocation = localStorage.getItem('cachedLocation');
-    const cacheTimestamp = localStorage.getItem('prayerTimesTimestamp');
-    
-    const now = Date.now();
-    const thirtyMinutes = 30 * 60 * 1000;
-    
-    if (!forceRefresh && cachedPrayerTimes && cachedLocation && cacheTimestamp && 
-        (now - parseInt(cacheTimestamp)) < thirtyMinutes) {
-      
-      const times = JSON.parse(cachedPrayerTimes);
-      const location = JSON.parse(cachedLocation);
-      
-      setPrayerTimes(times);
-      setUserLocation(location);
-      setNextPrayer(getNextPrayer(times));
-      setLoading(false);
-      console.log('✅ Using cached prayer times');
-      return;
-    }
-
-    // Get new prayer times
-    setLocationLoading(true);
-    try {
-      console.log('📍 Getting fresh prayer times...');
-      
-      const currentLocation = await getCurrentLocation();
-      setUserLocation(currentLocation);
-      
-      const times = await calculatePrayerTimes(currentLocation.latitude, currentLocation.longitude);
-      setPrayerTimes(times);
-      setNextPrayer(getNextPrayer(times));
-      
-      // Cache the results
-      localStorage.setItem('cachedPrayerTimes', JSON.stringify(times));
-      localStorage.setItem('cachedLocation', JSON.stringify(currentLocation));
-      localStorage.setItem('prayerTimesTimestamp', now.toString());
-      
-      if (forceRefresh) {
-        setSnackbarMessage('📍 Location and prayer times updated');
-        setSnackbarOpen(true);
-      }
-      
-    } catch (error) {
-      console.error('❌ Location failed:', error);
-      setError('Unable to detect location. Using cached times.');
-      
-      // Try to use cached data even if it's old
-      if (cachedPrayerTimes && cachedLocation) {
-        const times = JSON.parse(cachedPrayerTimes);
-        const location = JSON.parse(cachedLocation);
-        
-        setPrayerTimes(times);
-        setUserLocation({ ...location, note: 'cached' });
-        setNextPrayer(getNextPrayer(times));
-        setSnackbarMessage('⚠️ Using cached prayer times');
-        setSnackbarOpen(true);
-      }
-    } finally {
-      setLocationLoading(false);
-      setLoading(false);
-    }
-  };
-
-  // Manual location refresh
-  const handleRefreshLocation = async () => {
-    await loadPrayerTimes(true);
-  };
-
-  const handlePracticeToggle = async (prayerName) => {
-    if (!user) {
-      setSnackbarMessage('Please sign in to track prayers');
-      setSnackbarOpen(true);
-      return;
-    }
-
-    try {
-      const wasCompleted = isPrayerCompletedToday(prayerName);
-      await trackPrayer(prayerName);
-      
-      if (wasCompleted) {
-        setSnackbarMessage(`${prayerName} prayer marked as incomplete`);
-      } else {
-        setSnackbarMessage(`${prayerName} prayer tracked successfully!`);
-      }
-      
-      setSnackbarOpen(true);
-      
-      // Refresh the UI to show updated completion status
-      setPrayerTimes(prev => ({ ...prev }));
-    } catch (error) {
-      setSnackbarMessage('Failed to track prayer');
-      setSnackbarOpen(true);
-    }
-  };
-
-  // Load prayer times on component mount (only once)
   useEffect(() => {
-    setLoading(true);
-    loadPrayerTimes();
-  }, []);
+    if (prayerTimes) {
+      setLastUpdated(new Date().toLocaleTimeString());
+    }
+  }, [prayerTimes]);
 
-  const prayers = [
-    { name: 'Fajr', time: prayerTimes?.fajr, icon: '🌅', type: 'fajr' },
-    { name: 'Dhuhr', time: prayerTimes?.dhuhr, icon: '☀️', type: 'dhuhr' },
-    { name: 'Asr', time: prayerTimes?.asr, icon: '🌇', type: 'asr' },
-    { name: 'Maghrib', time: prayerTimes?.maghrib, icon: '🌆', type: 'maghrib' },
-    { name: 'Isha', time: prayerTimes?.isha, icon: '🌙', type: 'isha' }
-  ];
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchPrayerTimes();
+    setTimeout(() => setRefreshing(false), 1000);
+  };
 
-  if (loading && !prayerTimes) {
+  const getPrayerIcon = (prayerName) => {
+    switch (prayerName.toLowerCase()) {
+      case 'fajr':
+        return <Brightness4 sx={{ fontSize: 20, color: '#1976d2' }} />;
+      case 'sunrise':
+        return <WbSunny sx={{ fontSize: 20, color: '#ff9800' }} />;
+      case 'dhuhr':
+        return <WbSunny sx={{ fontSize: 20, color: '#f57c00' }} />;
+      case 'asr':
+        return <AccessTime sx={{ fontSize: 20, color: '#388e3c' }} />;
+      case 'maghrib':
+        return <NightsStay sx={{ fontSize: 20, color: '#d32f2f' }} />;
+      case 'isha':
+        return <NightsStay sx={{ fontSize: 20, color: '#7b1fa2' }} />;
+      default:
+        return <AccessTime sx={{ fontSize: 20 }} />;
+    }
+  };
+
+  const getPrayerColor = (prayerName) => {
+    switch (prayerName.toLowerCase()) {
+      case 'fajr':
+        return '#1976d2';
+      case 'sunrise':
+        return '#ff9800';
+      case 'dhuhr':
+        return '#f57c00';
+      case 'asr':
+        return '#388e3c';
+      case 'maghrib':
+        return '#d32f2f';
+      case 'isha':
+        return '#7b1fa2';
+      default:
+        return 'text.primary';
+    }
+  };
+
+  const formatPrayerName = (name) => {
+    return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+  };
+
+  const getCurrentPrayer = () => {
+    if (!prayerTimes) return null;
+
+    const now = new Date();
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+
+    const prayers = [
+      { name: 'Fajr', time: prayerTimes.fajr },
+      { name: 'Sunrise', time: prayerTimes.sunrise },
+      { name: 'Dhuhr', time: prayerTimes.dhuhr },
+      { name: 'Asr', time: prayerTimes.asr },
+      { name: 'Maghrib', time: prayerTimes.maghrib },
+      { name: 'Isha', time: prayerTimes.isha }
+    ];
+
+    for (let i = prayers.length - 1; i >= 0; i--) {
+      const prayerTime = prayers[i].time;
+      if (prayerTime) {
+        const [time, period] = prayerTime.split(' ');
+        let [hours, minutes] = time.split(':').map(Number);
+        
+        if (period === 'PM' && hours !== 12) hours += 12;
+        if (period === 'AM' && hours === 12) hours = 0;
+        
+        const prayerMinutes = hours * 60 + minutes;
+        
+        if (currentTime >= prayerMinutes) {
+          return prayers[i];
+        }
+      }
+    }
+    
+    return prayers[prayers.length - 1]; // Return Isha if before Fajr
+  };
+
+  const getNextPrayer = () => {
+    if (!prayerTimes) return null;
+
+    const now = new Date();
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+
+    const prayers = [
+      { name: 'Fajr', time: prayerTimes.fajr },
+      { name: 'Dhuhr', time: prayerTimes.dhuhr },
+      { name: 'Asr', time: prayerTimes.asr },
+      { name: 'Maghrib', time: prayerTimes.maghrib },
+      { name: 'Isha', time: prayerTimes.isha }
+    ];
+
+    for (let i = 0; i < prayers.length; i++) {
+      const prayerTime = prayers[i].time;
+      if (prayerTime) {
+        const [time, period] = prayerTime.split(' ');
+        let [hours, minutes] = time.split(':').map(Number);
+        
+        if (period === 'PM' && hours !== 12) hours += 12;
+        if (period === 'AM' && hours === 12) hours = 0;
+        
+        const prayerMinutes = hours * 60 + minutes;
+        
+        if (currentTime < prayerMinutes) {
+          return prayers[i];
+        }
+      }
+    }
+    
+    return prayers[0]; // Return Fajr if after Isha
+  };
+
+  const currentPrayer = getCurrentPrayer();
+  const nextPrayer = getNextPrayer();
+
+  // Get human-readable location name
+  const displayLocation = zone ? getSimpleZoneName(zone) : 'Your Location';
+
+  if (loading) {
     return (
-      <Card sx={{ borderRadius: 2, boxShadow: 1 }}>
-        <CardContent sx={{ textAlign: 'center', py: 3 }}>
-          <CircularProgress size={24} />
-          <Typography variant="body2" sx={{ mt: 1, fontSize: '0.8rem' }}>
-            Loading prayer times...
+      <Card elevation={2} sx={{ mb: 3, borderRadius: 2 }}>
+        <CardContent sx={{ textAlign: 'center', py: 4 }}>
+          <CircularProgress size={40} sx={{ mb: 2 }} />
+          <Typography variant="h6" color="text.secondary">
+            Loading Prayer Times...
           </Typography>
         </CardContent>
       </Card>
     );
   }
 
+  if (error) {
+    return (
+      <Card elevation={2} sx={{ mb: 3, borderRadius: 2 }}>
+        <CardContent>
+          <Alert 
+            severity="error" 
+            action={
+              <Button color="inherit" size="small" onClick={fetchPrayerTimes}>
+                Retry
+              </Button>
+            }
+          >
+            {error}
+          </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!prayerTimes) {
+    return (
+      <Card elevation={2} sx={{ mb: 3, borderRadius: 2 }}>
+        <CardContent sx={{ textAlign: 'center', py: 4 }}>
+          <Typography variant="h6" color="text.secondary" gutterBottom>
+            Prayer Times Not Available
+          </Typography>
+          <Button 
+            variant="contained" 
+            onClick={fetchPrayerTimes}
+            startIcon={<Refresh />}
+          >
+            Load Prayer Times
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <>
-      <Card sx={{ borderRadius: 2, boxShadow: 1 }}>
-        <CardContent sx={{ p: 2 }}>
-          {/* Compact Header */}
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              {/* CHANGED: Using mosque emoji instead of non-existent icon */}
-              <Typography variant="h6" sx={{ fontSize: '1.2rem' }}>🕌</Typography>
-              <Typography variant="h6" sx={{ fontSize: '1.1rem', fontWeight: '600' }}>
-                Prayer Times
-              </Typography>
+    <Card elevation={2} sx={{ mb: 3, borderRadius: 2, overflow: 'visible' }}>
+      <CardContent sx={{ p: 0 }}>
+        {/* Header with Location and Refresh */}
+        <Box sx={{ 
+          p: 3, 
+          pb: 2,
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          background: 'linear-gradient(135deg, #1976d2 0%, #0D47A1 100%)',
+          color: 'white',
+          position: 'relative'
+        }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+            <Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                <MyLocation sx={{ fontSize: 20, mr: 1, opacity: 0.9 }} />
+                <Typography variant="h6" fontWeight="600">
+                  {displayLocation}
+                </Typography>
+              </Box>
+              {userLocation && (
+                <Chip 
+                  label="Live Location" 
+                  size="small" 
+                  variant="outlined"
+                  sx={{ 
+                    backgroundColor: 'rgba(255,255,255,0.2)', 
+                    color: 'white',
+                    borderColor: 'rgba(255,255,255,0.3)',
+                    fontSize: '0.7rem'
+                  }}
+                />
+              )}
             </Box>
             
             <Button
-              size="small"
-              startIcon={locationLoading ? <CircularProgress size={14} /> : <MyLocation />}
-              onClick={handleRefreshLocation}
-              disabled={locationLoading}
+              onClick={handleRefresh}
+              disabled={refreshing}
+              startIcon={<Refresh />}
               variant="outlined"
-              color="primary"
-              sx={{ 
-                fontSize: '0.7rem', 
-                minWidth: 'auto',
-                px: 1,
-                py: 0.5
+              size="small"
+              sx={{
+                color: 'white',
+                borderColor: 'rgba(255,255,255,0.3)',
+                '&:hover': {
+                  borderColor: 'rgba(255,255,255,0.5)',
+                  backgroundColor: 'rgba(255,255,255,0.1)'
+                }
               }}
             >
-              {locationLoading ? '' : 'Refresh'}
+              {refreshing ? 'Updating...' : 'Refresh'}
             </Button>
           </Box>
 
-          {error && (
-            <Alert severity="warning" sx={{ mb: 1.5, fontSize: '0.75rem', py: 0.5 }}>
-              {error}
-            </Alert>
-          )}
-
-          {/* Next Prayer - Compact */}
-          {nextPrayer && (
-            <Box sx={{ 
-              bgcolor: 'primary.main', 
-              color: 'white', 
-              p: 1.5, 
-              borderRadius: 1.5, 
-              mb: 2,
-              textAlign: 'center'
-            }}>
-              <Typography variant="body2" fontWeight="medium" sx={{ fontSize: '0.8rem' }}>
-                Next: {nextPrayer.name}
+          {/* Current Prayer Status */}
+          {currentPrayer && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="body2" sx={{ opacity: 0.9, mb: 1 }}>
+                Currently: <strong>{formatPrayerName(currentPrayer.name)}</strong>
               </Typography>
-              <Typography variant="h6" fontWeight="bold" sx={{ fontSize: '1rem' }}>
-                {nextPrayer.time}
-                {nextPrayer.isTomorrow && ' (Tomorrow)'}
+              {nextPrayer && nextPrayer.name !== 'Fajr' && (
+                <Typography variant="body2" sx={{ opacity: 0.8 }}>
+                  Next: <strong>{formatPrayerName(nextPrayer.name)}</strong> at {nextPrayer.time}
+                </Typography>
+              )}
+            </Box>
+          )}
+        </Box>
+
+        {/* Prayer Times Grid */}
+        <Box sx={{ p: 3 }}>
+          <Grid container spacing={2}>
+            {Object.entries(prayerTimes).map(([key, time]) => {
+              if (key === 'date' || !time) return null;
+              
+              const prayerName = formatPrayerName(key);
+              const isCurrentPrayer = currentPrayer && currentPrayer.name.toLowerCase() === key.toLowerCase();
+              const prayerColor = getPrayerColor(key);
+              
+              return (
+                <Grid item xs={6} sm={4} key={key}>
+                  <Box
+                    sx={{
+                      p: 2,
+                      borderRadius: 2,
+                      textAlign: 'center',
+                      border: isCurrentPrayer ? `2px solid ${prayerColor}` : '1px solid',
+                      borderColor: isCurrentPrayer ? prayerColor : 'divider',
+                      backgroundColor: isCurrentPrayer ? `${prayerColor}10` : 'transparent',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        backgroundColor: isCurrentPrayer ? `${prayerColor}15` : 'grey.50'
+                      }
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1 }}>
+                      {getPrayerIcon(key)}
+                    </Box>
+                    <Typography 
+                      variant="body2" 
+                      fontWeight="600" 
+                      color={isCurrentPrayer ? prayerColor : 'text.primary'}
+                      gutterBottom
+                    >
+                      {prayerName}
+                    </Typography>
+                    <Typography 
+                      variant="h6" 
+                      fontWeight="700"
+                      color={isCurrentPrayer ? prayerColor : 'text.primary'}
+                    >
+                      {time}
+                    </Typography>
+                    {isCurrentPrayer && (
+                      <Chip 
+                        label="Now" 
+                        size="small" 
+                        sx={{ 
+                          mt: 1,
+                          backgroundColor: prayerColor,
+                          color: 'white',
+                          fontSize: '0.6rem',
+                          height: 20
+                        }}
+                      />
+                    )}
+                  </Box>
+                </Grid>
+              );
+            })}
+          </Grid>
+
+          {/* Last Updated */}
+          {lastUpdated && (
+            <Box sx={{ mt: 3, pt: 2, borderTop: '1px solid', borderColor: 'divider' }}>
+              <Typography variant="caption" color="text.secondary">
+                Last updated: {lastUpdated}
               </Typography>
             </Box>
           )}
-
-          {/* Compact Prayer Times List */}
-          {prayerTimes && (
-            <Grid container spacing={0.5}>
-              {prayers.map((prayer) => {
-                const isCompleted = isPrayerCompletedToday(prayer.name);
-                const isNextPrayer = nextPrayer?.name === prayer.name;
-                
-                return (
-                  <Grid item xs={12} key={prayer.name}>
-                    <Box 
-                      sx={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                        p: 1,
-                        borderRadius: 1,
-                        bgcolor: isNextPrayer ? 'action.hover' : 'transparent',
-                        border: isNextPrayer ? '1px solid' : 'none',
-                        borderColor: isNextPrayer ? 'primary.main' : 'transparent',
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Typography variant="body2" sx={{ fontSize: '1rem', minWidth: '24px' }}>
-                          {prayer.icon}
-                        </Typography>
-                        <Box>
-                          <Typography 
-                            variant="body2"
-                            fontWeight="500"
-                            sx={{ 
-                              textDecoration: isCompleted ? 'line-through' : 'none',
-                              color: isCompleted ? 'text.secondary' : 'text.primary',
-                              fontSize: '0.8rem'
-                            }}
-                          >
-                            {prayer.name}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {prayer.time || '--:--'}
-                          </Typography>
-                        </Box>
-                      </Box>
-                      
-                      <IconButton
-                        onClick={() => handlePracticeToggle(prayer.name)}
-                        color={isCompleted ? "success" : "default"}
-                        size="small"
-                        disabled={!user}
-                        sx={{
-                          width: '28px',
-                          height: '28px',
-                          opacity: !user ? 0.5 : 1,
-                        }}
-                      >
-                        {isCompleted ? <CheckCircle fontSize="small" /> : <RadioButtonUnchecked fontSize="small" />}
-                      </IconButton>
-                    </Box>
-                  </Grid>
-                );
-              })}
-            </Grid>
-          )}
-
-          {/* Compact Footer */}
-          <Box sx={{ mt: 1, textAlign: 'center' }}>
-            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem' }}>
-              {prayerTimes?.zone ? `Zone: ${prayerTimes.zone}` : 'Official JAKIM times'}
-              {userLocation?.note === 'cached' && ' • Cached'}
-            </Typography>
-          </Box>
-        </CardContent>
-      </Card>
-
-      <Snackbar
-        open={snackbarOpen}
-        autoHideDuration={3000}
-        onClose={() => setSnackbarOpen(false)}
-        message={snackbarMessage}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        sx={{ '& .MuiSnackbarContent-root': { fontSize: '0.8rem' } }}
-      />
-    </>
+        </Box>
+      </CardContent>
+    </Card>
   );
 };
 
