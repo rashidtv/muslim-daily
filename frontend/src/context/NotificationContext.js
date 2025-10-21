@@ -93,7 +93,7 @@ export const NotificationProvider = ({ children }) => {
       console.log('🔄 Initializing automatic prayer notifications...');
       
       // Get user location first - USING SAME PRECISE LOGIC AS QIBLA
-      const location = await getUserLocation();
+      const location = await getCurrentLocation(); // This uses the same function as prayer times
       setUserLocation(location);
       console.log('📍 Precise location obtained for notifications:', location);
 

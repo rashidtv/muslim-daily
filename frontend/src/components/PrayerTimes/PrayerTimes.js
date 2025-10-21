@@ -12,10 +12,10 @@ import {
   Snackbar,
   Grid
 } from '@mui/material';
-import { Refresh, CheckCircle, RadioButtonUnchecked, MyLocation, GpsFixed } from '@mui/icons-material';
+import { Refresh, CheckCircle, RadioButtonUnchecked, MyLocation, GpsFixed, Wifi } from '@mui/icons-material';
 import { usePractice } from '../../context/PracticeContext';
 import { useAuth } from '../../context/AuthContext';
-import { calculatePrayerTimes, getCurrentLocation, getNextPrayer } from '../../utils/prayerTimes';
+import { calculatePrayerTimesFromAPI, getCurrentLocation, getNextPrayer } from '../../utils/prayerTimes';
 
 const PrayerTimes = () => {
   const [prayerTimes, setPrayerTimes] = useState(null);
@@ -26,6 +26,7 @@ const PrayerTimes = () => {
   const [userLocation, setUserLocation] = useState(null);
   const [snackbarOpen, setSnackbarOpen] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [usingAPI, setUsingAPI] = useState(true);
   
   const { trackPrayer, getTodayPrayers } = usePractice();
   const { user } = useAuth();
@@ -46,18 +47,20 @@ const PrayerTimes = () => {
       const location = await getCurrentLocation();
       setUserLocation(location);
       
-      // Calculate prayer times using PRECISE GPS coordinates
-      const times = await calculatePrayerTimes(location.latitude, location.longitude);
+      // Calculate prayer times using PRECISE GPS coordinates with JAKIM-like API
+      const times = await calculatePrayerTimesFromAPI(location.latitude, location.longitude);
       setPrayerTimes(times);
       setNextPrayer(getNextPrayer(times));
+      setUsingAPI(times.source === 'aladhan-api');
       
-      setSnackbarMessage(`📍 Using your precise location for accurate prayer times`);
+      setSnackbarMessage(`📍 Using precise location with ${usingAPI ? 'JAKIM-like API' : 'local calculation'}`);
       setSnackbarOpen(true);
       
-      console.log('✅ Prayer times calculated using PRECISE GPS:', {
+      console.log('✅ Prayer times calculated:', {
         coordinates: `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`,
         accuracy: `${Math.round(location.accuracy)}m`,
-        times: times
+        method: times.method,
+        dhuhr: times.dhuhr
       });
       
     } catch (error) {
@@ -68,9 +71,10 @@ const PrayerTimes = () => {
       const fallbackLocation = { latitude: 3.1390, longitude: 101.6869, accuracy: 0, note: 'fallback' };
       setUserLocation(fallbackLocation);
       
-      const times = await calculatePrayerTimes(fallbackLocation.latitude, fallbackLocation.longitude);
+      const times = await calculatePrayerTimesFromAPI(fallbackLocation.latitude, fallbackLocation.longitude);
       setPrayerTimes(times);
       setNextPrayer(getNextPrayer(times));
+      setUsingAPI(times.source === 'aladhan-api');
       
       setSnackbarMessage('⚠️ Using default location. Enable GPS for precise prayer times.');
       setSnackbarOpen(true);
@@ -89,11 +93,12 @@ const PrayerTimes = () => {
       const location = await getCurrentLocation();
       setUserLocation(location);
       
-      const times = await calculatePrayerTimes(location.latitude, location.longitude);
+      const times = await calculatePrayerTimesFromAPI(location.latitude, location.longitude);
       setPrayerTimes(times);
       setNextPrayer(getNextPrayer(times));
+      setUsingAPI(times.source === 'aladhan-api');
       
-      setSnackbarMessage(`📍 Location refreshed! Using precise GPS coordinates`);
+      setSnackbarMessage(`📍 Location refreshed! Using precise GPS`);
       setSnackbarOpen(true);
       
     } catch (error) {
@@ -211,14 +216,14 @@ const PrayerTimes = () => {
               p: 1.5, 
               borderRadius: 2, 
               mb: 2,
-              backgroundColor: 'success.50',
+              backgroundColor: usingAPI ? 'info.50' : 'warning.50',
               border: '1px solid',
-              borderColor: 'success.100'
+              borderColor: usingAPI ? 'info.100' : 'warning.100'
             }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <MyLocation sx={{ fontSize: 16, color: 'success.main' }} />
-                <Typography variant="body2" color="success.main" fontWeight="medium">
-                  Using {userLocation.note === 'fallback' ? 'default' : 'precise'} location
+                {usingAPI ? <Wifi sx={{ fontSize: 16, color: 'info.main' }} /> : <GpsFixed sx={{ fontSize: 16, color: 'warning.main' }} />}
+                <Typography variant="body2" color={usingAPI ? 'info.main' : 'warning.main'} fontWeight="medium">
+                  {usingAPI ? 'Live JAKIM-like times' : 'Local calculation'} • {userLocation.note === 'fallback' ? 'Default location' : 'Precise GPS'}
                 </Typography>
               </Box>
               <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5 }}>
@@ -334,7 +339,7 @@ const PrayerTimes = () => {
           {/* Footer Info */}
           <Box sx={{ mt: 1, textAlign: 'center' }}>
             <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
-              Calculated using precise GPS coordinates • {prayerTimes?.method}
+              {prayerTimes?.method} • Using precise GPS coordinates
             </Typography>
           </Box>
         </CardContent>
