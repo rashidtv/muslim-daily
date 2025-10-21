@@ -25,8 +25,40 @@ const PrayerTimes = () => {
   const [error, setError] = useState('');
   const [lastUpdated, setLastUpdated] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [zone, setZone] = useState('');
 
-  // Simple mock data for now - we'll replace this with your actual data source
+  // Smart location detection with multiple fallbacks
+  const getDisplayLocation = () => {
+    try {
+      // Primary: Get clean location name from Qibla compass
+      const storedName = localStorage.getItem('userLocationName');
+      if (storedName && storedName !== 'Your Location') {
+        return storedName;
+      }
+      
+      // Secondary: Check if we have raw location data
+      const locationData = localStorage.getItem('userLocationData');
+      if (locationData) {
+        const parsedData = JSON.parse(locationData);
+        if (parsedData.cleanName && parsedData.cleanName !== 'Your Location') {
+          return parsedData.cleanName;
+        }
+      }
+      
+      // Fallback: Show zone if available
+      if (zone && zone !== 'Unknown') {
+        return `Zone ${zone}`;
+      }
+      
+      return 'Your Location';
+    } catch (error) {
+      return 'Your Location';
+    }
+  };
+
+  const displayLocation = getDisplayLocation();
+
+  // Mock data - replace with your actual API
   const mockPrayerTimes = {
     fajr: '5:49 AM',
     sunrise: '6:59 AM', 
@@ -37,7 +69,6 @@ const PrayerTimes = () => {
   };
 
   useEffect(() => {
-    // Load prayer times on component mount
     fetchPrayerTimes();
   }, []);
 
@@ -52,8 +83,9 @@ const PrayerTimes = () => {
     setError('');
     try {
       // TODO: Replace with your actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 800));
       setPrayerTimes(mockPrayerTimes);
+      setZone('SGR01'); // Mock zone - replace with actual zone from your API
     } catch (err) {
       setError('Failed to load prayer times');
     } finally {
@@ -181,9 +213,6 @@ const PrayerTimes = () => {
   const currentPrayer = getCurrentPrayer();
   const nextPrayer = getNextPrayer();
 
-  // Simple location display - we'll improve this later
-  const displayLocation = 'Your Location';
-
   if (loading) {
     return (
       <Card elevation={2} sx={{ mb: 3, borderRadius: 2 }}>
@@ -288,17 +317,12 @@ const PrayerTimes = () => {
             </Button>
           </Box>
 
-          {/* Current Prayer Status */}
-          {currentPrayer && (
+          {/* Next Prayer Status */}
+          {nextPrayer && (
             <Box sx={{ mt: 2 }}>
-              <Typography variant="body2" sx={{ opacity: 0.9, mb: 1 }}>
-                Currently: <strong>{formatPrayerName(currentPrayer.name)}</strong>
+              <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                Next: <strong>{formatPrayerName(nextPrayer.name)}</strong> at {nextPrayer.time}
               </Typography>
-              {nextPrayer && nextPrayer.name !== 'Fajr' && (
-                <Typography variant="body2" sx={{ opacity: 0.8 }}>
-                  Next: <strong>{formatPrayerName(nextPrayer.name)}</strong> at {nextPrayer.time}
-                </Typography>
-              )}
             </Box>
           )}
         </Box>

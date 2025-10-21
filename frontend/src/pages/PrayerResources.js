@@ -43,6 +43,85 @@ const PrayerResources = () => {
     }
   }, [userLocation]);
 
+  // Intelligent location name cleaning
+  const getCleanLocationName = (address) => {
+    const administrativeTerms = [
+      'municipal', 'council', 'majlis', 'daerah', 'district', 
+      'administrative', 'perbandaran', 'bandaran', 'city council',
+      'municipality', 'county', 'authority', 'jabatan'
+    ];
+
+    let city = '';
+    let state = address.state || '';
+
+    // Function to check if text contains administrative terms
+    const hasAdministrativeTerm = (text) => {
+      if (!text) return false;
+      return administrativeTerms.some(term => 
+        text.toLowerCase().includes(term.toLowerCase())
+      );
+    };
+
+    // Function to extract clean city name from text
+    const extractCleanCityName = (text) => {
+      if (!text) return '';
+      
+      let cleanText = text;
+      
+      // Remove administrative terms
+      administrativeTerms.forEach(term => {
+        const regex = new RegExp(`\\b${term}\\b`, 'gi');
+        cleanText = cleanText.replace(regex, '');
+      });
+      
+      // Remove extra spaces, commas, and special characters
+      cleanText = cleanText.replace(/[,\s]+/g, ' ').trim();
+      
+      return cleanText || text;
+    };
+
+    // Priority order for city names with intelligent cleaning
+    const cityFields = ['city', 'town', 'village', 'municipality', 'suburb', 'county'];
+    
+    for (const field of cityFields) {
+      if (address[field]) {
+        const rawName = address[field];
+        
+        // If it doesn't contain administrative terms, use it directly
+        if (!hasAdministrativeTerm(rawName)) {
+          city = rawName;
+          break;
+        } else {
+          // If it has administrative terms, try to extract clean name
+          const cleanName = extractCleanCityName(rawName);
+          if (cleanName && cleanName.length > 2) {
+            city = cleanName;
+            break;
+          }
+        }
+      }
+    }
+
+    // Final cleanup of city name
+    if (city) {
+      // Remove any remaining administrative terms
+      city = city.replace(/\b(council|municipal|daerah|district|perbandaran)\b/gi, '').trim();
+      // Remove double spaces and trailing commas
+      city = city.replace(/\s+/g, ' ').replace(/,\s*$/, '').trim();
+    }
+
+    // Return formatted location
+    if (city && state && city !== state) {
+      return `${city}, ${state}`;
+    } else if (city) {
+      return city;
+    } else if (state) {
+      return state;
+    }
+
+    return 'Your Location';
+  };
+
   const getLocationName = async (latitude, longitude) => {
     try {
       const response = await fetch(
@@ -52,77 +131,38 @@ const PrayerResources = () => {
       
       if (data && data.address) {
         const address = data.address;
-        let locationParts = [];
         
-        // Get city/town name (avoid municipal council, district, etc.)
-        if (address.city) {
-          locationParts.push(address.city);
-        } else if (address.town) {
-          locationParts.push(address.town);
-        } else if (address.village) {
-          locationParts.push(address.village);
-        }
-        // Note: We're skipping municipality, county, district to avoid "Kajang Municipal Council"
+        // Get intelligently cleaned location name
+        const cleanName = getCleanLocationName(address);
+        setLocationName(cleanName);
         
-        // Get state (but avoid if it's the same as city)
-        if (address.state && locationParts[0] !== address.state) {
-          locationParts.push(address.state);
-        }
+        // Store for Prayer Times to use
+        const locationData = {
+          cleanName,
+          rawAddress: address,
+          timestamp: new Date().toISOString(),
+          coordinates: { latitude, longitude }
+        };
         
-        if (locationParts.length > 0) {
-          setLocationName(locationParts.join(', '));
-        } else {
-          // Fallback: if no clean city/state found, use a simpler approach
-          setLocationName(this.getSimpleLocationName(address) || `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
-        }
+        localStorage.setItem('userLocationData', JSON.stringify(locationData));
+        localStorage.setItem('userLocationName', cleanName);
+        
+        console.log('📍 Intelligent location processing:', {
+          raw: address,
+          clean: cleanName
+        });
+        
       } else {
-        setLocationName(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+        const fallbackName = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+        setLocationName(fallbackName);
+        localStorage.setItem('userLocationName', fallbackName);
       }
     } catch (error) {
       console.log('Error getting location name:', error);
-      setLocationName(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+      const fallbackName = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+      setLocationName(fallbackName);
+      localStorage.setItem('userLocationName', fallbackName);
     }
-  };
-
-  // Helper function to extract clean city and state
-  const getSimpleLocationName = (address) => {
-    // Common patterns to exclude
-    const excludePatterns = [
-      'municipal council',
-      'municipality',
-      'district',
-      'county',
-      'city council',
-      'majlis',
-      'daerah'
-    ];
-    
-    let city = '';
-    let state = '';
-    
-    // Find city/town (excluding administrative names)
-    if (address.city && !excludePatterns.some(pattern => address.city.toLowerCase().includes(pattern))) {
-      city = address.city;
-    } else if (address.town && !excludePatterns.some(pattern => address.town.toLowerCase().includes(pattern))) {
-      city = address.town;
-    } else if (address.village) {
-      city = address.village;
-    }
-    
-    // Get state
-    if (address.state) {
-      state = address.state;
-    }
-    
-    if (city && state) {
-      return `${city}, ${state}`;
-    } else if (city) {
-      return city;
-    } else if (state) {
-      return state;
-    }
-    
-    return null;
   };
 
   const getLocation = () => {
