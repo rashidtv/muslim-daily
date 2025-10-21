@@ -73,6 +73,45 @@ const PrayerResources = () => {
     return isInPWA;
   };
 
+  // NEW: Auto-enable compass for PWA mobile
+  const autoEnableCompassPWA = async () => {
+    if (compassPermissionRequested || compassActive || !isPWA) return;
+
+    console.log('🔄 Auto-enabling compass for PWA...');
+    setCompassPermissionRequested(true);
+    
+    setTimeout(async () => {
+      try {
+        if (window.DeviceOrientationEvent) {
+          if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+            // iOS - auto request permission in PWA
+            try {
+              const permission = await DeviceOrientationEvent.requestPermission();
+              if (permission === 'granted') {
+                localStorage.setItem('compassPermission', 'granted');
+                setCompassPermissionGranted(true);
+                setupCompass();
+                console.log('✅ Compass auto-enabled in PWA (iOS)');
+              } else {
+                console.log('ℹ️ Compass permission not granted in PWA');
+              }
+            } catch (err) {
+              console.log('Compass permission request failed in PWA:', err);
+            }
+          } else {
+            // Android - auto enable in PWA
+            localStorage.setItem('compassPermission', 'granted');
+            setCompassPermissionGranted(true);
+            setupCompass();
+            console.log('✅ Compass auto-enabled in PWA (Android)');
+          }
+        }
+      } catch (err) {
+        console.log('Auto-enable compass in PWA failed:', err);
+      }
+    }, 1000);
+  };
+
   const getLocationName = async (latitude, longitude) => {
     setGettingLocationName(true);
     try {
@@ -192,6 +231,7 @@ const PrayerResources = () => {
     setShowCompassDialog(false);
   };
 
+  // UPDATED: Enhanced auto-enable compass for both desktop and PWA
   const autoEnableCompass = async () => {
     if (compassPermissionRequested || compassActive) return;
 
@@ -199,11 +239,20 @@ const PrayerResources = () => {
     
     setTimeout(async () => {
       try {
-        if (isPWA || typeof DeviceOrientationEvent.requestPermission !== 'function') {
+        // For PWA mobile, use the new auto-enable function
+        if (isPWA) {
+          await autoEnableCompassPWA();
+        } 
+        // For desktop browsers that don't require permission
+        else if (typeof DeviceOrientationEvent.requestPermission !== 'function') {
           if (window.DeviceOrientationEvent) {
+            localStorage.setItem('compassPermission', 'granted');
+            setCompassPermissionGranted(true);
             setupCompass();
+            console.log('✅ Compass auto-enabled in desktop browser');
           }
         } else {
+          // For iOS Safari (non-PWA), show dialog
           setShowCompassDialog(true);
         }
       } catch (err) {
@@ -256,7 +305,10 @@ const PrayerResources = () => {
           setQiblaDirection(direction);
           
           getLocationName(latitude, longitude);
+          
+          // AUTO-ENABLE COMPASS - Now works for both desktop and PWA mobile
           autoEnableCompass();
+          
         } catch (error) {
           console.error('Calculation error:', error);
           setError('Error calculating Qibla direction');
@@ -319,6 +371,7 @@ const PrayerResources = () => {
           {isPWA && (
             <Alert severity="success" sx={{ mb: 2 }}>
               Running in app mode - Best experience! 
+              {compassActive && ' Compass auto-enabled!'}
             </Alert>
           )}
 
@@ -376,6 +429,14 @@ const PrayerResources = () => {
               variant={compassActive ? "filled" : "outlined"}
               disabled={!qiblaDirection || loading}
             />
+            {isPWA && compassActive && (
+              <Chip 
+                label="Auto" 
+                size="small" 
+                color="info" 
+                variant="outlined"
+              />
+            )}
           </Box>
 
           {error && (
@@ -504,6 +565,7 @@ const PrayerResources = () => {
                   ? `Point device towards Mecca (${currentAngle.toFixed(0)}°)` 
                   : `Face ${qiblaDirection}° from North towards Mecca`
                 }
+                {isPWA && compassActive && ' • Auto-enabled'}
               </Typography>
             </Box>
           )}
