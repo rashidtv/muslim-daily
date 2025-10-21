@@ -35,6 +35,7 @@ const PrayerResources = () => {
     deviceHeading,
     compassActive,
     compassSupported,
+    compassAvailable,
     userLocation,
     compassError,
     setUserLocationAndCalculateQibla,
@@ -42,7 +43,7 @@ const PrayerResources = () => {
     stopCompass,
     getQiblaAngle,
     debugCompass,
-    testCompassMovement // Get the test function from context
+    testCompassMovement
   } = useCompass();
 
   // Get notification status
@@ -251,11 +252,23 @@ const PrayerResources = () => {
           <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3, gap: 1 }}>
             <Chip 
               icon={<Navigation />}
-              label={compassActive ? "Compass Active" : "Compass Ready"} 
-              color={compassActive ? "success" : "primary"}
+              label={
+                compassActive 
+                  ? compassAvailable 
+                    ? "Compass Active" 
+                    : "Static Direction"
+                  : "Compass Ready"
+              } 
+              color={
+                compassActive 
+                  ? compassAvailable 
+                    ? "success" 
+                    : "warning"
+                  : "primary"
+              }
               variant={compassActive ? "filled" : "outlined"}
             />
-            {compassActive && (
+            {compassActive && compassAvailable && (
               <Chip 
                 label="Auto" 
                 size="small" 
@@ -263,7 +276,7 @@ const PrayerResources = () => {
                 variant="outlined"
               />
             )}
-            {!compassSupported && (
+            {compassActive && !compassAvailable && (
               <Chip 
                 label="Static" 
                 size="small" 
@@ -307,7 +320,10 @@ const PrayerResources = () => {
                   </Typography>
                   {compassActive && (
                     <Typography variant="caption" color="success.main" display="block" fontWeight="medium">
-                      {compassSupported ? '✅ Compass auto-enabled & persistent' : '📍 Static Qibla direction (compass not available)'}
+                      {compassAvailable 
+                        ? '✅ Compass auto-enabled & persistent' 
+                        : '📍 Static Qibla direction (compass not available)'
+                      }
                     </Typography>
                   )}
                 </>
@@ -328,7 +344,9 @@ const PrayerResources = () => {
               height: '100%', 
               borderRadius: '50%', 
               border: '4px solid',
-              borderColor: compassActive ? (compassSupported ? 'success.main' : 'warning.main') : 'primary.main', 
+              borderColor: compassActive 
+                ? (compassAvailable ? 'success.main' : 'warning.main') 
+                : 'primary.main', 
               position: 'relative', 
               backgroundColor: '#f8f9fa',
               boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
@@ -348,7 +366,9 @@ const PrayerResources = () => {
                 left: '50%',
                 width: 3,
                 height: '45%',
-                backgroundColor: compassActive ? (compassSupported ? '#1976d2' : '#ed6c02') : '#90caf9',
+                backgroundColor: compassActive 
+                  ? (compassAvailable ? '#1976d2' : '#ed6c02') 
+                  : '#90caf9',
                 transform: `translate(-50%, -50%) rotate(${currentAngle}deg)`,
                 transformOrigin: 'center center',
                 zIndex: 2,
@@ -363,7 +383,11 @@ const PrayerResources = () => {
                   height: 0,
                   borderLeft: '6px solid transparent',
                   borderRight: '6px solid transparent',
-                  borderBottom: `10px solid ${compassActive ? (compassSupported ? '#1976d2' : '#ed6c02') : '#90caf9'}`
+                  borderBottom: `10px solid ${
+                    compassActive 
+                      ? (compassAvailable ? '#1976d2' : '#ed6c02') 
+                      : '#90caf9'
+                  }`
                 }
               }} />
 
@@ -392,12 +416,12 @@ const PrayerResources = () => {
               </Typography>
               <Typography variant="h6" gutterBottom color="text.primary">
                 {compassActive 
-                  ? compassSupported 
+                  ? compassAvailable 
                     ? `Point device towards Mecca (${currentAngle.toFixed(0)}°)` 
                     : `Face ${qiblaDirection}° from North towards Mecca (Static)`
                   : `Face ${qiblaDirection}° from North towards Mecca`
                 }
-                {compassActive && compassSupported && ' • Auto-enabled & Persistent'}
+                {compassActive && compassAvailable && ' • Auto-enabled & Persistent'}
               </Typography>
             </Box>
           )}
@@ -446,11 +470,12 @@ const PrayerResources = () => {
           </Box>
 
           {/* Compass Support Notice */}
-          {!compassSupported && compassActive && (
+          {!compassAvailable && compassActive && (
             <Alert severity="info" sx={{ mt: 2 }}>
               <Typography variant="body2">
-                <strong>Note:</strong> Your device/browser doesn't support compass functionality. 
-                Showing static Qibla direction based on your location.
+                <strong>Note:</strong> Your device doesn't have compass hardware or it's not accessible. 
+                Showing static Qibla direction based on your location. For compass functionality, 
+                try using a mobile device with compass hardware.
               </Typography>
             </Alert>
           )}

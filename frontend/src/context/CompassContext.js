@@ -18,9 +18,11 @@ export const CompassProvider = ({ children }) => {
   const [compassPermissionGranted, setCompassPermissionGranted] = useState(false);
   const [compassError, setCompassError] = useState('');
   const [compassSupported, setCompassSupported] = useState(true);
+  const [compassAvailable, setCompassAvailable] = useState(true); // Different from supported
   const compassListenerRef = useRef(null);
   const lastHeadingRef = useRef(0);
   const eventCountRef = useRef(0);
+  const nullEventCountRef = useRef(0);
 
   // Check compass permission status on load
   useEffect(() => {
@@ -30,10 +32,26 @@ export const CompassProvider = ({ children }) => {
   }, []);
 
   const checkCompassSupport = () => {
-    const supported = !!(window.DeviceOrientationEvent);
-    setCompassSupported(supported);
-    console.log(`🎯 Compass supported: ${supported}`);
-    return supported;
+    // Check if DeviceOrientationEvent is supported
+    const orientationSupported = !!(window.DeviceOrientationEvent);
+    
+    // Check if this is likely a mobile device with actual compass hardware
+    const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const hasTouch = 'ontouchstart' in window;
+    
+    const likelyHasCompass = orientationSupported && (isMobileDevice || hasTouch);
+    
+    setCompassSupported(orientationSupported);
+    setCompassAvailable(likelyHasCompass);
+    
+    console.log(`🎯 Compass check:`, {
+      orientationSupported,
+      isMobileDevice,
+      hasTouch,
+      likelyHasCompass
+    });
+    
+    return orientationSupported;
   };
 
   const checkCompassPermissionStatus = () => {
@@ -65,6 +83,21 @@ export const CompassProvider = ({ children }) => {
     let heading = null;
     let dataSource = 'none';
 
+    // Check if we're getting null data (device doesn't actually have compass)
+    if (event.alpha === null && event.beta === null && event.gamma === null) {
+      nullEventCountRef.current++;
+      console.warn(`📵 Null compass data received (${nullEventCountRef.current} times)`);
+      
+      // If we've received multiple null events, mark compass as unavailable
+      if (nullEventCountRef.current >= 3) {
+        console.log('🔧 Compass hardware not available on this device');
+        setCompassAvailable(false);
+        setCompassError('Compass hardware not available on this device. Using static Qibla direction.');
+        stopCompass(); // Stop listening since we know it won't work
+      }
+      return;
+    }
+
     // For iOS Safari - most reliable
     if (typeof event.webkitCompassHeading !== 'undefined' && event.webkitCompassHeading !== null) {
       heading = event.webkitCompassHeading;
@@ -87,6 +120,9 @@ export const CompassProvider = ({ children }) => {
     }
 
     if (heading !== null && !isNaN(heading)) {
+      // Reset null counter since we got valid data
+      nullEventCountRef.current = 0;
+      
       // Smooth the heading changes
       const smoothing = 0.3;
       const currentHeading = lastHeadingRef.current;
@@ -116,19 +152,19 @@ export const CompassProvider = ({ children }) => {
         gamma: event.gamma,
         eventNumber: eventCountRef.current
       });
-
-      // If we've received several events but no valid data, the device might not support compass
-      if (eventCountRef.current > 10 && deviceHeading === 0) {
-        console.warn('🔧 Device may not support compass - considering fallback options');
-        setCompassError('Compass not available on this device. Using static Qibla direction.');
-        setCompassSupported(false);
-      }
     }
   };
 
   const setupCompass = () => {
     if (!compassSupported) {
       console.log('ℹ️ Compass not supported, skipping setup');
+      setCompassError('Compass not supported by your browser.');
+      return;
+    }
+
+    if (!compassAvailable) {
+      console.log('ℹ️ Compass not available on this device');
+      setCompassError('Compass hardware not available on this device.');
       return;
     }
 
@@ -142,6 +178,7 @@ export const CompassProvider = ({ children }) => {
 
     // Reset counters
     eventCountRef.current = 0;
+    nullEventCountRef.current = 0;
     lastHeadingRef.current = 0;
 
     // Set up new listener
@@ -161,12 +198,15 @@ export const CompassProvider = ({ children }) => {
       
       // Set up a test to check if events are coming through
       const testTimeout = setTimeout(() => {
-        console.log(`🔍 Compass Status: ${eventCountRef.current} events received, heading: ${deviceHeading}°`);
+        console.log(`🔍 Compass Status: ${eventCountRef.current} events received, ${nullEventCountRef.current} null events, heading: ${deviceHeading}°`);
         
         if (eventCountRef.current === 0) {
-          console.warn('⚠️ No compass events received - device/browser may not support compass');
-          setCompassError('Compass not supported. Using static Qibla direction.');
-          setCompassSupported(false);
+          console.warn('⚠️ No compass events received');
+          setCompassError('No compass data received from device.');
+        } else if (nullEventCountRef.current >= 3) {
+          console.warn('⚠️ Compass hardware not available');
+          setCompassError('Compass hardware not available on this device. Using static Qibla direction.');
+          setCompassAvailable(false);
         } else if (deviceHeading === 0 && eventCountRef.current > 5) {
           console.warn('⚠️ Compass events received but no valid heading data');
           setCompassError('Compass data not available. Using static Qibla direction.');
@@ -178,7 +218,7 @@ export const CompassProvider = ({ children }) => {
     } catch (error) {
       console.error('❌ Failed to add compass event listener:', error);
       setCompassError('Failed to start compass sensor: ' + error.message);
-      setCompassSupported(false);
+      setCompassAvailable(false);
     }
   };
 
@@ -192,6 +232,7 @@ export const CompassProvider = ({ children }) => {
     setDeviceHeading(0);
     lastHeadingRef.current = 0;
     eventCountRef.current = 0;
+    nullEventCountRef.current = 0;
   };
 
   const autoEnableCompass = async () => {
@@ -200,8 +241,8 @@ export const CompassProvider = ({ children }) => {
       return;
     }
 
-    if (!compassSupported) {
-      console.log('ℹ️ Compass not supported, using static direction');
+    if (!compassSupported || !compassAvailable) {
+      console.log('ℹ️ Compass not supported/available, using static direction');
       setCompassActive(true); // Still mark as active for UI, but with static direction
       return;
     }
@@ -232,12 +273,12 @@ export const CompassProvider = ({ children }) => {
             console.log('❌ iOS compass permission denied');
             localStorage.setItem('compassPermission', 'denied');
             setCompassError('Compass permission denied. Using static Qibla direction.');
-            setCompassSupported(false);
+            setCompassAvailable(false);
           }
         } catch (err) {
           console.error('❌ iOS permission request failed:', err);
           setCompassError('Failed to request compass permission. Using static Qibla direction.');
-          setCompassSupported(false);
+          setCompassAvailable(false);
         }
       } else {
         // For Android and desktop - no permission needed, just enable
@@ -249,7 +290,7 @@ export const CompassProvider = ({ children }) => {
     } catch (error) {
       console.error('⚠️ Auto-enable compass failed:', error);
       setCompassError('Failed to enable compass automatically. Using static Qibla direction.');
-      setCompassSupported(false);
+      setCompassAvailable(false);
     }
   };
 
@@ -268,8 +309,8 @@ export const CompassProvider = ({ children }) => {
       return 0;
     }
     
-    // If compass is not supported or not active, return static Qibla direction
-    if (!compassSupported || !compassActive || deviceHeading === 0) {
+    // If compass is not supported or not available, return static Qibla direction
+    if (!compassSupported || !compassAvailable || !compassActive || deviceHeading === 0) {
       return qiblaDirection;
     }
     
@@ -286,9 +327,11 @@ export const CompassProvider = ({ children }) => {
       deviceHeading,
       compassActive,
       compassSupported,
+      compassAvailable,
       compassPermissionGranted,
       userLocation,
       eventCount: eventCountRef.current,
+      nullEventCount: nullEventCountRef.current,
       lastHeading: lastHeadingRef.current,
       hasListener: !!compassListenerRef.current,
       relativeAngle: getQiblaAngle(),
@@ -301,7 +344,7 @@ export const CompassProvider = ({ children }) => {
     if (!compassActive) return;
     
     console.log('🧪 Testing compass movement...');
-    let testHeading = 0;
+    let testHeading = deviceHeading || 0;
     const testInterval = setInterval(() => {
       testHeading = (testHeading + 10) % 360;
       setDeviceHeading(testHeading);
@@ -329,6 +372,7 @@ export const CompassProvider = ({ children }) => {
     deviceHeading,
     compassActive,
     compassSupported,
+    compassAvailable,
     userLocation,
     compassPermissionGranted,
     compassError,
@@ -339,7 +383,7 @@ export const CompassProvider = ({ children }) => {
     getQiblaAngle,
     setCompassError,
     debugCompass,
-    testCompassMovement // Add test function for development
+    testCompassMovement
   };
 
   return (
