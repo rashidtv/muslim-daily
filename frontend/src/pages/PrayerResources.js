@@ -409,6 +409,24 @@ const PrayerResources = () => {
             >
               {compassActive ? 'Stop Compass' : 'Enable Compass'}
             </Button>
+
+            {/* Add this to your controls section for testing */}
+<Button 
+  startIcon={<Refresh />} 
+  onClick={() => {
+    console.log('🔍 Compass Debug:', {
+      qiblaDirection,
+      deviceHeading,
+      compassActive,
+      currentAngle: getQiblaAngle(),
+      userLocation
+    });
+  }}
+  variant="outlined"
+  color="secondary"
+>
+  Debug Compass
+</Button>
           </Box>
 
           {/* PWA Benefits Notice */}
