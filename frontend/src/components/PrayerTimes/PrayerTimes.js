@@ -15,7 +15,7 @@ import {
 import { Refresh, CheckCircle, RadioButtonUnchecked, MyLocation, GpsFixed, Wifi, Schedule } from '@mui/icons-material';
 import { usePractice } from '../../context/PracticeContext';
 import { useAuth } from '../../context/AuthContext';
-import { calculatePrayerTimes, calculatePrayerTimesFromAPI, getCurrentLocation, getNextPrayer } from '../../utils/prayerTimes';
+import { calculatePrayerTimes, getCurrentLocation, getNextPrayer } from '../../utils/prayerTimes';
 
 const PrayerTimes = () => {
   const [prayerTimes, setPrayerTimes] = useState(null);
@@ -45,52 +45,40 @@ const PrayerTimes = () => {
       setLocationLoading(true);
       console.log('📍 Auto-detecting precise location for prayer times...');
       
-      const location = await getCurrentLocation();
-      setUserLocation(location);
+      const currentLocation = await getCurrentLocation();
+      setUserLocation(currentLocation);
       
-      // Try local calculation first (more reliable)
-      let times = await calculatePrayerTimes(location.latitude, location.longitude);
-      let method = 'local';
-      
-      // If local calculation fails or gives fallback, try API
-      if (!times.success || times.source === 'fallback') {
-        console.log('🔄 Local calculation failed, trying API...');
-        const apiTimes = await calculatePrayerTimesFromAPI(location.latitude, location.longitude);
-        if (apiTimes.success) {
-          times = apiTimes;
-          method = 'api';
-        }
-      }
-      
+      // Calculate prayer times using PRECISE GPS coordinates
+      const times = await calculatePrayerTimes(currentLocation.latitude, currentLocation.longitude);
       setPrayerTimes(times);
       setNextPrayer(getNextPrayer(times));
-      setUsingAPI(method === 'api');
-      setCalculationMethod(method);
+      setUsingAPI(times.source === 'api');
+      setCalculationMethod(times.source === 'api' ? 'api' : 'local');
       
-      setSnackbarMessage(`📍 Using precise location (${method === 'api' ? 'JAKIM API' : 'Local calculation'})`);
+      setSnackbarMessage(`📍 Using precise location (${times.source === 'api' ? 'JAKIM API' : 'Local calculation'})`);
       setSnackbarOpen(true);
       
       console.log('✅ Prayer times calculated:', {
-        coordinates: `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`,
-        accuracy: `${Math.round(location.accuracy)}m`,
+        coordinates: `${currentLocation.latitude.toFixed(6)}, ${currentLocation.longitude.toFixed(6)}`,
+        accuracy: `${Math.round(currentLocation.accuracy)}m`,
         method: times.method,
         dhuhr: times.dhuhr,
-        source: method
+        source: times.source
       });
       
     } catch (error) {
       console.error('❌ Auto-location failed:', error);
       setError('Unable to detect your location. Using default coordinates.');
       
-      // Fallback to Kuala Lumpur coordinates
+      // Fallback to Kuala Lumpur coordinates but STILL USE PRECISE CALCULATION
       const fallbackLocation = { latitude: 3.1390, longitude: 101.6869, accuracy: 0, note: 'fallback' };
       setUserLocation(fallbackLocation);
       
-      const times = await calculatePrayerTimes(location.latitude, location.longitude);
+      const times = await calculatePrayerTimes(fallbackLocation.latitude, fallbackLocation.longitude);
       setPrayerTimes(times);
       setNextPrayer(getNextPrayer(times));
-      setUsingAPI(false);
-      setCalculationMethod('local');
+      setUsingAPI(times.source === 'api');
+      setCalculationMethod(times.source === 'api' ? 'api' : 'local');
       
       setSnackbarMessage('⚠️ Using default location. Enable GPS for precise prayer times.');
       setSnackbarOpen(true);
@@ -106,27 +94,16 @@ const PrayerTimes = () => {
     try {
       console.log('📍 Manually refreshing precise location...');
       
-      const location = await getCurrentLocation();
-      setUserLocation(location);
+      const currentLocation = await getCurrentLocation();
+      setUserLocation(currentLocation);
       
-      // Try both methods and use the best one
-      let times = await calculatePrayerTimes(location.latitude, location.longitude);
-      let method = 'local';
-      
-      if (!times.success || times.source === 'fallback') {
-        const apiTimes = await calculatePrayerTimesFromAPI(location.latitude, location.longitude);
-        if (apiTimes.success) {
-          times = apiTimes;
-          method = 'api';
-        }
-      }
-      
+      const times = await calculatePrayerTimes(currentLocation.latitude, currentLocation.longitude);
       setPrayerTimes(times);
       setNextPrayer(getNextPrayer(times));
-      setUsingAPI(method === 'api');
-      setCalculationMethod(method);
+      setUsingAPI(times.source === 'api');
+      setCalculationMethod(times.source === 'api' ? 'api' : 'local');
       
-      setSnackbarMessage(`📍 Location refreshed! (${method === 'api' ? 'JAKIM API' : 'Local calculation'})`);
+      setSnackbarMessage(`📍 Location refreshed! (${times.source === 'api' ? 'JAKIM API' : 'Local calculation'})`);
       setSnackbarOpen(true);
       
     } catch (error) {
@@ -150,12 +127,14 @@ const PrayerTimes = () => {
       
       if (calculationMethod === 'local') {
         // Switch to API
+        const { calculatePrayerTimesFromAPI } = await import('../../utils/prayerTimes');
         times = await calculatePrayerTimesFromAPI(userLocation.latitude, userLocation.longitude);
         method = 'api';
         setSnackbarMessage('🔄 Switched to JAKIM API calculation');
       } else {
         // Switch to local
-        times = await calculatePrayerTimes(userLocation.latitude, userLocation.longitude);
+        const { calculatePrayerTimesLocal } = await import('../../utils/prayerTimes');
+        times = await calculatePrayerTimesLocal(userLocation.latitude, userLocation.longitude);
         method = 'local';
         setSnackbarMessage('🔄 Switched to local calculation');
       }
