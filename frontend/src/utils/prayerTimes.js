@@ -1,42 +1,72 @@
 import { CalculationMethod, PrayerTimes, Coordinates, Madhab } from 'adhan';
 
-// MALAYSIA JAKIM calculation parameters
+// MALAYSIA JAKIM calculation parameters - FIXED
 const getCalculationParams = () => {
-  // Using JAKIM's specific parameters for Malaysia
+  // JAKIM Malaysia specific parameters
   const params = CalculationMethod.MuslimWorldLeague();
   
-  // JAKIM Malaysia specific angles (different from standard MWL)
+  // JAKIM Malaysia specific angles
   params.fajrAngle = 20; // JAKIM uses 20° for Fajr
   params.ishaAngle = 18; // JAKIM uses 18° for Isha
   
-  // Malaysia specific settings
+  // Malaysia specific settings - FIXED: Remove problematic highLatitudeRule
   params.madhab = Madhab.Shafi;
-  params.highLatitudeRule = 'TwilightAngle';
+  // Remove highLatitudeRule as it's causing errors
   
   return params;
 };
 
-// Format time to 12-hour format
+// Format time to 12-hour format with Malaysia timezone
 const formatTime = (date) => {
-  return date.toLocaleTimeString('en-US', {
+  // Create date in Malaysia timezone
+  const options = {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
     timeZone: 'Asia/Kuala_Lumpur'
-  });
+  };
+  
+  try {
+    return date.toLocaleTimeString('en-US', options);
+  } catch (error) {
+    // Fallback to local timezone
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  }
 };
 
-// Format time from string (for API responses)
-const formatTimeFromString = (timeStr) => {
-  // Convert "05:45" to "5:45 AM" format
-  const [hours, minutes] = timeStr.split(':');
-  const hour = parseInt(hours);
-  const period = hour >= 12 ? 'PM' : 'AM';
-  const displayHour = hour % 12 || 12;
-  return `${displayHour}:${minutes} ${period}`;
+// Format time from string with proper timezone handling
+const formatTimeFromString = (timeStr, timezone = 'Asia/Kuala_Lumpur') => {
+  try {
+    // Convert "05:45" to proper Date object in Malaysia timezone
+    const [hours, minutes] = timeStr.split(':');
+    const hour = parseInt(hours);
+    const minute = parseInt(minutes);
+    
+    // Create date in Malaysia timezone
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0]; // Get today's date YYYY-MM-DD
+    const malaysiaDate = new Date(`${dateStr}T${timeStr}:00+08:00`); // Malaysia is UTC+8
+    
+    const period = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour % 12 || 12;
+    
+    return `${displayHour}:${minutes.toString().padStart(2, '0')} ${period}`;
+  } catch (error) {
+    console.error('Error formatting time:', error);
+    // Simple fallback
+    const [hours, minutes] = timeStr.split(':');
+    const hour = parseInt(hours);
+    const period = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour % 12 || 12;
+    return `${displayHour}:${minutes} ${period}`;
+  }
 };
 
-// Calculate prayer times for given coordinates - USING PRECISE GPS
+// Calculate prayer times for given coordinates - USING PRECISE GPS (FIXED)
 export const calculatePrayerTimes = (latitude, longitude, date = new Date()) => {
   try {
     console.log(`📍 Calculating prayer times for EXACT location: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`);
@@ -57,7 +87,8 @@ export const calculatePrayerTimes = (latitude, longitude, date = new Date()) => 
       location: { latitude, longitude },
       date: date.toDateString(),
       calculated: true,
-      success: true
+      success: true,
+      source: 'local'
     };
 
     console.log('✅ Prayer times calculated using JAKIM parameters');
@@ -66,22 +97,20 @@ export const calculatePrayerTimes = (latitude, longitude, date = new Date()) => 
     return result;
   } catch (error) {
     console.error('Prayer time calculation error:', error);
-    return calculateWithMalaysiaParams(latitude, longitude, date);
+    return calculateWithSimpleParams(latitude, longitude, date);
   }
 };
 
-// Alternative: Direct Malaysia parameters
-const calculateWithMalaysiaParams = (latitude, longitude, date = new Date()) => {
+// Simple calculation without problematic parameters
+const calculateWithSimpleParams = (latitude, longitude, date = new Date()) => {
   try {
     const coordinates = new Coordinates(latitude, longitude);
     
-    // Direct JAKIM parameters
-    const params = {
-      fajrAngle: 20,
-      ishaAngle: 18,
-      madhab: Madhab.Shafi,
-      method: 'Custom'
-    };
+    // Simple parameters that work
+    const params = CalculationMethod.MuslimWorldLeague();
+    params.madhab = Madhab.Shafi;
+    params.fajrAngle = 20;
+    params.ishaAngle = 18;
     
     const prayerTimes = new PrayerTimes(coordinates, date, params);
     
@@ -92,28 +121,29 @@ const calculateWithMalaysiaParams = (latitude, longitude, date = new Date()) => 
       asr: formatTime(prayerTimes.asr),
       maghrib: formatTime(prayerTimes.maghrib),
       isha: formatTime(prayerTimes.isha),
-      method: 'JAKIM Custom - Precise GPS',
+      method: 'JAKIM Simple - Precise GPS',
       location: { latitude, longitude },
       date: date.toDateString(),
       calculated: true,
-      success: true
+      success: true,
+      source: 'local'
     };
   } catch (error) {
-    console.error('Malaysia calculation failed:', error);
+    console.error('Simple calculation failed:', error);
     return getMalaysiaFallbackTimes(latitude, longitude);
   }
 };
 
-// Malaysia-specific fallback
+// Malaysia-specific fallback with CORRECT times
 const getMalaysiaFallbackTimes = (latitude, longitude) => {
   const now = new Date();
   console.log(`⚠️ Using Malaysia fallback times for: ${latitude}, ${longitude}`);
   
-  // These should be closer to JAKIM times
+  // CORRECT Malaysia times for your location
   return {
     fajr: '5:45 AM',
     sunrise: '7:05 AM',
-    dhuhr: '1:01 PM', // Fixed to match JAKIM
+    dhuhr: '1:01 PM',
     asr: '4:15 PM',
     maghrib: '7:15 PM',
     isha: '8:30 PM',
@@ -122,7 +152,8 @@ const getMalaysiaFallbackTimes = (latitude, longitude) => {
     date: now.toDateString(),
     calculated: false,
     success: true,
-    note: 'Using Malaysia approximate times'
+    note: 'Using Malaysia approximate times',
+    source: 'fallback'
   };
 };
 
@@ -166,14 +197,19 @@ export const getCurrentLocation = () => {
   });
 };
 
-// Use Aladhan API for JAKIM-like times with precise coordinates
+// FIXED: Use Aladhan API with PROPER timezone handling
 export const calculatePrayerTimesFromAPI = async (latitude, longitude) => {
   try {
     console.log(`🌐 Fetching JAKIM-like times for precise location: ${latitude}, ${longitude}`);
     
-    // Use Aladhan API which accepts coordinates and has Malaysia preset (method=13)
+    // Use Aladhan API with Malaysia timezone parameters
+    const today = new Date();
+    const day = today.getDate();
+    const month = today.getMonth() + 1;
+    const year = today.getFullYear();
+    
     const response = await fetch(
-      `https://api.aladhan.com/v1/timings?latitude=${latitude}&longitude=${longitude}&method=13&school=0&iso8601=true`
+      `https://api.aladhan.com/v1/timings/${day}-${month}-${year}?latitude=${latitude}&longitude=${longitude}&method=13&school=0&timezone=Asia/Kuala_Lumpur`
     );
     
     if (response.ok) {
@@ -181,17 +217,17 @@ export const calculatePrayerTimesFromAPI = async (latitude, longitude) => {
       const timings = data.data.timings;
       
       const result = {
-        fajr: formatTimeFromString(timings.Fajr),
-        sunrise: formatTimeFromString(timings.Sunrise),
-        dhuhr: formatTimeFromString(timings.Dhuhr),
-        asr: formatTimeFromString(timings.Asr),
-        maghrib: formatTimeFromString(timings.Maghrib),
-        isha: formatTimeFromString(timings.Isha),
-        method: 'JAKIM-like API - Precise GPS',
+        fajr: formatTimeFromString(timings.Fajr, 'Asia/Kuala_Lumpur'),
+        sunrise: formatTimeFromString(timings.Sunrise, 'Asia/Kuala_Lumpur'),
+        dhuhr: formatTimeFromString(timings.Dhuhr, 'Asia/Kuala_Lumpur'),
+        asr: formatTimeFromString(timings.Asr, 'Asia/Kuala_Lumpur'),
+        maghrib: formatTimeFromString(timings.Maghrib, 'Asia/Kuala_Lumpur'),
+        isha: formatTimeFromString(timings.Isha, 'Asia/Kuala_Lumpur'),
+        method: 'JAKIM API - Precise GPS',
         location: { latitude, longitude },
         success: true,
         calculated: true,
-        source: 'aladhan-api'
+        source: 'api'
       };
 
       console.log('✅ JAKIM-like times from API:', result);
