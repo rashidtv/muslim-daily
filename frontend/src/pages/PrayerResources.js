@@ -39,7 +39,6 @@ const PrayerResources = () => {
     if (!userLocation) {
       getLocation();
     } else if (!locationName) {
-      // If we have location but no name, get the name
       getLocationName(userLocation.latitude, userLocation.longitude);
     }
   }, [userLocation]);
@@ -55,7 +54,6 @@ const PrayerResources = () => {
         const address = data.address;
         let locationParts = [];
         
-        // Priority: city -> town -> municipality -> state
         if (address.city) {
           locationParts.push(address.city);
         } else if (address.town) {
@@ -66,7 +64,6 @@ const PrayerResources = () => {
           locationParts.push(address.village);
         }
         
-        // Add state if available
         if (address.state) {
           locationParts.push(address.state);
         }
@@ -74,7 +71,6 @@ const PrayerResources = () => {
         if (locationParts.length > 0) {
           setLocationName(locationParts.join(', '));
         } else {
-          // Fallback to coordinates if no location name found
           setLocationName(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
         }
       } else {
@@ -182,7 +178,7 @@ const PrayerResources = () => {
             </Box>
           )}
 
-          {/* Clean Compass Design - FIXED ARROW POSITIONING */}
+          {/* Clean Compass Design */}
           <Box sx={{ 
             position: 'relative', 
             width: 250, 
@@ -196,13 +192,13 @@ const PrayerResources = () => {
             alignItems: 'center',
             justifyContent: 'center',
             boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-            overflow: 'hidden' // Prevent any overflow issues
+            overflow: 'hidden'
           }}>
             
-            {/* Cardinal Directions - SIMPLIFIED */}
+            {/* Cardinal Directions - Adjusted spacing */}
             <Typography variant="h6" fontWeight="bold" sx={{ 
               position: 'absolute', 
-              top: 16, 
+              top: 20,  // Moved down from 16
               left: '50%', 
               transform: 'translateX(-50%)', 
               color: '#d32f2f'
@@ -212,7 +208,7 @@ const PrayerResources = () => {
             <Typography variant="body1" fontWeight="bold" sx={{ 
               position: 'absolute', 
               top: '50%', 
-              right: 16, 
+              right: 20,  // Moved in from 16
               transform: 'translateY(-50%)', 
               color: 'primary.main'
             }}>
@@ -220,7 +216,7 @@ const PrayerResources = () => {
             </Typography>
             <Typography variant="body1" fontWeight="bold" sx={{ 
               position: 'absolute', 
-              bottom: 16, 
+              bottom: 20,  // Moved up from 16
               left: '50%', 
               transform: 'translateX(-50%)', 
               color: 'success.main'
@@ -230,30 +226,29 @@ const PrayerResources = () => {
             <Typography variant="body1" fontWeight="bold" sx={{ 
               position: 'absolute', 
               top: '50%', 
-              left: 16, 
+              left: 20,  // Moved in from 16
               transform: 'translateY(-50%)', 
               color: 'warning.main'
             }}>
               W
             </Typography>
 
-            {/* Qibla Arrow - PERFECTLY CENTERED AND ATTACHED */}
+            {/* Qibla Arrow */}
             <Box sx={{
               position: 'absolute',
               top: '50%',
               left: '50%',
               width: 3,
-              height: 100, // Fixed height from center to edge
+              height: 100,
               backgroundColor: '#1976d2',
-              // PERFECT CENTERING: Transform from exact center point
               transform: `translate(-50%, -50%) rotate(${currentAngle}deg)`,
-              transformOrigin: 'center center', // Rotate from exact center
+              transformOrigin: 'center center',
               zIndex: 2,
               borderRadius: '1px',
               '&::after': {
                 content: '""',
                 position: 'absolute',
-                top: 0, // Triangle at the outer end
+                top: 0,
                 left: '50%',
                 transform: 'translateX(-50%)',
                 width: 0,
@@ -264,7 +259,7 @@ const PrayerResources = () => {
               }
             }} />
 
-            {/* Center Dot - PERFECTLY CENTERED */}
+            {/* Center Dot */}
             <Box sx={{
               position: 'absolute', 
               top: '50%', 
@@ -279,19 +274,20 @@ const PrayerResources = () => {
               zIndex: 3
             }} />
 
-            {/* Current Angle Display */}
+            {/* Current Angle Display - MOVED TO AVOID OVERLAP */}
             {compassActive && (
               <Box sx={{
                 position: 'absolute',
-                bottom: 8,
+                bottom: 40,  // Moved up from 8 to avoid overlapping with "S"
                 left: '50%',
                 transform: 'translateX(-50%)',
                 backgroundColor: 'primary.main',
                 color: 'white',
-                padding: '2px 8px',
+                padding: '4px 12px',
                 borderRadius: 1,
-                fontSize: '0.7rem',
-                fontWeight: '500'
+                fontSize: '0.75rem',
+                fontWeight: '500',
+                whiteSpace: 'nowrap'
               }}>
                 {currentAngle.toFixed(0)}° to Mecca
               </Box>
