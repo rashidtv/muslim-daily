@@ -43,6 +43,7 @@ import { PracticeProvider } from './context/PracticeContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider, useTheme } from './context/ThemeContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { CompassProvider } from './context/CompassContext'; // Add this import
 
 // Components
 import Home from './pages/Home';
@@ -522,12 +523,10 @@ function App() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState('login');
 
-
   const handleAuthAction = (mode) => {
     setAuthMode(mode);
     setAuthModalOpen(true);
   };
-
 
   return (
     <ThemeProvider>
@@ -535,48 +534,50 @@ function App() {
       <AuthProvider>
         <PracticeProvider>
           <NotificationProvider>
-            <Router>
-              <Box sx={{ 
-                minHeight: '100vh', 
-                backgroundColor: 'background.default',
-                pb: { xs: '65px', md: 0 },
-              }}>
-                <Header onAuthAction={handleAuthAction} />
-                
-                <Container 
-                  maxWidth="lg" 
-                  sx={{ 
-                    py: { xs: 2, md: 3 },
-                    px: { xs: 2, sm: 3 } 
-                  }}
-                >
-                 <Routes>
-  <Route path="/" element={<Home onAuthAction={handleAuthAction} />} />
-  <Route path="/progress" element={<Progress />} />
-  <Route path="/prayer-resources" element={<PrayerResources />} /> {/* This line must exist */}
-  <Route path="/calendar" element={<Calendar />} />
-  <Route path="/settings" element={<Settings />} />
-  <Route path="*" element={<Home onAuthAction={handleAuthAction} />} />
-</Routes>
-                </Container>
+            <CompassProvider> {/* Add CompassProvider here */}
+              <Router>
+                <Box sx={{ 
+                  minHeight: '100vh', 
+                  backgroundColor: 'background.default',
+                  pb: { xs: '65px', md: 0 },
+                }}>
+                  <Header onAuthAction={handleAuthAction} />
+                  
+                  <Container 
+                    maxWidth="lg" 
+                    sx={{ 
+                      py: { xs: 2, md: 3 },
+                      px: { xs: 2, sm: 3 } 
+                    }}
+                  >
+                    <Routes>
+                      <Route path="/" element={<Home onAuthAction={handleAuthAction} />} />
+                      <Route path="/progress" element={<Progress />} />
+                      <Route path="/prayer-resources" element={<PrayerResources />} />
+                      <Route path="/calendar" element={<Calendar />} />
+                      <Route path="/settings" element={<Settings />} />
+                      <Route path="*" element={<Home onAuthAction={handleAuthAction} />} />
+                    </Routes>
+                  </Container>
 
-                {/* Mobile Bottom Navigation */}
-                <Box sx={{ display: { xs: 'block', md: 'none' } }}>
-                  <MobileBottomNav />
+                  {/* Mobile Bottom Navigation */}
+                  <Box sx={{ display: { xs: 'block', md: 'none' } }}>
+                    <MobileBottomNav />
+                  </Box>
+
+                  <PWAInstallPrompt />
+
+                  <AuthModal 
+                    open={authModalOpen}
+                    onClose={() => setAuthModalOpen(false)}
+                    initialMode={authMode}
+                  />
+
+                  {/* Auto-update notification */}
+                 
                 </Box>
-
-                <PWAInstallPrompt />
-
-                <AuthModal 
-                  open={authModalOpen}
-                  onClose={() => setAuthModalOpen(false)}
-                  initialMode={authMode}
-                />
-
-                {/* Auto-update notification */}
-               
-              </Box>
-            </Router>
+              </Router>
+            </CompassProvider>
           </NotificationProvider>
         </PracticeProvider>
       </AuthProvider>
