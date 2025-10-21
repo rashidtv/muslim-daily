@@ -19,7 +19,7 @@ import {
   NotificationsActive
 } from '@mui/icons-material';
 import { useNotification } from '../context/NotificationContext';
-import { useCompass } from '../context/CompassContext'; // Import the compass context
+import { useCompass } from '../context/CompassContext';
 
 const PrayerResources = () => {
   const [loading, setLoading] = useState(false);
@@ -39,7 +39,8 @@ const PrayerResources = () => {
     setUserLocationAndCalculateQibla,
     autoEnableCompass,
     stopCompass,
-    getQiblaAngle
+    getQiblaAngle,
+    debugCompass // Get the debug function from context
   } = useCompass();
 
   // Get notification status
@@ -410,17 +411,15 @@ const PrayerResources = () => {
               {compassActive ? 'Stop Compass' : 'Enable Compass'}
             </Button>
 
-            {/* Add this to your controls section for testing */}
-<Button 
-  startIcon={<Refresh />} 
-  onClick={() => {
-    debugCompass(); // Use the debug function from context
-  }}
-  variant="outlined"
-  color="secondary"
->
-  Debug Compass
-</Button>
+            {/* Debug Button */}
+            <Button 
+              startIcon={<Refresh />} 
+              onClick={debugCompass}
+              variant="outlined"
+              color="secondary"
+            >
+              Debug Compass
+            </Button>
           </Box>
 
           {/* PWA Benefits Notice */}
