@@ -56,7 +56,7 @@ const PrayerResources = () => {
     const savedPermission = localStorage.getItem('compassPermission');
     if (savedPermission === 'granted') {
       setCompassPermissionGranted(true);
-      autoStartCompass();
+      // Don't auto-start here, wait for location
     }
   };
 
@@ -73,43 +73,43 @@ const PrayerResources = () => {
     return isInPWA;
   };
 
-  // NEW: Auto-enable compass for PWA mobile
-  const autoEnableCompassPWA = async () => {
-    if (compassPermissionRequested || compassActive || !isPWA) return;
+  // NEW: Simple and reliable auto-enable compass for PWA
+  const autoEnableCompassPWA = () => {
+    if (compassPermissionRequested || compassActive || !isPWA) {
+      return;
+    }
 
-    console.log('🔄 Auto-enabling compass for PWA...');
+    console.log('🔄 Auto-enabling compass for PWA mobile...');
     setCompassPermissionRequested(true);
-    
-    setTimeout(async () => {
-      try {
-        if (window.DeviceOrientationEvent) {
-          if (typeof DeviceOrientationEvent.requestPermission === 'function') {
-            // iOS - auto request permission in PWA
-            try {
-              const permission = await DeviceOrientationEvent.requestPermission();
-              if (permission === 'granted') {
-                localStorage.setItem('compassPermission', 'granted');
-                setCompassPermissionGranted(true);
-                setupCompass();
-                console.log('✅ Compass auto-enabled in PWA (iOS)');
-              } else {
-                console.log('ℹ️ Compass permission not granted in PWA');
-              }
-            } catch (err) {
-              console.log('Compass permission request failed in PWA:', err);
+
+    // For PWA, we can be more aggressive with auto-enable
+    if (window.DeviceOrientationEvent) {
+      if (typeof DeviceOrientationEvent.requestPermission === 'function') {
+        // iOS PWA - auto request without dialog
+        console.log('📱 iOS PWA detected - auto-requesting compass permission...');
+        DeviceOrientationEvent.requestPermission()
+          .then(permission => {
+            if (permission === 'granted') {
+              console.log('✅ Compass permission granted in iOS PWA');
+              localStorage.setItem('compassPermission', 'granted');
+              setCompassPermissionGranted(true);
+              setupCompass();
+            } else {
+              console.log('❌ Compass permission denied in iOS PWA');
+              localStorage.setItem('compassPermission', 'denied');
             }
-          } else {
-            // Android - auto enable in PWA
-            localStorage.setItem('compassPermission', 'granted');
-            setCompassPermissionGranted(true);
-            setupCompass();
-            console.log('✅ Compass auto-enabled in PWA (Android)');
-          }
-        }
-      } catch (err) {
-        console.log('Auto-enable compass in PWA failed:', err);
+          })
+          .catch(err => {
+            console.log('⚠️ Compass permission request failed in iOS PWA:', err);
+          });
+      } else {
+        // Android PWA - no permission needed, just enable
+        console.log('🤖 Android PWA detected - auto-enabling compass...');
+        localStorage.setItem('compassPermission', 'granted');
+        setCompassPermissionGranted(true);
+        setupCompass();
       }
-    }, 1000);
+    }
   };
 
   const getLocationName = async (latitude, longitude) => {
@@ -192,21 +192,17 @@ const PrayerResources = () => {
         try {
           const permission = await DeviceOrientationEvent.requestPermission();
           if (permission === 'granted') {
-            // Save permission to avoid asking again
             localStorage.setItem('compassPermission', 'granted');
             setCompassPermissionGranted(true);
             setupCompass();
           } else {
             setError('Compass permission denied. You can enable it in browser settings.');
             localStorage.setItem('compassPermission', 'denied');
-            setShowCompassDialog(true);
           }
         } catch (err) {
           setError('Failed to get compass permission');
-          setShowCompassDialog(true);
         }
       } else {
-        // Auto-grant for browsers that don't require permission
         localStorage.setItem('compassPermission', 'granted');
         setCompassPermissionGranted(true);
         setupCompass();
@@ -218,47 +214,14 @@ const PrayerResources = () => {
     }
   };
 
-  const autoStartCompass = () => {
-    if (compassPermissionGranted && !compassActive) {
-      setupCompass();
-    }
-  };
-
   const setupCompass = () => {
-    window.addEventListener('deviceorientation', handleCompass, true);
-    setCompassActive(true);
-    setError('');
-    setShowCompassDialog(false);
-  };
-
-  // UPDATED: Enhanced auto-enable compass for both desktop and PWA
-  const autoEnableCompass = async () => {
-    if (compassPermissionRequested || compassActive) return;
-
-    setCompassPermissionRequested(true);
-    
-    setTimeout(async () => {
-      try {
-        // For PWA mobile, use the new auto-enable function
-        if (isPWA) {
-          await autoEnableCompassPWA();
-        } 
-        // For desktop browsers that don't require permission
-        else if (typeof DeviceOrientationEvent.requestPermission !== 'function') {
-          if (window.DeviceOrientationEvent) {
-            localStorage.setItem('compassPermission', 'granted');
-            setCompassPermissionGranted(true);
-            setupCompass();
-            console.log('✅ Compass auto-enabled in desktop browser');
-          }
-        } else {
-          // For iOS Safari (non-PWA), show dialog
-          setShowCompassDialog(true);
-        }
-      } catch (err) {
-        console.log('Auto-enable compass failed:', err);
-      }
-    }, 1500);
+    if (window.DeviceOrientationEvent) {
+      window.addEventListener('deviceorientation', handleCompass, true);
+      setCompassActive(true);
+      setError('');
+      setShowCompassDialog(false);
+      console.log('🎯 Compass activated successfully');
+    }
   };
 
   const stopCompass = () => {
@@ -306,8 +269,13 @@ const PrayerResources = () => {
           
           getLocationName(latitude, longitude);
           
-          // AUTO-ENABLE COMPASS - Now works for both desktop and PWA mobile
-          autoEnableCompass();
+          // AUTO-ENABLE COMPASS - Only for PWA mobile
+          if (isPWA) {
+            console.log('📍 Location found in PWA - auto-enabling compass...');
+            autoEnableCompassPWA();
+          } else {
+            console.log('📍 Location found in desktop - compass available for manual enable');
+          }
           
         } catch (error) {
           console.error('Calculation error:', error);
@@ -371,7 +339,7 @@ const PrayerResources = () => {
           {isPWA && (
             <Alert severity="success" sx={{ mb: 2 }}>
               Running in app mode - Best experience! 
-              {compassActive && ' Compass auto-enabled!'}
+              {compassActive && ' • Compass auto-enabled!'}
             </Alert>
           )}
 
@@ -468,23 +436,20 @@ const PrayerResources = () => {
                     {locationName || `GPS: ${userLocation.latitude.toFixed(6)}, ${userLocation.longitude.toFixed(6)}`}
                   </Typography>
                   
-                  {/* Show GPS accuracy if available */}
-                  {userLocation.accuracy && (
-                    <Typography variant="caption" color="text.secondary" display="block">
-                      📍 GPS Accuracy: {userLocation.accuracy.toFixed(0)} meters
-                      {userLocation.note && ` • ${userLocation.note}`}
-                    </Typography>
-                  )}
-                  
-                  {/* Always show precise coordinates */}
                   <Typography variant="caption" color="text.secondary" display="block">
                     Coordinates: {userLocation.latitude.toFixed(6)}, {userLocation.longitude.toFixed(6)}
                   </Typography>
+                  {isPWA && compassActive && (
+                    <Typography variant="caption" color="success.main" display="block" fontWeight="medium">
+                      ✅ Compass auto-enabled in PWA
+                    </Typography>
+                  )}
                 </>
               )}
             </Box>
           )}
 
+          {/* Rest of the component remains the same... */}
           {/* Compass Container */}
           <Box sx={{ 
             position: 'relative', 
@@ -565,7 +530,7 @@ const PrayerResources = () => {
                   ? `Point device towards Mecca (${currentAngle.toFixed(0)}°)` 
                   : `Face ${qiblaDirection}° from North towards Mecca`
                 }
-                {isPWA && compassActive && ' • Auto-enabled'}
+                {isPWA && compassActive && ' • Auto-enabled in PWA'}
               </Typography>
             </Box>
           )}
@@ -602,8 +567,8 @@ const PrayerResources = () => {
         </CardContent>
       </Card>
 
-      {/* Compass Permission Dialog */}
-      <Dialog open={showCompassDialog} onClose={() => setShowCompassDialog(false)}>
+      {/* Compass Permission Dialog - Only show for non-PWA */}
+      <Dialog open={showCompassDialog && !isPWA} onClose={() => setShowCompassDialog(false)}>
         <DialogTitle>
           <CompassCalibration sx={{ mr: 1, verticalAlign: 'middle' }} />
           Enable Compass
@@ -612,12 +577,6 @@ const PrayerResources = () => {
           <Typography>
             To use the live compass feature, we need access to your device's orientation sensors.
           </Typography>
-          {!isPWA && (
-            <Alert severity="info" sx={{ mt: 2 }}>
-              <InstallMobile sx={{ fontSize: 16, mr: 1 }} />
-              For best experience, install this app to your home screen!
-            </Alert>
-          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setShowCompassDialog(false)}>Cancel</Button>
