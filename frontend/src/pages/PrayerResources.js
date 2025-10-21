@@ -138,7 +138,7 @@ const PrayerResources = () => {
             </Box>
           )}
 
-          {/* Compass Container - FIXED ARROW POSITIONING */}
+          {/* Compass Container - FIXED ARROW DIRECTION */}
           <Box sx={{ 
             position: 'relative', 
             width: 250, 
@@ -189,7 +189,7 @@ const PrayerResources = () => {
               W
             </Typography>
 
-            {/* Qibla Arrow - FIXED POSITIONING */}
+            {/* Qibla Arrow - FIXED: Now pointing OUTWARD towards Mecca */}
             <Box sx={{
               position: 'absolute',
               top: '50%',
@@ -197,20 +197,21 @@ const PrayerResources = () => {
               width: 2,
               height: '40%',
               backgroundColor: compassActive ? '#1976d2' : '#90caf9',
-              transform: `translate(-50%, -100%) rotate(${currentAngle}deg)`,
-              transformOrigin: 'bottom center',
+              // FIX: Transform from center pointing outward
+              transform: `translate(-50%, -50%) rotate(${currentAngle}deg)`,
+              transformOrigin: 'center bottom', // Rotate from bottom center
               zIndex: 2,
               '&::after': {
                 content: '""',
                 position: 'absolute',
-                bottom: 0,
+                top: 0, // Triangle at the TOP (outward end)
                 left: '50%',
                 transform: 'translateX(-50%)',
                 width: 0,
                 height: 0,
                 borderLeft: '6px solid transparent',
                 borderRight: '6px solid transparent',
-                borderTop: `12px solid ${compassActive ? '#1976d2' : '#90caf9'}`
+                borderBottom: `12px solid ${compassActive ? '#1976d2' : '#90caf9'}` // Triangle pointing outward
               }
             }} />
 
@@ -227,6 +228,21 @@ const PrayerResources = () => {
               border: '2px solid white',
               boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
               zIndex: 3
+            }} />
+
+            {/* Optional: Mecca indicator dot at the edge */}
+            <Box sx={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              width: 8,
+              height: 8,
+              backgroundColor: '#2e7d32',
+              borderRadius: '50%',
+              transform: `translate(-50%, -50%) translate(0, -100px) rotate(${currentAngle}deg)`,
+              transformOrigin: 'center 100px',
+              zIndex: 1,
+              opacity: 0.7
             }} />
           </Box>
 
@@ -276,6 +292,15 @@ const PrayerResources = () => {
             <Alert severity="info" sx={{ mt: 2 }}>
               <Typography variant="body2">
                 Click "Start Compass" to enable compass functionality. On iOS, you may need to allow compass permissions.
+              </Typography>
+            </Alert>
+          )}
+
+          {/* Compass Help */}
+          {compassActive && (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              <Typography variant="body2">
+                <strong>Blue arrow points towards Mecca</strong>. Rotate your device until the arrow points straight up (0°) to face the Qibla direction.
               </Typography>
             </Alert>
           )}
