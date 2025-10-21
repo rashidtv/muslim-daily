@@ -36,10 +36,12 @@ const PrayerResources = () => {
     compassActive,
     compassSupported,
     compassAvailable,
+    usingSimulation,
     userLocation,
     compassError,
     setUserLocationAndCalculateQibla,
     autoEnableCompass,
+    manualStartCompass,
     stopCompass,
     getQiblaAngle,
     debugCompass,
@@ -254,33 +256,33 @@ const PrayerResources = () => {
               icon={<Navigation />}
               label={
                 compassActive 
-                  ? compassAvailable 
-                    ? "Compass Active" 
-                    : "Static Direction"
+                  ? usingSimulation 
+                    ? "Simulation Active" 
+                    : "Compass Active"
                   : "Compass Ready"
               } 
               color={
                 compassActive 
-                  ? compassAvailable 
-                    ? "success" 
-                    : "warning"
+                  ? usingSimulation 
+                    ? "warning" 
+                    : "success"
                   : "primary"
               }
               variant={compassActive ? "filled" : "outlined"}
             />
-            {compassActive && compassAvailable && (
+            {compassActive && usingSimulation && (
               <Chip 
-                label="Auto" 
+                label="Simulation" 
                 size="small" 
-                color="info" 
+                color="warning" 
                 variant="outlined"
               />
             )}
-            {compassActive && !compassAvailable && (
+            {compassActive && !usingSimulation && compassAvailable && (
               <Chip 
-                label="Static" 
+                label="Real Compass" 
                 size="small" 
-                color="warning" 
+                color="success" 
                 variant="outlined"
               />
             )}
@@ -319,10 +321,12 @@ const PrayerResources = () => {
                     Coordinates: {userLocation.latitude.toFixed(6)}, {userLocation.longitude.toFixed(6)}
                   </Typography>
                   {compassActive && (
-                    <Typography variant="caption" color="success.main" display="block" fontWeight="medium">
-                      {compassAvailable 
-                        ? '✅ Compass auto-enabled & persistent' 
-                        : '📍 Static Qibla direction (compass not available)'
+                    <Typography variant="caption" display="block" fontWeight="medium" sx={{
+                      color: usingSimulation ? 'warning.main' : 'success.main'
+                    }}>
+                      {usingSimulation 
+                        ? '🎮 Using compass simulation (device has no compass)' 
+                        : '✅ Real compass active & tracking'
                       }
                     </Typography>
                   )}
@@ -345,19 +349,49 @@ const PrayerResources = () => {
               borderRadius: '50%', 
               border: '4px solid',
               borderColor: compassActive 
-                ? (compassAvailable ? 'success.main' : 'warning.main') 
+                ? (usingSimulation ? 'warning.main' : 'success.main') 
                 : 'primary.main', 
               position: 'relative', 
               backgroundColor: '#f8f9fa',
               boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-              opacity: compassActive ? 1 : 0.8
+              opacity: compassActive ? 1 : 0.8,
+              transition: 'all 0.3s ease'
             }}>
               
               {/* Compass Directions */}
-              <Typography variant="h6" fontWeight="bold" sx={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', color: '#d32f2f' }}>N</Typography>
-              <Typography variant="body2" fontWeight="bold" sx={{ position: 'absolute', top: '50%', right: 12, transform: 'translateY(-50%)' }}>E</Typography>
-              <Typography variant="body2" fontWeight="bold" sx={{ position: 'absolute', bottom: 8, left: '50%', transform: 'translateX(-50%)' }}>S</Typography>
-              <Typography variant="body2" fontWeight="bold" sx={{ position: 'absolute', top: '50%', left: 12, transform: 'translateY(-50%)' }}>W</Typography>
+              <Typography variant="h6" fontWeight="bold" sx={{ 
+                position: 'absolute', 
+                top: 8, 
+                left: '50%', 
+                transform: 'translateX(-50%)', 
+                color: '#d32f2f' 
+              }}>
+                N
+              </Typography>
+              <Typography variant="body2" fontWeight="bold" sx={{ 
+                position: 'absolute', 
+                top: '50%', 
+                right: 12, 
+                transform: 'translateY(-50%)' 
+              }}>
+                E
+              </Typography>
+              <Typography variant="body2" fontWeight="bold" sx={{ 
+                position: 'absolute', 
+                bottom: 8, 
+                left: '50%', 
+                transform: 'translateX(-50%)' 
+              }}>
+                S
+              </Typography>
+              <Typography variant="body2" fontWeight="bold" sx={{ 
+                position: 'absolute', 
+                top: '50%', 
+                left: 12, 
+                transform: 'translateY(-50%)' 
+              }}>
+                W
+              </Typography>
 
               {/* Qibla Arrow */}
               <Box sx={{
@@ -367,12 +401,13 @@ const PrayerResources = () => {
                 width: 3,
                 height: '45%',
                 backgroundColor: compassActive 
-                  ? (compassAvailable ? '#1976d2' : '#ed6c02') 
+                  ? (usingSimulation ? '#ed6c02' : '#1976d2') 
                   : '#90caf9',
                 transform: `translate(-50%, -50%) rotate(${currentAngle}deg)`,
-                transformOrigin: 'center center',
+                transformOrigin: 'center bottom',
                 zIndex: 2,
                 borderRadius: '2px',
+                transition: 'transform 0.3s ease',
                 '&::after': {
                   content: '""',
                   position: 'absolute',
@@ -385,9 +420,10 @@ const PrayerResources = () => {
                   borderRight: '6px solid transparent',
                   borderBottom: `10px solid ${
                     compassActive 
-                      ? (compassAvailable ? '#1976d2' : '#ed6c02') 
+                      ? (usingSimulation ? '#ed6c02' : '#1976d2') 
                       : '#90caf9'
-                  }`
+                  }`,
+                  transition: 'all 0.3s ease'
                 }
               }} />
 
@@ -405,6 +441,18 @@ const PrayerResources = () => {
                 boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
                 zIndex: 3
               }} />
+
+              {/* Compass Degree Markings */}
+              <Box sx={{
+                position: 'absolute',
+                top: '50%',
+                left: '50%',
+                width: '92%',
+                height: '92%',
+                transform: 'translate(-50%, -50%)',
+                borderRadius: '50%',
+                border: '1px solid rgba(0,0,0,0.1)'
+              }} />
             </Box>
           </Box>
 
@@ -416,12 +464,18 @@ const PrayerResources = () => {
               </Typography>
               <Typography variant="h6" gutterBottom color="text.primary">
                 {compassActive 
-                  ? compassAvailable 
-                    ? `Point device towards Mecca (${currentAngle.toFixed(0)}°)` 
-                    : `Face ${qiblaDirection}° from North towards Mecca (Static)`
+                  ? usingSimulation 
+                    ? `Face ${qiblaDirection}° from North towards Mecca`
+                    : `Point towards Mecca (${currentAngle.toFixed(0)}°)` 
                   : `Face ${qiblaDirection}° from North towards Mecca`
                 }
-                {compassActive && compassAvailable && ' • Auto-enabled & Persistent'}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                {compassActive && (
+                  usingSimulation 
+                    ? "🎮 Simulation mode - arrow moves automatically"
+                    : "📱 Real compass mode - move your device to see direction change"
+                )}
               </Typography>
             </Box>
           )}
@@ -433,18 +487,20 @@ const PrayerResources = () => {
               onClick={getLocation}
               variant="outlined"
               disabled={loading}
+              size="medium"
             >
               {loading ? <CircularProgress size={20} /> : 'Recalibrate'}
             </Button>
             
             <Button 
               startIcon={<Navigation />} 
-              onClick={compassActive ? stopCompass : autoEnableCompass}
+              onClick={compassActive ? stopCompass : manualStartCompass}
               variant={compassActive ? "outlined" : "contained"}
               color={compassActive ? "secondary" : "primary"}
               disabled={!userLocation}
+              size="medium"
             >
-              {compassActive ? 'Stop Compass' : 'Enable Compass'}
+              {compassActive ? 'Stop Compass' : 'Start Compass'}
             </Button>
 
             {/* Debug Button */}
@@ -453,8 +509,9 @@ const PrayerResources = () => {
               onClick={debugCompass}
               variant="outlined"
               color="secondary"
+              size="medium"
             >
-              Debug Compass
+              Debug
             </Button>
 
             {/* Test Compass Button */}
@@ -464,18 +521,27 @@ const PrayerResources = () => {
               variant="outlined"
               color="warning"
               disabled={!compassActive}
+              size="medium"
             >
-              Test Compass
+              Test Movement
             </Button>
           </Box>
 
-          {/* Compass Support Notice */}
-          {!compassAvailable && compassActive && (
+          {/* Compass Information */}
+          {compassActive && (
             <Alert severity="info" sx={{ mt: 2 }}>
               <Typography variant="body2">
-                <strong>Note:</strong> Your device doesn't have compass hardware or it's not accessible. 
-                Showing static Qibla direction based on your location. For compass functionality, 
-                try using a mobile device with compass hardware.
+                <strong>
+                  {usingSimulation 
+                    ? "Simulation Mode" 
+                    : "Real Compass Mode"
+                  }
+                </strong>
+                <br />
+                {usingSimulation 
+                  ? "Your device doesn't have compass hardware. The arrow shows the Qibla direction and moves automatically for demonstration."
+                  : "Compass is active! Rotate your device to see the arrow point towards Mecca."
+                }
               </Typography>
             </Alert>
           )}
